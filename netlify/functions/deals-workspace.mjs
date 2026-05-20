@@ -164,8 +164,9 @@ async function contactByEmail(token, email) {
 
 async function fetchDeals(token) {
   const fieldSets = [
-    'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time,Pickup_Supplier,Vendor_Pick_Up,Con_Note_Number,Delivery_Notes,Milk_Run_Date,Work_Item_ID,Scheduled_Date_Time',
-    'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time,Vendor_Pick_Up,Con_Note_Number,Delivery_Notes,Milk_Run_Date,Work_Item_ID,Scheduled_Date_Time',
+    'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time,Pickup_Supplier,Vendor_Pick_Up,Con_Note_Number,Delivery_Notes,Milk_Run_Date,Work_Item_ID,Scheduled_Date_Time,Work_End_Date_Time,Reciever_Name,Driver_Name,Invoice_Number,Invoice_Status',
+    'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time,Pickup_Supplier,Vendor_Pick_Up,Con_Note_Number,Delivery_Notes,Milk_Run_Date,Work_Item_ID,Scheduled_Date_Time,Work_End_Date_Time,Receiver_Name,Driver_Name,Invoice_Number,Invoice_Status',
+    'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time,Vendor_Pick_Up,Con_Note_Number,Delivery_Notes,Milk_Run_Date,Work_Item_ID,Scheduled_Date_Time,Work_End_Date_Time,Invoice_Number,Invoice_Status',
     'Deal_Name,Stage,Pipeline,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time',
     'Deal_Name,Stage,Closing_Date,Amount,Account_Name,Contact_Name,Description,Created_Time,Modified_Time',
   ];
@@ -199,6 +200,15 @@ function dealBelongsToClient(deal, contact) {
   );
 }
 
+function deliveredAtFromDeal(deal, description = '') {
+  return firstValue(
+    deal.Work_End_Date_Time,
+    descriptionField(description, 'Delivered at'),
+    deal.Modified_Time,
+    deal.Created_Time
+  );
+}
+
 function dealToOrder(deal, clientEmail = '') {
   const description = deal.Description || '';
   const accountName = deal.Account_Name?.name || '';
@@ -208,6 +218,7 @@ function dealToOrder(deal, clientEmail = '') {
   const pickupAddress = firstValue(descriptionField(description, 'Pickup address'), descriptionField(description, 'Supplier address'));
   const dropAddress = firstValue(descriptionField(description, 'Drop address'), descriptionField(description, 'Delivery address'));
   const milkRunDate = firstValue(deal.Milk_Run_Date, descriptionField(description, 'Milk run date'));
+  const deliveredAt = deliveredAtFromDeal(deal, description);
 
   return {
     id: `zoho_${deal.id}`,
@@ -226,12 +237,21 @@ function dealToOrder(deal, clientEmail = '') {
     clientId: deal.Contact_Name?.id ? `crm_${deal.Contact_Name.id}` : deal.Account_Name?.id ? `crm_account_${deal.Account_Name.id}` : '',
     clientName: contactName || accountName || 'Client',
     businessName: accountName || contactName || 'Client',
+    accountName,
     clientEmail,
     clientPhone: '',
     status: appStatusFromDealStage(deal.Stage),
     price: Number(deal.Amount || 0),
+    totalPrice: Number(deal.Amount || 0),
     submittedAt: deal.Scheduled_Date_Time || deal.Created_Time || new Date().toISOString(),
+    deliveredAt,
+    completedAt: deliveredAt,
+    receiverName: firstValue(deal.Reciever_Name, deal.Receiver_Name, descriptionField(description, 'Receiver')),
+    driverName: firstValue(deal.Driver_Name, descriptionField(description, 'Driver')),
+    invoiceNumber: firstValue(deal.Invoice_Number, descriptionField(description, 'Books invoice number')),
+    invoiceStatus: firstValue(deal.Invoice_Status),
     portalOrderId: firstValue(deal.Work_Item_ID, descriptionField(description, 'Portal order id')),
+    itemsDesc: firstValue(descriptionField(description, 'Delivered items'), descriptionField(description, 'Items'), 'Moto & Co courier delivery'),
   };
 }
 
