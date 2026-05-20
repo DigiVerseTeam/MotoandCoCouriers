@@ -12,7 +12,7 @@ function looseKey(value) {
 }
 
 function isDriverScreen() {
-  return document.querySelector(".dw-shell") && document.querySelector(".rpill")?.textContent?.trim()?.toLowerCase() === "driver";
+  return Boolean(document.querySelector(".dw-shell"));
 }
 
 function brisbaneDateKey(date = new Date()) {
@@ -48,6 +48,10 @@ function normaliseStatus(status) {
   return status === "Pending" ? "Order Placed" : String(status || "Order Placed");
 }
 
+function orderLabel(order) {
+  return order?.conNote || order?.portalOrderId || order?.businessName || order?.clientName || "Pickup";
+}
+
 function findOrderFromCard(card, orders) {
   const conNote = textOf(card?.querySelector?.(".dw-order-top strong"));
   const vendor = textOf(card?.querySelector?.("small"));
@@ -76,7 +80,7 @@ function pickupItemsFromCard(card) {
     const qty = Number(textOf(row.querySelector(".dw-stepper span")) || 0) || 0;
     if (label.includes("tyre")) items.tyres = qty;
     else if (label.includes("up to 5")) items.upTo5kg = qty;
-    else if (label.includes("5-10") || label.includes("5–10")) items.fiveTo10kg = qty;
+    else if (label.includes("5-10") || label.includes("5-10")) items.fiveTo10kg = qty;
     else if (label.includes("return")) items.returns = qty;
   });
   return items;
@@ -106,7 +110,7 @@ async function pullZohoOrders() {
 async function updatePickupOutcome(order, { outcome, stageKey, requestedPickupDate, notes, pickupItems }) {
   if (!order?.zohoDealId) throw new Error("This pickup does not have a Zoho Deal ID yet.");
   const actualPickupAt = new Date().toISOString();
-  return fetch("/.netlify/functions/pickup-outcome", {
+  const response = await fetch("/.netlify/functions/pickup-outcome", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -118,11 +122,10 @@ async function updatePickupOutcome(order, { outcome, stageKey, requestedPickupDa
       pickupNotes: notes,
       pickupItems,
     }),
-  }).then(async response => {
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || "Could not update Zoho pickup outcome.");
-    return body;
   });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || "Could not update Zoho pickup outcome.");
+  return body;
 }
 
 async function patchLocalOrder(order, changes) {
@@ -166,7 +169,7 @@ export default function DriverPickupOutcomeBridge() {
 
   useEffect(() => {
     const tick = () => {
-      const nextActive = Boolean(isDriverScreen());
+      const nextActive = isDriverScreen();
       setActive(nextActive);
       if (nextActive) refreshOrders();
     };
@@ -183,7 +186,6 @@ export default function DriverPickupOutcomeBridge() {
   const futureOrders = useMemo(() => orders
     .filter(order => normaliseStatus(order.status) === "Order Placed")
     .filter(order => orderDateKey(order) > todayKey), [orders, todayKey]);
-  const futureConNotes = useMemo(() => new Set(futureOrders.map(order => String(order.conNote || "").trim()).filter(Boolean)), [futureOrders]);
   const futureGroups = useMemo(() => groupByVendor(futureOrders), [futureOrders]);
 
   useEffect(() => {
@@ -193,8 +195,7 @@ export default function DriverPickupOutcomeBridge() {
       document.querySelectorAll(".dw-order.legacy-order").forEach(card => {
         const order = findOrderFromCard(card, orders);
         if (!order) return;
-        const isFuture = futureConNotes.has(String(order.conNote || "").trim());
-        card.style.display = isFuture ? "none" : "";
+        card.style.display = orderDateKey(order) > todayKey ? "none" : "";
 
         const actions = card.querySelector(".dw-order-actions");
         if (actions && !actions.querySelector(".dw-abandon")) {
@@ -211,7 +212,7 @@ export default function DriverPickupOutcomeBridge() {
     const observer = new MutationObserver(syncDom);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [active, orders, futureConNotes]);
+  }, [active, orders, todayKey]);
 
   useEffect(() => {
     if (!active) return;
@@ -234,7 +235,8 @@ export default function DriverPickupOutcomeBridge() {
             notes: "Driver confirmed pickup in app.",
             pickupItems,
           })
-            .then(result => setMessage(`${order.conNote} pickup saved to Zoho with ${result.itemRows || 0} item row${result.itemRows === 1 ? "" : "s"}.`))
+            .then(result => setMessage(`${orderLabel(order)} pickup saved to Zoho with ${result.itemRows || 0} item row${result.itemRows === 1 ? "" : "s"}.`))
+            .then(refreshOrders)
             .catch(error => setMessage(error.message));
         }, 250);
       }
@@ -242,7 +244,8 @@ export default function DriverPickupOutcomeBridge() {
       if (text === "no pickup") {
         setTimeout(() => {
           updatePickupOutcome(order, { outcome: "No Pickup", notes: "Driver marked no pickup in app." })
-            .then(() => setMessage(`${order.conNote} marked No Pickup in Zoho.`))
+            .then(() => setMessage(`${orderLabel(order)} marked No Pickup in Zoho.`))
+            .then(refreshOrders)
             .catch(error => setMessage(error.message));
         }, 250);
       }
@@ -256,7 +259,7 @@ export default function DriverPickupOutcomeBridge() {
           updatePickupOutcome(order, { outcome: "Abandoned", notes }),
           patchLocalOrder(order, { status: "Abandoned", pickupOutcome: "Abandoned", pickupNotes: notes, actualPickupAt: new Date().toISOString() }),
         ]).then(() => {
-          setMessage(`${order.conNote} marked Abandoned.`);
+          setMessage(`${orderLabel(order)} marked Abandoned.`);
           return refreshOrders();
         }).catch(error => setMessage(error.message)).finally(() => setBusyId(""));
       }
@@ -282,7 +285,7 @@ export default function DriverPickupOutcomeBridge() {
         pickupNotes: notes,
         broughtForwardAt: new Date().toISOString(),
       });
-      setMessage(`${order.conNote} brought into today's run.`);
+      setMessage(`${orderLabel(order)} brought into today's run.`);
       await refreshOrders();
       window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
@@ -308,7 +311,7 @@ export default function DriverPickupOutcomeBridge() {
               {group.map(order => (
                 <div className="dw-future-row" key={order.id}>
                   <div>
-                    <strong>{order.conNote || "No con note"}</strong>
+                    <strong>{order.conNote || order.portalOrderId || "No con note"}</strong>
                     <span>{order.businessName || order.clientName || "Customer"}</span>
                     <em>Scheduled {displayDate(orderDateKey(order))}</em>
                   </div>
