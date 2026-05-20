@@ -11,6 +11,7 @@ const codeWindowMs = 10 * 60 * 1000;
 
 const staffUsers = [
   { id: 'admin', name: 'Super Admin', email: 'admin@motoandco.com.au', role: 'admin' },
+  { id: 'admin_gerrard', name: 'Gerrard Otimi', email: 'gerrard@otimi.com.au', role: 'admin' },
   { id: 'driver_stephen', name: 'Stephen', email: 'stephen@motoandco.com.au', role: 'driver' },
   { id: 'driver_gmail_test', name: 'Driver Test', email: 'gcmtm12@gmail.com', role: 'driver' },
 ];
