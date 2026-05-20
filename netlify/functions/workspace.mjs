@@ -2,10 +2,11 @@ const zohoAccountsUrl = (process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho
 const zohoApiDomain = (process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com.au').replace(/\/$/, '');
 const zohoCrmVersion = process.env.ZOHO_CRM_VERSION || 'v8';
 const tokenCache = new Map();
-const staffEmails = new Set(['admin@motoandco.com.au', 'jake@motoandco.com.au']);
+const staffEmails = new Set(['admin@motoandco.com.au', 'gerrard@otimi.com.au', 'jake@motoandco.com.au']);
 
 const fallbackUsers = [
   { id: 'admin', name: 'Super Admin', email: 'admin@motoandco.com.au', role: 'admin' },
+  { id: 'admin_gerrard', name: 'Gerrard Otimi', email: 'gerrard@otimi.com.au', role: 'admin' },
   { id: 'drv1', name: 'Jake Morrow', email: 'jake@motoandco.com.au', role: 'driver' },
 ];
 
