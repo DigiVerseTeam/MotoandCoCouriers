@@ -73,6 +73,23 @@ function firstValue(...values) {
   return values.map(value => String(value || '').trim()).find(Boolean) || '';
 }
 
+function formatAddress(...parts) {
+  return parts.map(part => String(part || '').trim()).filter(Boolean).join(', ');
+}
+
+function accountIdFromDeal(deal) {
+  return String(deal?.Account_Name?.id || '').trim();
+}
+
+function addressFromAccount(account = {}) {
+  return firstValue(
+    formatAddress(account.Shipping_Street, account.Shipping_City, account.Shipping_State, account.Shipping_Code, account.Shipping_Country),
+    formatAddress(account.Billing_Street, account.Billing_City, account.Billing_State, account.Billing_Code, account.Billing_Country),
+    account.Shipping_Street,
+    account.Billing_Street
+  );
+}
+
 function dealStage(key) {
   const defaults = {
     ORDER_PLACED: 'Order Placed',
@@ -191,6 +208,40 @@ async function fetchDeals(token) {
   throw lastError;
 }
 
+async function fetchAccountAddresses(token, deals = []) {
+  const ids = [...new Set(deals.map(accountIdFromDeal).filter(Boolean))];
+  const fields = [
+    'Account_Name',
+    'Billing_Street',
+    'Billing_City',
+    'Billing_State',
+    'Billing_Code',
+    'Billing_Country',
+    'Shipping_Street',
+    'Shipping_City',
+    'Shipping_State',
+    'Shipping_Code',
+    'Shipping_Country',
+  ].join(',');
+  const addresses = new Map();
+
+  await Promise.all(ids.map(async id => {
+    try {
+      const result = await zohoRequest({
+        token,
+        path: `/crm/${zohoCrmVersion}/Accounts/${encodeURIComponent(id)}?fields=${encodeURIComponent(fields)}`,
+      });
+      const account = (result.data || [])[0] || {};
+      const address = addressFromAccount(account);
+      if (address) addresses.set(id, address);
+    } catch {
+      // Keep the driver run available even if the token cannot read Account addresses yet.
+    }
+  }));
+
+  return addresses;
+}
+
 function dealBelongsToClient(deal, contact) {
   return (
     deal.Contact_Name?.id === contact?.id ||
@@ -209,14 +260,15 @@ function deliveredAtFromDeal(deal, description = '') {
   );
 }
 
-function dealToOrder(deal, clientEmail = '') {
+function dealToOrder(deal, clientEmail = '', accountAddresses = new Map()) {
   const description = deal.Description || '';
   const accountName = deal.Account_Name?.name || '';
+  const accountId = accountIdFromDeal(deal);
   const contactName = deal.Contact_Name?.name || '';
   const conNote = firstValue(deal.Con_Note_Number, descriptionField(description, 'Con note'), deal.Deal_Name?.split(' - ').at(-1), deal.id);
   const vendor = firstValue(deal.Pickup_Supplier, lookupName(deal.Vendor_Pick_Up), descriptionField(description, 'Supplier'), descriptionField(description, 'Pickup supplier'), 'Supplier');
   const pickupAddress = firstValue(descriptionField(description, 'Pickup address'), descriptionField(description, 'Supplier address'));
-  const dropAddress = firstValue(descriptionField(description, 'Drop address'), descriptionField(description, 'Delivery address'));
+  const dropAddress = firstValue(descriptionField(description, 'Drop address'), descriptionField(description, 'Delivery address'), accountAddresses.get(accountId));
   const milkRunDate = firstValue(deal.Milk_Run_Date, descriptionField(description, 'Milk run date'));
   const deliveredAt = deliveredAtFromDeal(deal, description);
 
@@ -234,10 +286,11 @@ function dealToOrder(deal, clientEmail = '') {
     requestedPickupDate: milkRunDate,
     preferredTime: '09:00',
     dropLocation: dropAddress,
-    clientId: deal.Contact_Name?.id ? `crm_${deal.Contact_Name.id}` : deal.Account_Name?.id ? `crm_account_${deal.Account_Name.id}` : '',
+    clientId: deal.Contact_Name?.id ? `crm_${deal.Contact_Name.id}` : accountId ? `crm_account_${accountId}` : '',
     clientName: contactName || accountName || 'Client',
     businessName: accountName || contactName || 'Client',
     accountName,
+    accountAddress: accountAddresses.get(accountId) || '',
     clientEmail,
     clientPhone: '',
     status: appStatusFromDealStage(deal.Stage),
@@ -289,10 +342,11 @@ export async function handler(event) {
       dealStage('PAID'),
     ]);
 
-    const orders = (await fetchDeals(token))
+    const visibleDeals = (await fetchDeals(token))
       .filter(deal => !deal.Pipeline || deal.Pipeline === pipeline || deal.Pipeline?.display_value === pipeline || stages.has(deal.Stage))
-      .filter(deal => role !== 'client' || dealBelongsToClient(deal, contact))
-      .map(deal => dealToOrder(deal, role === 'client' ? cleanEmail : ''));
+      .filter(deal => role !== 'client' || dealBelongsToClient(deal, contact));
+    const accountAddresses = await fetchAccountAddresses(token, visibleDeals);
+    const orders = visibleDeals.map(deal => dealToOrder(deal, role === 'client' ? cleanEmail : '', accountAddresses));
 
     return response(200, { orders, mode: 'live' });
   } catch (error) {
