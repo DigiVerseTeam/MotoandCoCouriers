@@ -209,7 +209,13 @@ async function fetchDeals(token) {
 }
 
 async function fetchAccountAddresses(token, deals = []) {
-  const ids = [...new Set(deals.map(accountIdFromDeal).filter(Boolean))];
+  if (process.env.ZOHO_ENABLE_ACCOUNT_ADDRESS_LOOKUP !== 'true') return new Map();
+
+  const dealsMissingDropAddress = deals.filter(deal => {
+    const description = deal.Description || '';
+    return !firstValue(descriptionField(description, 'Drop address'), descriptionField(description, 'Delivery address'));
+  });
+  const ids = [...new Set(dealsMissingDropAddress.map(accountIdFromDeal).filter(Boolean))].slice(0, 10);
   const fields = [
     'Account_Name',
     'Billing_Street',
@@ -225,7 +231,7 @@ async function fetchAccountAddresses(token, deals = []) {
   ].join(',');
   const addresses = new Map();
 
-  await Promise.all(ids.map(async id => {
+  for (const id of ids) {
     try {
       const result = await zohoRequest({
         token,
@@ -237,7 +243,7 @@ async function fetchAccountAddresses(token, deals = []) {
     } catch {
       // Keep the driver run available even if the token cannot read Account addresses yet.
     }
-  }));
+  }
 
   return addresses;
 }
