@@ -2,12 +2,20 @@ const zohoAccountsUrl = (process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho
 const zohoApiDomain = (process.env.ZOHO_API_DOMAIN || 'https://www.zohoapis.com.au').replace(/\/$/, '');
 const zohoCrmVersion = process.env.ZOHO_CRM_VERSION || 'v8';
 const tokenCache = new Map();
-const staffEmails = new Set(['admin@motoandco.com.au', 'gerrard@otimi.com.au', 'jake@motoandco.com.au']);
+const staffEmails = new Set([
+  'admin@motoandco.com.au',
+  'gerrard@otimi.com.au',
+  'jake@motoandco.com.au',
+  'stephen@motoandco.com.au',
+  'gcmtm12@gmail.com',
+]);
 
 const fallbackUsers = [
   { id: 'admin', name: 'Super Admin', email: 'admin@motoandco.com.au', role: 'admin' },
   { id: 'admin_gerrard', name: 'Gerrard Otimi', email: 'gerrard@otimi.com.au', role: 'admin' },
   { id: 'drv1', name: 'Jake Morrow', email: 'jake@motoandco.com.au', role: 'driver' },
+  { id: 'driver_stephen', name: 'Stephen', email: 'stephen@motoandco.com.au', role: 'driver' },
+  { id: 'driver_gmail_test', name: 'Driver Test', email: 'gcmtm12@gmail.com', role: 'driver' },
 ];
 
 function response(statusCode, body) {
@@ -279,7 +287,9 @@ export async function handler(event) {
     const visibleDeals = role === 'client' ? pipelineDeals.filter(deal => dealBelongsToContact(deal, contact)) : pipelineDeals;
     const clients = role === 'client'
       ? [clientFromContact(contact)]
-      : (await fetchContacts(token)).map(clientFromContact);
+      : role === 'admin'
+        ? (await fetchContacts(token)).map(clientFromContact)
+        : [];
 
     const orders = visibleDeals.map(deal => dealToOrder(deal, role === 'client' ? email : ''));
     return response(200, { store: { users: fallbackUsers, clients, orders, deliveries: [] }, mode: 'live' });
