@@ -73,6 +73,15 @@ function findOrderFromCard(card, orders) {
   }) || null;
 }
 
+function findOrderFromRouteRow(row, orders) {
+  const customer = looseKey(textOf(row?.querySelector?.("strong")));
+  const marker = textOf(row?.querySelector?.("em")).split(" - ")[0];
+  const conNote = looseKey(marker);
+  return orders.find(order => conNote && looseKey(order.conNote || order.portalOrderId || order.workItemId || order.id) === conNote)
+    || orders.find(order => customer && looseKey(order.businessName || order.clientName || order.accountName) === customer)
+    || null;
+}
+
 function pickupItemsFromCard(card) {
   const items = { tyres: 0, upTo5kg: 0, fiveTo10kg: 0, returns: 0 };
   card?.querySelectorAll?.(".dw-item")?.forEach(row => {
@@ -159,6 +168,7 @@ export default function DriverPickupOutcomeBridge() {
   const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [futureOpen, setFutureOpen] = useState(false);
   const todayKey = brisbaneDateKey();
 
   async function refreshOrders() {
@@ -172,6 +182,7 @@ export default function DriverPickupOutcomeBridge() {
       const nextActive = isDriverScreen();
       setActive(nextActive);
       if (nextActive) refreshOrders();
+      if (!nextActive) setFutureOpen(false);
     };
     tick();
     const observer = new MutationObserver(tick);
@@ -191,6 +202,51 @@ export default function DriverPickupOutcomeBridge() {
   useEffect(() => {
     if (!active) return;
 
+    function syncNav() {
+      const nav = document.querySelector(".dw-nav");
+      if (!nav) return;
+      let button = nav.querySelector("[data-driver-future-tab='true']");
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "dw-future-tab";
+        button.dataset.driverFutureTab = "true";
+        const deliveryButton = Array.from(nav.querySelectorAll("button")).find(item => textOf(item).toLowerCase().includes("delivery"));
+        nav.insertBefore(button, deliveryButton || null);
+      }
+      button.textContent = futureOrders.length ? `Future Pickups (${futureOrders.length})` : "Future Pickups";
+      button.classList.toggle("active", futureOpen);
+    }
+
+    syncNav();
+    const observer = new MutationObserver(syncNav);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [active, futureOpen, futureOrders.length]);
+
+  useEffect(() => {
+    if (!active) return;
+
+    function handleNavClick(event) {
+      const button = event.target?.closest?.("button");
+      if (!button?.closest?.(".dw-nav")) return;
+      if (button.dataset.driverFutureTab === "true") {
+        event.preventDefault();
+        event.stopPropagation();
+        setFutureOpen(true);
+        refreshOrders();
+        return;
+      }
+      setFutureOpen(false);
+    }
+
+    document.addEventListener("click", handleNavClick, true);
+    return () => document.removeEventListener("click", handleNavClick, true);
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
+
     function syncDom() {
       document.querySelectorAll(".dw-order.legacy-order").forEach(card => {
         const order = findOrderFromCard(card, orders);
@@ -205,6 +261,12 @@ export default function DriverPickupOutcomeBridge() {
           button.textContent = "Abandoned";
           actions.appendChild(button);
         }
+      });
+
+      document.querySelectorAll(".dw-route-row").forEach(row => {
+        const order = findOrderFromRouteRow(row, orders);
+        if (!order) return;
+        row.style.display = orderDateKey(order) > todayKey ? "none" : "";
       });
     }
 
@@ -270,7 +332,7 @@ export default function DriverPickupOutcomeBridge() {
   }, [active, orders]);
 
   async function bringForward(order) {
-    const notes = `Supplier had this future pickup ready early. Driver brought it into the ${displayDate(todayKey)} run.`;
+    const notes = `Supplier had this future pickup picked and packed early. Driver brought it into the ${displayDate(todayKey)} run.`;
     setBusyId(order.id);
     try {
       await updatePickupOutcome(order, {
@@ -286,6 +348,7 @@ export default function DriverPickupOutcomeBridge() {
         broughtForwardAt: new Date().toISOString(),
       });
       setMessage(`${orderLabel(order)} brought into today's run.`);
+      setFutureOpen(false);
       await refreshOrders();
       window.setTimeout(() => window.location.reload(), 500);
     } catch (error) {
@@ -301,19 +364,27 @@ export default function DriverPickupOutcomeBridge() {
     <div className="dw-outcome-bridge">
       <style>{styles}</style>
       {message && <div className="dw-outcome-message" onClick={() => setMessage("")}>{message}</div>}
-      {futureOrders.length > 0 && (
-        <aside className="dw-future-panel">
-          <div className="dw-future-title">Future pickups at supplier</div>
-          <p>Use only when the supplier has tomorrow's/future goods ready and the driver is taking them now.</p>
+      {futureOpen && (
+        <main className="dw-future-screen">
+          <section className="dw-future-titlebar">
+            <div>
+              <h1><span>Future</span> Pickups</h1>
+              <p>Use this only when the driver is physically at the supplier and the warehouse confirms the future pickup is already picked and packed.</p>
+            </div>
+            <button type="button" onClick={() => setFutureOpen(false)}>Close</button>
+          </section>
+
+          {futureOrders.length === 0 && <div className="dw-future-empty">No future pickups are waiting.</div>}
           {Object.entries(futureGroups).map(([vendor, group]) => (
-            <section key={vendor}>
-              <h3>{vendor}</h3>
+            <section className="dw-future-vendor" key={vendor}>
+              <h2>{vendor} Future Pickups ({group.length})</h2>
               {group.map(order => (
                 <div className="dw-future-row" key={order.id}>
                   <div>
                     <strong>{order.conNote || order.portalOrderId || "No con note"}</strong>
                     <span>{order.businessName || order.clientName || "Customer"}</span>
-                    <em>Scheduled {displayDate(orderDateKey(order))}</em>
+                    <em>{order.dropLocation || "No delivery address set"}</em>
+                    <small>Scheduled {displayDate(orderDateKey(order))}</small>
                   </div>
                   <button disabled={busyId === order.id} onClick={() => bringForward(order)}>
                     {busyId === order.id ? "Moving..." : "Bring into today"}
@@ -322,12 +393,12 @@ export default function DriverPickupOutcomeBridge() {
               ))}
             </section>
           ))}
-        </aside>
+        </main>
       )}
     </div>
   );
 }
 
 const styles = `
-.dw-outcome-message{position:fixed;right:18px;bottom:18px;z-index:10020;max-width:360px;background:#e9e2d5;border:1px solid #cfc6b7;border-left:4px solid #d70b3c;color:#15110d;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-family:Barlow,Arial,sans-serif;font-size:14px;cursor:pointer}.dw-future-panel{position:fixed;right:18px;top:82px;z-index:10010;width:min(380px,calc(100vw - 36px));max-height:calc(100vh - 110px);overflow:auto;background:#fff;border:1px solid #cfc6b7;border-top:4px solid #8b6914;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:14px}.dw-future-title{font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;font-weight:900;letter-spacing:1.4px;font-size:16px;color:#15110d}.dw-future-panel p{margin:4px 0 12px;color:#6d6257;font-size:13px}.dw-future-panel h3{font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;font-size:15px;letter-spacing:1px;margin:12px 0 6px;color:#8b6914}.dw-future-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-top:1px solid #e4ddd0;padding:10px 0}.dw-future-row strong{display:block;font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;font-size:18px;line-height:1}.dw-future-row span{display:block;font-size:13px;color:#15110d}.dw-future-row em{display:block;font-style:normal;font-size:12px;color:#6d6257}.dw-future-row button{border:0;background:#8b6914;color:#f3f3e8;padding:8px 10px;font-family:'Barlow Condensed',Arial,sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.4px;cursor:pointer}.dw-future-row button:disabled{opacity:.55;cursor:wait}.dw-abandon{border-color:#d7b5b5!important;color:#8a293b!important}@media(max-width:760px){.dw-future-panel{position:static;width:auto;margin:12px 14px}.dw-outcome-message{left:14px;right:14px;bottom:14px;max-width:none}}
+.dw-outcome-message{position:fixed;right:18px;bottom:18px;z-index:10020;max-width:360px;background:#e9e2d5;border:1px solid #cfc6b7;border-left:4px solid #d70b3c;color:#15110d;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-family:Barlow,Arial,sans-serif;font-size:14px;cursor:pointer}.dw-abandon{border-color:#d7b5b5!important;color:#8a293b!important}.dw-future-screen{position:fixed;left:0;right:0;top:58px;bottom:0;z-index:10005;overflow:auto;background:#f3f3e8;color:#15110d;padding:32px 22px 60px;font-family:Barlow,Arial,sans-serif}.dw-future-screen>*{max-width:1180px;margin-left:auto;margin-right:auto}.dw-future-titlebar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid #cfc6b7;padding-bottom:18px;margin-bottom:18px}.dw-future-titlebar h1{font-family:'Barlow Condensed',Arial,sans-serif;font-size:39px;line-height:1;text-transform:uppercase;margin:0;letter-spacing:.5px;color:#d70b3c}.dw-future-titlebar h1 span{color:#15110d}.dw-future-titlebar p{margin:6px 0 0;color:#6e6459;font-size:15px;max-width:760px}.dw-future-titlebar button{border:1px solid #cfc6b7;background:#e9e2d5;color:#15110d;padding:10px 15px;font-family:'Barlow Condensed',Arial,sans-serif;font-weight:900;text-transform:uppercase;cursor:pointer}.dw-future-empty{background:#fff;border:1px solid #cfc6b7;margin-top:18px;padding:36px;text-align:center;color:#7a6f61;font-style:italic}.dw-future-vendor h2{font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;letter-spacing:3px;font-size:14px;color:#d70b3c;margin:18px 0 10px}.dw-future-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;background:#fff;border:1px solid #cfc6b7;border-left:5px solid #d70b3c;padding:16px 18px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.05)}.dw-future-row strong{display:block;font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;font-size:22px;line-height:1}.dw-future-row span{display:block;font-family:'Barlow Condensed',Arial,sans-serif;text-transform:uppercase;font-size:16px;margin-top:4px}.dw-future-row em{display:block;font-style:normal;font-size:14px;color:#15110d;margin-top:3px}.dw-future-row small{display:block;color:#6d6257;margin-top:4px}.dw-future-row button{border:0;background:#d70b3c;color:#f3f3e8;padding:10px 14px;font-family:'Barlow Condensed',Arial,sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.4px;cursor:pointer}.dw-future-row button:disabled{opacity:.55;cursor:wait}@media(max-width:760px){.dw-outcome-message{left:14px;right:14px;bottom:14px;max-width:none}.dw-future-screen{top:0;padding:18px 14px 44px}.dw-future-titlebar,.dw-future-row{grid-template-columns:1fr;flex-direction:column}.dw-future-titlebar h1{font-size:32px}.dw-future-row button{width:100%}}
 `;
