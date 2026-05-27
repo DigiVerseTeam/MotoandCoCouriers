@@ -28,6 +28,9 @@ function persistDriverLogin(user) {
   try {
     sessionStorage.setItem("motoco_driver_user", JSON.stringify(user));
   } catch {}
+  try {
+    window.dispatchEvent(new CustomEvent("motoco:driver-login", { detail: user }));
+  } catch {}
 }
 
 async function persistVerifiedDriver(response, lastDriverRef) {
