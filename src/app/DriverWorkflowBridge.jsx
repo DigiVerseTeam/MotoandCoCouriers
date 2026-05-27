@@ -255,6 +255,7 @@ export default function DriverWorkflowBridge() {
   const [itemsByOrder, setItemsByOrder] = useState({});
   const [receiverByStop, setReceiverByStop] = useState({});
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
@@ -293,20 +294,28 @@ export default function DriverWorkflowBridge() {
   async function refresh() {
     if (!driver) return;
     const email = driver.email ? `&email=${encodeURIComponent(driver.email)}` : "";
-    const [data, zohoOrders] = await Promise.all([
-      apiJSON(`/workspace?role=driver${email}`),
-      pullZohoOrders().catch(() => []),
+    setLoadError("");
+    const [workspaceResult, zohoOrdersResult] = await Promise.all([
+      apiJSON(`/workspace?role=driver${email}`).catch(error => ({ error })),
+      pullZohoOrders().catch(error => ({ error })),
     ]);
-    const baseStore = data.store || { orders: [], deliveries: [] };
+
+    const workspaceFailed = Boolean(workspaceResult?.error);
+    const zohoOrdersFailed = Boolean(zohoOrdersResult?.error);
+    const zohoOrders = Array.isArray(zohoOrdersResult) ? zohoOrdersResult : [];
+    const baseStore = workspaceResult?.store || { orders: [], deliveries: [] };
     const mergedStore = { ...baseStore, orders: mergeOrders(baseStore.orders || [], zohoOrders) };
     setStore(mergedStore);
+    if (workspaceFailed || zohoOrdersFailed) {
+      setLoadError("Could not load the latest milk run from Zoho. You are still logged in. Try refresh in a moment.");
+    }
     const nextItems = {};
     for (const order of mergedStore.orders || []) nextItems[order.id] = defaultItems(order);
     setItemsByOrder(previous => ({ ...nextItems, ...previous }));
   }
 
   useEffect(() => {
-    refresh().catch(console.error);
+    refresh();
   }, [driver]);
 
   const orders = store?.orders || [];
@@ -454,6 +463,12 @@ export default function DriverWorkflowBridge() {
         </section>
 
         {message && <div className="dw-alert" onClick={() => setMessage("")}>{message}</div>}
+        {loadError && (
+          <div className="dw-alert soft">
+            <span>{loadError}</span>
+            <button className="dw-secondary" type="button" onClick={() => refresh()}>Refresh run</button>
+          </div>
+        )}
         {!store && <div className="dw-empty">Loading driver run...</div>}
 
         {store && tab === "route" && (
