@@ -263,6 +263,14 @@ export default function DriverWorkflowBridge() {
 
   useEffect(() => {
     const originalFetch = window.fetch.bind(window);
+    const onDriverLogin = event => {
+      if (event.detail?.role === "driver") {
+        storeDriver(event.detail);
+        setDriver(event.detail);
+      }
+    };
+    window.addEventListener("motoco:driver-login", onDriverLogin);
+
     window.fetch = async (input, init = {}) => {
       const url = typeof input === "string" ? input : input?.url;
       const method = String(init?.method || "GET").toUpperCase();
@@ -287,6 +295,7 @@ export default function DriverWorkflowBridge() {
 
     return () => {
       window.fetch = originalFetch;
+      window.removeEventListener("motoco:driver-login", onDriverLogin);
       observer.disconnect();
     };
   }, []);
