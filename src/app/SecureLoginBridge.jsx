@@ -11,6 +11,26 @@ function loginCodePath(nextPath) {
   return `/.netlify/functions/login-code/${nextPath}`;
 }
 
+function persistDriverLogin(user) {
+  if (user?.role !== "driver") return;
+  try {
+    sessionStorage.setItem("motoco_driver_user", JSON.stringify(user));
+  } catch {}
+
+  window.setTimeout(() => {
+    if (!document.querySelector(".dw-shell")) {
+      window.location.reload();
+    }
+  }, 350);
+}
+
+async function persistVerifiedDriver(response) {
+  if (!response?.ok) return response;
+  const body = await response.clone().json().catch(() => ({}));
+  persistDriverLogin(body.user);
+  return response;
+}
+
 export default function SecureLoginBridge({ children }) {
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState("");
@@ -34,7 +54,10 @@ export default function SecureLoginBridge({ children }) {
       const isRequestCode = method === "POST" && String(url || "").endsWith("/auth/request-code");
       const isVerifyCode = method === "POST" && String(url || "").endsWith("/auth/verify-code");
       if (isRequestCode) return originalFetch(loginCodePath("request-code"), init);
-      if (isVerifyCode) return originalFetch(loginCodePath("verify-code"), init);
+      if (isVerifyCode) {
+        const verifyRes = await originalFetch(loginCodePath("verify-code"), init);
+        return persistVerifiedDriver(verifyRes);
+      }
       if (!isLogin) return originalFetch(input, init);
 
       let payload = {};
@@ -62,6 +85,8 @@ export default function SecureLoginBridge({ children }) {
       if (!verifyRes.ok) {
         const body = await verifyRes.clone().json().catch(() => ({}));
         setError(body.message || "That code did not work.");
+      } else {
+        await persistVerifiedDriver(verifyRes);
       }
 
       return verifyRes;
