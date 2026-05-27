@@ -11,24 +11,43 @@ function loginCodePath(nextPath) {
   return `/.netlify/functions/login-code/${nextPath}`;
 }
 
+function fallbackDriverStore(user) {
+  return {
+    store: {
+      users: user ? [user] : [],
+      clients: [],
+      orders: [],
+      deliveries: [],
+    },
+    degraded: true,
+  };
+}
+
 function persistDriverLogin(user) {
   if (user?.role !== "driver") return;
   try {
     sessionStorage.setItem("motoco_driver_user", JSON.stringify(user));
   } catch {}
-
-  window.setTimeout(() => {
-    if (!document.querySelector(".dw-shell")) {
-      window.location.reload();
-    }
-  }, 350);
 }
 
-async function persistVerifiedDriver(response) {
+async function persistVerifiedDriver(response, lastDriverRef) {
   if (!response?.ok) return response;
   const body = await response.clone().json().catch(() => ({}));
-  persistDriverLogin(body.user);
+  if (body.user?.role === "driver") {
+    lastDriverRef.current = body.user;
+    persistDriverLogin(body.user);
+  }
   return response;
+}
+
+function isDriverWorkspaceRequest(url, method) {
+  if (method !== "GET") return false;
+  try {
+    const parsed = new URL(String(url || ""), window.location.origin);
+    return parsed.pathname.endsWith("/workspace") && parsed.searchParams.get("role") === "driver";
+  } catch {
+    return false;
+  }
 }
 
 export default function SecureLoginBridge({ children }) {
@@ -36,6 +55,7 @@ export default function SecureLoginBridge({ children }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const resolverRef = useRef(null);
+  const lastDriverRef = useRef(null);
 
   const askForCode = (email, sent) => new Promise((resolve) => {
     resolverRef.current = resolve;
@@ -53,10 +73,22 @@ export default function SecureLoginBridge({ children }) {
       const isLogin = method === "POST" && String(url || "").endsWith("/auth/login");
       const isRequestCode = method === "POST" && String(url || "").endsWith("/auth/request-code");
       const isVerifyCode = method === "POST" && String(url || "").endsWith("/auth/verify-code");
+      const isDriverWorkspace = isDriverWorkspaceRequest(url, method);
+
       if (isRequestCode) return originalFetch(loginCodePath("request-code"), init);
       if (isVerifyCode) {
         const verifyRes = await originalFetch(loginCodePath("verify-code"), init);
-        return persistVerifiedDriver(verifyRes);
+        return persistVerifiedDriver(verifyRes, lastDriverRef);
+      }
+      if (isDriverWorkspace) {
+        try {
+          const workspaceRes = await originalFetch(input, init);
+          if (workspaceRes.ok || !lastDriverRef.current) return workspaceRes;
+          return jsonResponse(200, fallbackDriverStore(lastDriverRef.current));
+        } catch (error) {
+          if (lastDriverRef.current) return jsonResponse(200, fallbackDriverStore(lastDriverRef.current));
+          throw error;
+        }
       }
       if (!isLogin) return originalFetch(input, init);
 
@@ -86,7 +118,7 @@ export default function SecureLoginBridge({ children }) {
         const body = await verifyRes.clone().json().catch(() => ({}));
         setError(body.message || "That code did not work.");
       } else {
-        await persistVerifiedDriver(verifyRes);
+        await persistVerifiedDriver(verifyRes, lastDriverRef);
       }
 
       return verifyRes;
