@@ -26,6 +26,27 @@ function pathOf(url) {
   }
 }
 
+function storedDriver() {
+  try {
+    if (!window.sessionStorage) return null;
+    return JSON.parse(window.sessionStorage.getItem("motoco_driver_user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function storeDriver(user) {
+  try {
+    window.sessionStorage?.setItem("motoco_driver_user", JSON.stringify(user));
+  } catch {}
+}
+
+function clearStoredDriver() {
+  try {
+    window.sessionStorage?.removeItem("motoco_driver_user");
+  } catch {}
+}
+
 function normaliseStatus(status) {
   return status === "Pending" ? "Order Placed" : String(status || "Order Placed");
 }
@@ -228,9 +249,7 @@ function useSignature(activeKey) {
 }
 
 export default function DriverWorkflowBridge() {
-  const [driver, setDriver] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem("motoco_driver_user") || "null"); } catch { return null; }
-  });
+  const [driver, setDriver] = useState(() => storedDriver());
   const [store, setStore] = useState(null);
   const [tab, setTab] = useState("route");
   const [itemsByOrder, setItemsByOrder] = useState({});
@@ -250,7 +269,7 @@ export default function DriverWorkflowBridge() {
       if (method === "POST" && pathOf(url).includes("/verify-code") && response.ok) {
         const body = await response.clone().json().catch(() => ({}));
         if (body.user?.role === "driver") {
-          sessionStorage.setItem("motoco_driver_user", JSON.stringify(body.user));
+          storeDriver(body.user);
           setDriver(body.user);
         }
       }
@@ -416,7 +435,7 @@ export default function DriverWorkflowBridge() {
         <div className="dw-user">
           <strong>{driver.name || "Driver"}</strong>
           <span>Driver</span>
-          <button onClick={() => { sessionStorage.removeItem("motoco_driver_user"); window.location.reload(); }}>Logout</button>
+          <button onClick={() => { clearStoredDriver(); window.location.reload(); }}>Logout</button>
         </div>
       </header>
 
