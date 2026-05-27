@@ -9,6 +9,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/live/auth/request-code"
+  to = "/.netlify/functions/login-code/request-code"
+  status = 200
+
+[[redirects]]
+  from = "/api/live/auth/verify-code"
+  to = "/.netlify/functions/login-code/verify-code"
+  status = 200
+
+[[redirects]]
   from = "/api/live/zoho/crm/deal"
   to = "/.netlify/functions/crm-deal"
   status = 200
