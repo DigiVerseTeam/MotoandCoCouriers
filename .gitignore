@@ -1,0 +1,20 @@
+.next/
+.next-ci/
+.next-preflight/
+.next-preflight-build*/
+.next-verify/
+.next-verify-*/
+node_modules/
+out/
+dist/
+.env
+.env*.local
+*.tsbuildinfo
+
+# Local source archives stay out of the software repo unless explicitly approved.
+*.zip
+*.docx
+*.xlsx
+*.pdf
+!docs/**/*.md
+!public/**/*.png
