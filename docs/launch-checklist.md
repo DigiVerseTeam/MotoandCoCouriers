@@ -47,7 +47,7 @@ This checklist is staged around confirmed source material and known platform dir
 ## Runtime release
 
 - [x] Confirm user roles.
-- [x] Add BOAS v1.8/SOP-IAM-03 two-tier Super Admin/Admin provisioning model.
+- [x] Add BOAS v1.9/SOP-IAM-03 two-tier Super Admin/Admin provisioning model.
 - [ ] Bootstrap first Super Admin from approved display name, email, and approval reference.
 - [ ] Confirm booking workflow fields and rules.
 - [ ] Confirm tracking statuses.

@@ -23,7 +23,7 @@ It is not a claim that production launch is complete. It separates locally execu
 - Remaining gaps: `docs/build-gaps.md`.
 - Production blockers: `docs/production-blocker-register.md`.
 - HCM boundary correction: `docs/hcm-boundary.md` and `hcm-extract/`.
-- BOAS v1.8 / SOP-IAM-03 Super Admin and provisioning update from `super admin boas.zip`.
+- BOAS v1.9 / SOP-IAM-03 Super Admin, provisioning, migration-boundary, pending-user RLS, and bootstrap-risk update from `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`.
 - Source-backed rules: `docs/release-one-source-map.md` and `docs/release-one-rules.md`.
 - Launch and platform status: `docs/architecture.md`, `docs/open-questions.md`, and `docs/launch-checklist.md`.
 
@@ -60,7 +60,7 @@ It is not a claim that production launch is complete. It separates locally execu
 
 - `npm.cmd run verify:local` passed on 2026-06-19, covering source-backed requirements, platform environment reporting, launch readiness reporting, Supabase migration guardrails, Next route type generation, TypeScript, and production build with isolated `.next-preflight-build` output.
 - `npm.cmd run typecheck` passed on 2026-06-19.
-- `npm.cmd run verify:requirements` passed on 2026-06-19 with 89 source-backed checks.
+- `npm.cmd run verify:requirements` passed on 2026-06-19 with 90 source-backed checks.
 - `npm.cmd run verify:live` passed 32 production checks on 2026-06-19, then failed only on missing approved client/supplier/driver/vehicle records and missing active `super_admin`, `driver`, `client_ops`, and `client_billing` role records. The first Admin role remains active in production and is not silently promoted.
 - `npm.cmd run verify:launch` remains a read-only local env report; GitHub, Supabase, and Vercel are connected externally, while approved launch master data remains open.
 - `npm.cmd run verify:production` failed as expected on 2026-06-19 because production platform and live-tooling blockers remain open.
@@ -68,12 +68,13 @@ It is not a claim that production launch is complete. It separates locally execu
 - `npm.cmd run verify:migrations` passed on 2026-06-19 with 35 source-backed checks.
 - Production build passed with isolated local preflight output; final post-cleanup `typecheck`, `verify:requirements`, and `verify:migrations` also passed.
 - Browser smoke on `http://127.0.0.1:3001/admin` passed after `next.config.mjs` allowed the `127.0.0.1` dev origin: Admin login issued and verified a local code, the Access tab opened, Receiver showed as `ACT-INT-004`, and SOP-IAM-03 provisioning displayed with Admin creation hidden from a non-Super-Admin session.
+- BOAS v1.9 source diff was reviewed on 2026-06-19. It confirmed the existing SOP-IAM-03 implementation, added `R-IAM-004` / `R-IAM-005`, recorded `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008`, and did not introduce a new runtime workflow.
 - Draft GitHub Actions CI exists at `.github/workflows/runtime-ci.yml`; it is not GitHub-run evidence until the repository is connected.
 - Browser verification exists for the main actor workflows in `docs/local-build-report.md`, including UJ-DRV-001 S5 run-close confirmation/action-items, SOP-DEL-04 price-discrepancy sign-off, SOP-DEL-04 delivery sign-off proof, SOP-PUP-02 supplier-stop closeout, Policy #3 / Policy #4 / Policy #5 privacy request, Policy #21 / Policy #7 data-use, Policy #6 NDB response, Policy #20 AI draft review, Policy #24 month-end financial reconciliation, Policy #27 WHS hazard No Pickup/Admin follow-up, CAP-MCL-001 Supplier Approval Gate, Policy #15 goods acceptance, Policy #22 driver availability notice/late/contingency and dispatch-block, CAP-MCL-002 Run Planning Monitor and APP-ADM-002 exception queueing, SOP-RUN-04 source-correct future-pickup Bring Forward, SOP-DEL-01 grouped delivery stop workflow, Admin client supplier-access reason/evidence workflow, Day 8 auto-generated overdue notice evidence, Driver/Admin workflow-rule notice checks, Village CRM Rhythm Monitor/CRM Review workflow, Billing Contact to Admin investigation outcome workflow, Policy #14 cancellation workflow, Policy #8 failed-delivery/redelivery-fee workflow, Policy #16 vendor pickup standards workflow, Policy #18 required-field/SLA/remedy/outcome workflow, SOP-DEL-05 proof-driven delivery completion, SOP-BIL-04 fresh invoice approval/dispatch, the public website/app-entry handoff check, the in-app reset confirmation smoke check, and the post-cleanup route smoke check for `/`, `/legal`, and `/booking`.
 
 ## Blockers That Must Not Be Invented
 
-- First Super Admin display name, email address, and approval reference are not yet supplied.
+- First Super Admin display name, email address, and approval reference are not yet supplied; BOAS v1.9 `R-IAM-005` says `bootstrap-super-admin.mjs` must not be run until those values are approved.
 - Vercel is deployed, but full production actor testing remains blocked until first Super Admin approval, approved launch master data, and active Driver/Client Ops/Client Billing role records exist.
 - Notification provider and delivery channels for activation, booking, invoice, overdue, suspension, reinstatement, termination, delivery updates, and Admin alerts.
 - Policy #23 repeated non-payment termination remains blocked until debt recovery escalation and write-off thresholds are confirmed.

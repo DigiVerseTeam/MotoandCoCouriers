@@ -86,7 +86,7 @@ Confirmed Supabase requirements:
 - Suppliers must be stored in an administrator-managed table.
 - Customers/workshops must be stored in a CRM-controlled table or tables.
 - Pricing rules must be stored in a `price_rules` table.
-- BOAS v1.8 / `SOP-IAM-03` requires a two-tier Super Admin/Admin model: first Super Admin is bootstrapped server-side, Super Admin creates Admin users, Admin creates Client Ops/Client Billing/Driver users, and the browser must never receive the `service_role` key.
+- BOAS v1.9 / `SOP-IAM-03` requires a two-tier Super Admin/Admin model: first Super Admin is bootstrapped server-side, Super Admin creates Admin users, Admin creates Client Ops/Client Billing/Driver users, pending profiles do not pass RLS role checks, and the browser must never receive the `service_role` key.
 - Policy #24 revenue reconciliation must be stored in Admin-managed financial reconciliation tables, not hard-coded reporting text.
 - Policy #20 AI draft governance is stored as Admin-managed `ai_draft_reviews` evidence only; live AI provider, model, prompt registry, and outbound send transport are not part of the confirmed architecture yet.
 - Policy #21 / Policy #7 data-use governance is stored as Admin-managed `data_use_reviews` evidence for operational access, exports, Digiverse production access, third-party sharing, marketing use, blocked acceptable-use decisions, breach escalation, and APP-PRV-004 audit.

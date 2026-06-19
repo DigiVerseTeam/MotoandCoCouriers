@@ -86,6 +86,7 @@ requireMarkers("supabase/migrations/202606180018_role_access_rls.sql", [
 
 requireMarkers("supabase/migrations/202606190034_super_admin_provisioning.sql", [
   "SOP-IAM-03 Admin Master Data & User Provisioning",
+  "BOAS v1.8/v1.9",
   "super_admin",
   "client_ops",
   "public.is_super_admin()",

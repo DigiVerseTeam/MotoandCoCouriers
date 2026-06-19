@@ -110,7 +110,7 @@ These record the connected Vercel production deployment.
 | RLS coverage | 40 public base tables exist and all 40 have RLS enabled |
 | Production env | Vercel production has app env labels, site URL, Supabase URL, project ref, region, publishable key, and sensitive server key |
 
-Update 2026-06-19: migrations through `202606190034_super_admin_provisioning.sql` are applied. `202606190034` adds the BOAS v1.8/SOP-IAM-03 two-tier role model, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, API table privileges, private `delivery-proof` bucket, price rules, and active role records. It passed 32 checks, then failed only because the first Super Admin, approved client/supplier/driver/vehicle records, and active Driver, Client Ops, and Client Billing users do not exist yet.
+Update 2026-06-19: migrations through `202606190034_super_admin_provisioning.sql` are applied. `202606190034` adds the BOAS v1.9/SOP-IAM-03 two-tier role model, `client_ops` alias handling, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, API table privileges, private `delivery-proof` bucket, price rules, and active role records. It passed 32 checks, then failed only because the first Super Admin, approved client/supplier/driver/vehicle records, and active Driver, Client Ops, and Client Billing users do not exist yet.
 
 ## Not Environment Variables
 

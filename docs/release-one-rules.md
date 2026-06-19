@@ -1,6 +1,6 @@
 # Release One Rules
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 Source for this pass: direct user answers on 2026-06-18, with policy/SOP/control references preserved as supplied.
 
@@ -51,7 +51,7 @@ Confirmed launch roles:
 - Super Admin: `ACT-INT-003`.
 - Receiver: `ACT-INT-004`, no login.
 
-Confirmed access model from BOAS v1.8 / `SOP-IAM-03`:
+Confirmed access model from BOAS v1.9 / `SOP-IAM-03`:
 
 - Super Admin is one person at launch and is bootstrapped manually by Digiverse server-side.
 - Super Admin creates/removes Admin users inside the app after bootstrap.

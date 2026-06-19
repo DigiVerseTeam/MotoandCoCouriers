@@ -313,3 +313,13 @@ Decision: Use the BOAS v1.8 two-tier access model. `ACT-INT-003` is Super Admin,
 Source: User-provided `super admin boas.zip` files on 2026-06-19: `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.png`, `UJ-ADM-001-AdminJourney.xlsx`, and `UJ-ADM-001-AdminJourney.json`.
 
 Notes: The first Super Admin is not created inside the app. It requires an approved display name, email address, and approval reference, then `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`. Existing Admin `gerrard@otimi.com.au` remains an Admin unless explicitly approved as first Super Admin.
+
+### 2026-06-19 - BOAS v1.9 source alignment
+
+Status: Confirmed source update; no new runtime surface identified.
+
+Decision: Treat `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` as the current BOAS source. v1.9 confirms migration `202606190034` as the active boundary, confirms canonical `client_ops` with `client_operational` preserved as an alias, confirms the pending-profile RLS block, and keeps first Super Admin bootstrap values as an open blocker. No additional app feature was introduced by the v1.9 diff.
+
+Source: User supplied `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` on 2026-06-19.
+
+Notes: v1.9 adds `R-IAM-004`, `R-IAM-005`, `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008`, and deployment evidence `MIG-202606190034`. The source still says not to run `bootstrap-super-admin.mjs` until display name, email, and approval reference are approved.

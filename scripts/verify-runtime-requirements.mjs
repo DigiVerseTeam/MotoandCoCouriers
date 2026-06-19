@@ -858,10 +858,25 @@ requireText(
     "Zoho Books integration is not confirmed",
     "Privacy Owner is unnamed",
     "SOP-IAM-03",
+    "R-IAM-004",
+    "R-IAM-005",
     "Public secure tracking-token model is not confirmed",
     "Production invoice PDF/email rendering",
   ],
   "local gaps remain explicit"
+);
+
+requireText(
+  "docs/source-index.md",
+  [
+    "MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx",
+    "R-IAM-004",
+    "R-IAM-005",
+    "CFG-MCL-ACCESS-005",
+    "MIG-202606190034",
+    "bootstrap-super-admin.mjs",
+  ],
+  "BOAS v1.9 source update is recorded"
 );
 
 requireText(

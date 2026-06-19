@@ -378,7 +378,7 @@ export const roleAccessRules: RoleAccessRule[] = [
     canDo: "Approve billing groups, manage supplier/customer/driver/vehicle master data, resolve exceptions, suspend/reinstate accounts, and create Client Ops, Client Billing, and Driver users.",
     cannotDo: "Cannot create or remove Admin or Super Admin users, self-approve pricing changes, edit code, environment variables, secrets, or deployment settings as routine business operation.",
     accessNotes: "Created by Super Admin through SOP-IAM-03. Production changes and support access must be audited.",
-    source: "BOAS v1.8 Sheet 05 Roles & Access; UJ-ADM-001; SOP-IAM-03"
+    source: "BOAS v1.9 Sheet 05 Roles & Access; UJ-ADM-001; SOP-IAM-03"
   },
   {
     roleId: "ACT-INT-003",
@@ -386,7 +386,7 @@ export const roleAccessRules: RoleAccessRule[] = [
     canDo: "Create/remove Admin users, perform second pricing approval gate, and do everything Admin can do.",
     cannotDo: "Cannot be created inside the app. Routine business data changes still need source-backed approval evidence.",
     accessNotes: "One person at launch, bootstrapped manually by Digiverse server-side before in-app Admin provisioning begins.",
-    source: "BOAS v1.8 Sheet 05 Roles & Access; SOP-IAM-03"
+    source: "BOAS v1.9 Sheet 05 Roles & Access; SOP-IAM-03"
   },
   {
     roleId: "ACT-INT-004",
@@ -394,7 +394,7 @@ export const roleAccessRules: RoleAccessRule[] = [
     canDo: "Provide receiver name and sign delivery confirmation on driver device.",
     cannotDo: "No login. Cannot access app, authorise account/order changes, or view records.",
     accessNotes: "Name/signature are linked to delivery proof, not a standing user account.",
-    source: "BOAS v1.8 Sheet 05 Roles & Access"
+    source: "BOAS v1.9 Sheet 05 Roles & Access"
   },
   {
     roleId: "ACT-PRM-001",

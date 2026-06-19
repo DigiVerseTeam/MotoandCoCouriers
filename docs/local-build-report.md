@@ -282,7 +282,7 @@ Browser checks:
 Build result:
 
 - Local preflight passed with `NEXT_DIST_DIR=.next-preflight-build-assignmentfixture npm.cmd run verify:local`.
-- Runtime requirement verification passed with 89 source-backed checks.
+- Runtime requirement verification passed with 90 source-backed checks.
 - Platform environment contract report passed locally; GitHub, Supabase live project, and Vercel values remain open.
 - Launch readiness report passed locally as a read-only report; Git CLI, Supabase CLI, Vercel CLI, GitHub values, Supabase values, Vercel values, and local Git repository initialisation remain open.
 - Strict production readiness gate failed as expected with `npm.cmd run verify:production`; it reported missing GitHub values, Supabase values, Vercel values, Git CLI, Supabase CLI, Vercel CLI, and local Git repository initialisation.
@@ -297,7 +297,7 @@ Build result:
 - Supabase RLS/storage migration execution is not locally proven; live Supabase migration and Storage policy testing remain required.
 - Authenticated account-notice browser checks passed for Admin, Client Billing Contact, and Client Operational Contact; typecheck, production build, source scans, and pre-login route checks passed.
 - Browser dev logs retained duplicate-key warnings from the pre-fix supplier queue test in the earlier `127.0.0.1` tab; the duplicate exception ID issue was fixed and verified on fresh `localhost` state.
-- BOAS v1.8 / SOP-IAM-03 Admin Access smoke verified on `http://127.0.0.1:3001/admin` after adding `allowedDevOrigins: ["127.0.0.1"]` to `next.config.mjs`: local Admin login issued and verified a one-use code, the Access tab opened, Receiver displayed as `ACT-INT-004`, the SOP-IAM-03 provisioning panel was visible, and Admin-user creation was hidden for the non-Super-Admin session as required.
+- BOAS v1.9 / SOP-IAM-03 Admin Access smoke verified on `http://127.0.0.1:3001/admin` after adding `allowedDevOrigins: ["127.0.0.1"]` to `next.config.mjs`: local Admin login issued and verified a one-use code, the Access tab opened, Receiver displayed as `ACT-INT-004`, the SOP-IAM-03 provisioning panel was visible, and Admin-user creation was hidden for the non-Super-Admin session as required. v1.9 also records `R-IAM-004` pending-user RLS blocking and `R-IAM-005` bootstrap approval gating as current controls.
 - Development Fast Refresh warning appeared during editing only.
 
 Audit result:
