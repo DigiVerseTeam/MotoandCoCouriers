@@ -1,5 +1,6 @@
 .next/
 .next-ci/
+.next-ui-local/
 .next-preflight/
 .next-preflight-build*/
 .next-verify/

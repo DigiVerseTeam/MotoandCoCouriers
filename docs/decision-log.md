@@ -333,3 +333,13 @@ Decision: Upgrade existing production Admin `gerrard@otimi.com.au` to the first 
 Source: User instruction in Codex chat on 2026-06-20: `gerrard@otimi.com.au can be upgraded to sauper admin`.
 
 Notes: Production Supabase verification confirmed profile role `super_admin`, active access assignment `super_admin` / `ACT-INT-003`, one `master_data_changes` audit row, and one `runtime_records` evidence row using approval reference `User approved gerrard@otimi.com.au Super Admin upgrade in Codex chat - 2026-06-20`. `npm.cmd run verify:live` now fails only on missing approved client/supplier/driver/vehicle master data and missing active Driver, Client Ops, and Client Billing role records.
+
+### 2026-06-20 - Pilot production master data and live actor tests
+
+Status: Confirmed for pilot scope; full launch roster still incomplete.
+
+Decision: Load the user-approved V1 pilot records into production Supabase and use them for live actor boundary/workflow testing before adding the full launch roster.
+
+Source: User supplied the pilot customer, supplier, address, pickup window, driver, vehicle, expiry dates, Client Ops email, Client Billing email, and Driver email in Codex chat on 2026-06-20.
+
+Notes: Pilot import evidence was recorded in `production_seed_imports` with approval reference `Approved V1 pilot test data - user supplied in Codex chat - 2026-06-20`. The pilot set is `Gold Coast Motorcycle Tyres And Mechanical`, `Link International`, driver `Peter Price` / `gcmtm12@gmail.com`, vehicle `957OC8`, Client Ops `gcmtm_parts@outlook.com`, and Client Billing `josephine@otimi.com.au`. Vercel production Supabase env values were repaired and redeployed; the Super Admin provisioning API returned 200 for a valid Supabase bearer session. Live actor testing verified Super Admin provisioning API access, Client Ops booking, Client Billing booking denial, Super Admin/Admin dispatch, Driver assigned-run/pickup/out-for-delivery/POD Storage upload/runtime proof/run close, Client Billing invoice visibility and billing dispute, Client Ops delivery dispute, Admin exception queue, and Receiver/no-login runtime denial. Migration `202606200001_retention_queue_trigger_security.sql` was applied after live testing found retention queue side-effects were blocked by RLS. Fake immutable `delivery_proof` rows were not inserted because real proof evidence is retained for 7 years under Policy #5.

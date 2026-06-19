@@ -69,10 +69,11 @@ This checklist is staged around confirmed source material and known platform dir
 - [x] Load source-backed Policy #9 pricing seed.
 - [x] Add live Supabase runtime bridge and API table privileges.
 - [x] Add server-side SOP-IAM-03 user provisioning route for Admin-managed launch users.
-- [ ] Enter or import approved production master data for customers, suppliers, drivers, vehicles, and role records.
-- [ ] Run live actor journey tests.
+- [x] Enter/import approved V1 pilot production master data and role records.
+- [ ] Enter/import remaining full launch production master data and role records.
+- [x] Run live actor journey tests for V1 pilot records.
 - [x] Complete Supabase Auth role binding for first Super Admin.
-- [ ] Complete Supabase Auth role binding for Driver, Client Ops, and Client Billing.
+- [x] Complete Supabase Auth role binding for pilot Driver, Client Ops, and Client Billing.
 - [x] Confirm storage needs for POD assets.
 - [x] Confirm Row Level Security model for launch roles.
 - [ ] Confirm backup and retention requirements.

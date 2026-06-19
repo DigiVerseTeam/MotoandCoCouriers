@@ -32,7 +32,7 @@ function isUuid(value: unknown) {
 
 function serviceClient(): AdminSupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return null;
   return createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -83,7 +83,7 @@ async function callerContext(request: NextRequest, supabase: AdminSupabaseClient
   const { data: assignments, error: assignmentError } = await supabase
     .from("access_role_assignments")
     .select("application_role, status")
-    .eq("profile_id", authData.user.id);
+    .eq("profile_id", profile.id);
   if (assignmentError) throw assignmentError;
 
   const roles = new Set<string>();
