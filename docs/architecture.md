@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Confirmed stack direction
 
@@ -16,7 +16,7 @@ Last updated: 2026-06-19
 - Product routes currently load the logistics software shell rather than documentation pages.
 - A public website route exists at `/website`. It uses confirmed brand assets and placeholder-safe content only.
 - Supabase migrations exist under `supabase/migrations`.
-- The deployed Vercel app has the live Supabase runtime bridge available for production-labelled sessions. First Super Admin bootstrap, approved launch master data, and actor workflow evidence are still required before it can be treated as fully live-backed.
+- The deployed Vercel app has the live Supabase runtime bridge available for production-labelled sessions. The first Super Admin is bootstrapped; approved launch master data, non-admin launch role records, and actor workflow evidence are still required before it can be treated as fully live-backed.
 - Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; newly added MCP tools may require a fresh Codex session before they are callable in-thread.
 - Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is not currently available on PATH in the local shell used by Codex.
 - GitHub repository `DigiVerseTeam/MotoandCoCouriers` is connected; V1 is merged to `main`, and the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
@@ -86,7 +86,7 @@ Confirmed Supabase requirements:
 - Suppliers must be stored in an administrator-managed table.
 - Customers/workshops must be stored in a CRM-controlled table or tables.
 - Pricing rules must be stored in a `price_rules` table.
-- BOAS v1.9 / `SOP-IAM-03` requires a two-tier Super Admin/Admin model: first Super Admin is bootstrapped server-side, Super Admin creates Admin users, Admin creates Client Ops/Client Billing/Driver users, pending profiles do not pass RLS role checks, and the browser must never receive the `service_role` key.
+- BOAS v1.9 / `SOP-IAM-03` requires a two-tier Super Admin/Admin model: first Super Admin is bootstrapped server-side, Super Admin creates Admin users, Admin creates Client Ops/Client Billing/Driver users, pending profiles do not pass RLS role checks, and the browser must never receive the `service_role` key. Production now has `gerrard@otimi.com.au` bootstrapped as the first Super Admin under the 2026-06-20 user approval reference.
 - Policy #24 revenue reconciliation must be stored in Admin-managed financial reconciliation tables, not hard-coded reporting text.
 - Policy #20 AI draft governance is stored as Admin-managed `ai_draft_reviews` evidence only; live AI provider, model, prompt registry, and outbound send transport are not part of the confirmed architecture yet.
 - Policy #21 / Policy #7 data-use governance is stored as Admin-managed `data_use_reviews` evidence for operational access, exports, Digiverse production access, third-party sharing, marketing use, blocked acceptable-use decisions, breach escalation, and APP-PRV-004 audit.

@@ -840,8 +840,8 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "First Super Admin, approved production master data, and non-admin Auth role records are missing",
-    "Vercel production deployment must be redeployed and smoke-tested after the live bridge commit",
+    "Approved production master data and non-admin Auth role records are missing",
+    "Vercel production deployment must be smoke-tested after each production change",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
     "Public tracking model is unconfirmed",

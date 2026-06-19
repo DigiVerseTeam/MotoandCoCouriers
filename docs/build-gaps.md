@@ -1,6 +1,6 @@
 # Build Gaps
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 These are the gaps that remain after the local end-to-end build. They are not blockers to local prototype use, but they are blockers or risks for production deployment.
 
@@ -45,10 +45,10 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 - Supabase migrations now include a source-backed RLS policy layer from BOAS Sheet 05 for Client Ops, Client Billing, Driver, Admin, Super Admin, and Receiver no-login access boundaries.
 - Supabase Auth/live runtime wiring is now implemented in the app shell: production mode sends Supabase login links, resolves `profiles` plus `access_role_assignments`, hydrates workflow objects from Supabase, syncs role-allowed domain writes through `runtime_records`, and uploads POD signatures to the private `delivery-proof` bucket. Local testing-code login remains only as the non-live fallback.
 - The live Supabase migration `202606190032_live_runtime_records.sql` is applied in production. It creates the RLS-protected `runtime_records` bridge and `production_seed_imports` evidence table without seeding unapproved customers, suppliers, drivers, vehicles, or users.
-- The SOP-IAM-03 production migration `202606190034_super_admin_provisioning.sql` is applied. It adds Super Admin, Client Ops, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields without creating the first Super Admin.
+- The SOP-IAM-03 production migration `202606190034_super_admin_provisioning.sql` is applied. It adds Super Admin, Client Ops, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields. `gerrard@otimi.com.au` is bootstrapped in production as the first Super Admin under the 2026-06-20 user approval reference.
 - `scripts/bootstrap-super-admin.mjs` defines the one-time SOP-IAM-03 Super Admin bootstrap path and requires display name, email address, and approval reference. `scripts/import-production-master-data.mjs` and `docs/production-master-data.template.json` remain available for approved bulk launch records, but routine master data and user provisioning now belongs in the app after Super Admin bootstrap.
-- BOAS v1.9 adds `R-IAM-004` and `R-IAM-005`: pending profiles must not pass RLS role checks through active assignments, and the Super Admin bootstrap script must not be run without Owner-approved display name, email, and approval reference.
-- `npm.cmd run verify:live` now reaches the linked production Supabase database and passes structural checks for the live bridge, RLS policies, private POD bucket, price rules, and SOP-IAM-03 migration. It correctly fails until first Super Admin, approved launch master data, and active Driver, Client Ops, and Client Billing role records exist.
+- BOAS v1.9 adds `R-IAM-004` and `R-IAM-005`: pending profiles must not pass RLS role checks through active assignments, and the Super Admin bootstrap must not be run without Owner-approved display name, email, and approval reference. The first bootstrap approval is now recorded; future Super Admin creation remains outside the app.
+- `npm.cmd run verify:live` now reaches the linked production Supabase database and passes structural checks for the live bridge, RLS policies, private POD bucket, price rules, SOP-IAM-03 migration, active Admin, and active Super Admin. It correctly fails until approved launch master data and active Driver, Client Ops, and Client Billing role records exist.
 - Product routes including `/journey`, `/accountability`, `/admin`, `/driver`, `/portal`, `/tracking`, `/booking`, and `/login` now load the software shell rather than documentation pages.
 
 ## Platform Access
@@ -62,7 +62,7 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 
 ## Supabase Production Readiness
 
-- A first-pass RLS policy migration exists for the confirmed BOAS Sheet 05 role boundaries and has been executed against the live Supabase project. The app now resolves Supabase Auth users against `profiles` and `access_role_assignments`, but actor-by-actor policy tests remain blocked until approved launch users and role records are imported.
+- A first-pass RLS policy migration exists for the confirmed BOAS Sheet 05 role boundaries and has been executed against the live Supabase project. The app now resolves Supabase Auth users against `profiles` and `access_role_assignments`, and the first Super Admin exists, but actor-by-actor policy tests remain blocked until approved launch users and role records are imported or created through the app.
 - Policy #21 still needs production review alongside live Supabase Auth identity binding before RLS can be treated as final. The local Policy #21 / Policy #7 data-use register now records and blocks source-defined unacceptable use, but production Auth/RLS, Digiverse production access logging, and data-processing/security-schedule evidence remain untested.
 - Policy #6 NDB response cannot become Active until the Privacy Owner (ACT-TECH-002) is named. Local Admin intake and containment evidence exists; legal eligibility decisions and production notification execution remain blocked.
 - Supabase project metadata confirms region `ap-southeast-2`; any broader Digiverse infrastructure/data-residency statement for legal/privacy copy remains open.

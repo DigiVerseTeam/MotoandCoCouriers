@@ -18,9 +18,9 @@ The browser Supabase client is intentionally blocked when `NEXT_PUBLIC_APP_ENV` 
 
 This implements the confirmed release-control rule that preview deployments must
 not connect to production Supabase. GitHub, Vercel, Supabase region, production
-keys, migrations, private POD bucket, the initial pricing seed, and the live
-runtime bridge are connected. Approved launch master data and actor-by-actor
-journey evidence remain open.
+keys, migrations, private POD bucket, the initial pricing seed, the live
+runtime bridge, and the first Super Admin bootstrap are connected. Approved
+launch master data and actor-by-actor journey evidence remain open.
 
 ## Local Commands
 
@@ -56,10 +56,10 @@ Supabase.
 Use `npm.cmd run verify:live` after Supabase is linked to confirm the production
 live bridge, private POD bucket, price rules, Supabase API table privileges,
 seed import evidence, and active Super Admin/Admin/Driver/Client Ops/Client
-Billing role records. The first Admin has been bootstrapped in production, but
-the first Super Admin still needs the SOP-IAM-03 bootstrap values. The verifier
-is expected to fail until the Super Admin exists and approved launch customer,
-supplier, driver, vehicle, and client/driver role records are present.
+Billing role records. The first Admin and first Super Admin have been
+bootstrapped in production. The verifier is expected to fail until approved
+launch customer, supplier, driver, vehicle, and client/driver role records are
+present.
 
 Use `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`
 only for the one-time SOP-IAM-03 Super Admin bootstrap after those three values

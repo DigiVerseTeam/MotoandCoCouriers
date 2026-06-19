@@ -306,20 +306,30 @@ Notes: The app now sends Supabase login links in production mode, resolves appro
 
 ### 2026-06-19 - BOAS v1.8 SOP-IAM-03 Super Admin provisioning
 
-Status: Production migration applied; first Super Admin bootstrap values pending.
+Status: Production migration applied; first Super Admin bootstrapped on 2026-06-20.
 
 Decision: Use the BOAS v1.8 two-tier access model. `ACT-INT-003` is Super Admin, Receiver is renumbered to `ACT-INT-004`, Super Admin creates/removes Admin users, Admin creates Client Ops, Client Billing, and Driver users, and all login-user provisioning must run server-side with audit evidence. Customer/workshop, supplier, driver, vehicle, and login-user master data must be Admin-manageable rather than hard-coded.
 
 Source: User-provided `super admin boas.zip` files on 2026-06-19: `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.png`, `UJ-ADM-001-AdminJourney.xlsx`, and `UJ-ADM-001-AdminJourney.json`.
 
-Notes: The first Super Admin is not created inside the app. It requires an approved display name, email address, and approval reference, then `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`. Existing Admin `gerrard@otimi.com.au` remains an Admin unless explicitly approved as first Super Admin.
+Notes: The first Super Admin is not created inside the app. It requires an approved display name, email address, and approval reference, then `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`. On 2026-06-20 the user explicitly approved upgrading existing Admin `gerrard@otimi.com.au` to first Super Admin.
 
 ### 2026-06-19 - BOAS v1.9 source alignment
 
 Status: Confirmed source update; no new runtime surface identified.
 
-Decision: Treat `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` as the current BOAS source. v1.9 confirms migration `202606190034` as the active boundary, confirms canonical `client_ops` with `client_operational` preserved as an alias, confirms the pending-profile RLS block, and keeps first Super Admin bootstrap values as an open blocker. No additional app feature was introduced by the v1.9 diff.
+Decision: Treat `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` as the current BOAS source. v1.9 confirms migration `202606190034` as the active boundary, confirms canonical `client_ops` with `client_operational` preserved as an alias, confirms the pending-profile RLS block, and required first Super Admin bootstrap values before in-app provisioning could begin. No additional app feature was introduced by the v1.9 diff.
 
 Source: User supplied `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` on 2026-06-19.
 
-Notes: v1.9 adds `R-IAM-004`, `R-IAM-005`, `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008`, and deployment evidence `MIG-202606190034`. The source still says not to run `bootstrap-super-admin.mjs` until display name, email, and approval reference are approved.
+Notes: v1.9 adds `R-IAM-004`, `R-IAM-005`, `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008`, and deployment evidence `MIG-202606190034`. The source says not to run `bootstrap-super-admin.mjs` until display name, email, and approval reference are approved; the 2026-06-20 approval closes that first bootstrap blocker only.
+
+### 2026-06-20 - First Super Admin bootstrap
+
+Status: Confirmed in production.
+
+Decision: Upgrade existing production Admin `gerrard@otimi.com.au` to the first Super Admin for the V1 launch path.
+
+Source: User instruction in Codex chat on 2026-06-20: `gerrard@otimi.com.au can be upgraded to sauper admin`.
+
+Notes: Production Supabase verification confirmed profile role `super_admin`, active access assignment `super_admin` / `ACT-INT-003`, one `master_data_changes` audit row, and one `runtime_records` evidence row using approval reference `User approved gerrard@otimi.com.au Super Admin upgrade in Codex chat - 2026-06-20`. `npm.cmd run verify:live` now fails only on missing approved client/supplier/driver/vehicle master data and missing active Driver, Client Ops, and Client Billing role records.

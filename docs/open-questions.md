@@ -1,6 +1,6 @@
 # Open Questions
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Launch decisions
 
@@ -102,7 +102,7 @@ Driver legal classification, agreements, verification evidence, disciplinary/rem
 - Production-first V1 path is confirmed; local/preview builds still must not connect to production Supabase.
 - Production Supabase project ref is `fhrqfrhqopicekaiibyj`; project metadata confirms region `ap-southeast-2`.
 - Vercel team/account is confirmed as `DigiVerse` / `digi-verse`; project `motoandcocouriers`; production URL `https://motoandcocouriers.vercel.app`.
-- First Super Admin bootstrap still needs approved display name, email address, and approval reference; BOAS v1.9 `R-IAM-005` confirms the script must not be run without those approved values.
+- First Super Admin bootstrap is complete for `gerrard@otimi.com.au` under the 2026-06-20 user approval reference; live UI testing still needs a real Supabase login session.
 - Supabase workflow data wiring, Auth identity role binding, and live actor RLS tests still need approved launch records.
 - Who owns production secrets?
 

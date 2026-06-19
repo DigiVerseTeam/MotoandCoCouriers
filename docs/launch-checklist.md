@@ -1,6 +1,6 @@
 # Launch Checklist
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 This checklist is staged around confirmed source material and known platform direction. It is not a final project plan.
 
@@ -48,7 +48,7 @@ This checklist is staged around confirmed source material and known platform dir
 
 - [x] Confirm user roles.
 - [x] Add BOAS v1.9/SOP-IAM-03 two-tier Super Admin/Admin provisioning model.
-- [ ] Bootstrap first Super Admin from approved display name, email, and approval reference.
+- [x] Bootstrap first Super Admin from approved display name, email, and approval reference.
 - [ ] Confirm booking workflow fields and rules.
 - [ ] Confirm tracking statuses.
 - [x] Confirm POD requirements.
@@ -71,7 +71,8 @@ This checklist is staged around confirmed source material and known platform dir
 - [x] Add server-side SOP-IAM-03 user provisioning route for Admin-managed launch users.
 - [ ] Enter or import approved production master data for customers, suppliers, drivers, vehicles, and role records.
 - [ ] Run live actor journey tests.
-- [ ] Complete Supabase Auth role binding for Super Admin, Driver, Client Ops, and Client Billing.
+- [x] Complete Supabase Auth role binding for first Super Admin.
+- [ ] Complete Supabase Auth role binding for Driver, Client Ops, and Client Billing.
 - [x] Confirm storage needs for POD assets.
 - [x] Confirm Row Level Security model for launch roles.
 - [ ] Confirm backup and retention requirements.

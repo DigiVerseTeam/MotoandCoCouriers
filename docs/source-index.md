@@ -1,6 +1,6 @@
 # Source Index
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 This index records what has been identified in the local workspace. It is not a full content extraction.
 
@@ -172,7 +172,7 @@ Confirmed extraction notes:
 
 - BOAS v1.8 adds `ACT-INT-003` Super Admin and renumbers Receiver to `ACT-INT-004`.
 - `SOP-IAM-03` confirms Admin master data and user provisioning for customers/workshops, suppliers, drivers, vehicles, and login users.
-- First Super Admin bootstrap requires display name, email address, and approval reference before in-app provisioning can begin.
+- First Super Admin bootstrap requires display name, email address, and approval reference before in-app provisioning can begin. On 2026-06-20, the user approved `gerrard@otimi.com.au` and the production bootstrap evidence was recorded.
 
 ### `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`
 
@@ -180,12 +180,12 @@ Location observed: `C:\Users\User\OneDrive\Documents\Moto and Co Couriers\MotoCo
 
 Confirmed extraction notes from v1.9 diff against v1.8:
 
-- Sheet 00 records the Codex build-session boundary: migration `202606190034_super_admin_provisioning.sql` is the latest migration boundary; `client_operational` is preserved as an alias for canonical `client_ops`; pending-user RLS blocking was tightened; `bootstrap-super-admin.mjs` is ready but not run.
+- Sheet 00 records the Codex build-session boundary: migration `202606190034_super_admin_provisioning.sql` is the latest migration boundary; `client_operational` is preserved as an alias for canonical `client_ops`; pending-user RLS blocking was tightened; `bootstrap-super-admin.mjs` was the approved one-time bootstrap path.
 - Sheet 07 adds `R-IAM-004`: pending users must not pass RLS through an active assignment. Control is the `profile.status = active` check in RLS helper logic.
 - Sheet 07 adds `R-IAM-005`: `bootstrap-super-admin.mjs` must not be run without the approved display name, email address, and approval reference.
 - Sheet 10 adds `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008` for the latest migration boundary, role alias, pending-user RLS block, and Super Admin bootstrap script.
 - Sheet 11 adds deployment evidence `MIG-202606190034`.
-- Sheet 13 records the v1.9 source crosswalk and confirms the outstanding blocker remains first Super Admin bootstrap values.
+- Sheet 13 records the v1.9 source crosswalk and originally confirmed first Super Admin bootstrap values as outstanding; that blocker is now closed by the 2026-06-20 approval and production bootstrap.
 
 ## Extraction still needed
 

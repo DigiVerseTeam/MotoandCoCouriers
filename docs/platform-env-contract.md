@@ -1,10 +1,10 @@
 # Platform Environment Contract
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
-This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub, Vercel, Supabase project metadata, production keys, migrations, private POD Storage bucket, initial pricing seed evidence, the live runtime bridge, and SOP-IAM-03 server-side provisioning are now recorded here. First Super Admin bootstrap, approved launch master data, and actor-by-actor journey evidence remain open.
+This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub, Vercel, Supabase project metadata, production keys, migrations, private POD Storage bucket, initial pricing seed evidence, the live runtime bridge, SOP-IAM-03 server-side provisioning, and the first Super Admin bootstrap are now recorded here. Approved launch master data, non-admin launch role records, and actor-by-actor journey evidence remain open.
 
-Production-first V1 is now the confirmed platform direction. The Vercel production deployment is live, and the Supabase schema is deployed. The UI runtime now has Supabase Auth, role resolution, RLS-protected live persistence, private POD upload wiring, and a server-side provisioning API, but it is not launch-complete until the first Super Admin is bootstrapped, approved launch users/master data are entered or imported, and the live actor journeys pass.
+Production-first V1 is now the confirmed platform direction. The Vercel production deployment is live, and the Supabase schema is deployed. The UI runtime now has Supabase Auth, role resolution, RLS-protected live persistence, private POD upload wiring, a server-side provisioning API, and first Super Admin bootstrap evidence, but it is not launch-complete until approved launch users/master data are entered or imported and the live actor journeys pass.
 
 ## Local Command
 
@@ -109,8 +109,11 @@ These record the connected Vercel production deployment.
 | Pricing seed | 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows loaded from `supabase/seed/release_one_seed.sql` |
 | RLS coverage | 40 public base tables exist and all 40 have RLS enabled |
 | Production env | Vercel production has app env labels, site URL, Supabase URL, project ref, region, publishable key, and sensitive server key |
+| First Super Admin | `gerrard@otimi.com.au` active as `super_admin` / `ACT-INT-003`; approval reference `User approved gerrard@otimi.com.au Super Admin upgrade in Codex chat - 2026-06-20` |
 
-Update 2026-06-19: migrations through `202606190034_super_admin_provisioning.sql` are applied. `202606190034` adds the BOAS v1.9/SOP-IAM-03 two-tier role model, `client_ops` alias handling, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, API table privileges, private `delivery-proof` bucket, price rules, and active role records. It passed 32 checks, then failed only because the first Super Admin, approved client/supplier/driver/vehicle records, and active Driver, Client Ops, and Client Billing users do not exist yet.
+Update 2026-06-19: migrations through `202606190034_super_admin_provisioning.sql` are applied. `202606190034` adds the BOAS v1.9/SOP-IAM-03 two-tier role model, `client_ops` alias handling, profile status/link fields, pending-profile RLS blocking, and provisioning audit fields. At that point `npm.cmd run verify:live` reached production and confirmed the live bridge structure, RLS policies, API table privileges, private `delivery-proof` bucket, price rules, and active role records, then failed because the first Super Admin, approved client/supplier/driver/vehicle records, and active Driver, Client Ops, and Client Billing users did not exist yet.
+
+Update 2026-06-20: first Super Admin bootstrap is complete for `gerrard@otimi.com.au`. `npm.cmd run verify:live` now fails only because approved client/supplier/driver/vehicle records and active Driver, Client Ops, and Client Billing users do not exist yet.
 
 ## Not Environment Variables
 
