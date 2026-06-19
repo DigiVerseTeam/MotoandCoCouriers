@@ -84,6 +84,15 @@ requireMarkers("supabase/migrations/202606180018_role_access_rls.sql", [
   "delivery_proof_objects_read_by_linked_role",
 ], "BOAS Sheet 05 role access RLS draft");
 
+requireMarkers("supabase/migrations/202606190034_super_admin_provisioning.sql", [
+  "SOP-IAM-03 Admin Master Data & User Provisioning",
+  "super_admin",
+  "client_ops",
+  "public.is_super_admin()",
+  "p.status = 'active'",
+  "service_role key must never be exposed to the browser",
+], "SOP-IAM-03 two-tier Admin provisioning");
+
 requireMarkers("supabase/migrations/202606180020_delivery_proof_storage_contract.sql", [
   "delivery-proof",
   "deliveries/{delivery_id}",
@@ -248,7 +257,7 @@ requireMarkers("supabase/migrations/202606190032_live_runtime_records.sql", [
   "driver_profile_id = auth.uid()",
   "public.is_admin()",
   "No production customers, suppliers, drivers, or vehicles are seeded",
-], "V1 live runtime records and approved seed import gate");
+], "V1 live runtime records and approved master-data evidence gate");
 
 requireMarkers("supabase/migrations/202606190015_run_planning_monitor_cap_mcl002.sql", [
   "CAP-MCL-002",

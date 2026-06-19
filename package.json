@@ -13,7 +13,8 @@
     "verify:migrations": "node scripts/verify-supabase-migrations.mjs",
     "verify:platform": "node scripts/check-platform-env.mjs",
     "verify:production": "node scripts/production-readiness.mjs",
-    "verify:requirements": "node scripts/verify-runtime-requirements.mjs"
+    "verify:requirements": "node scripts/verify-runtime-requirements.mjs",
+    "bootstrap:super-admin": "node scripts/bootstrap-super-admin.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",

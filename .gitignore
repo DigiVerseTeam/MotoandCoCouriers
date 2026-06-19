@@ -10,6 +10,7 @@ dist/
 .env
 .env*.local
 *.tsbuildinfo
+.tmp-dev-*.log
 
 # Local source archives stay out of the software repo unless explicitly approved.
 *.zip

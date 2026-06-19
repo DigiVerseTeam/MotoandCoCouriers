@@ -9,7 +9,7 @@
 --   POD capture for assigned deliveries, and own run-close evidence.
 -- - ACT-INT-002 Admin / Business Owner: full platform access to operational,
 --   billing, CRM, master-data, exception, audit, and access-governance records.
--- - ACT-INT-003 Receiver: no login; receiver data is captured only as POD.
+-- - ACT-INT-004 Receiver: no login; receiver data is captured only as POD.
 --
 -- Still not final without live Supabase/Auth testing, project-region confirmation,
 -- and any production RPC/service-role decisions for public registration and

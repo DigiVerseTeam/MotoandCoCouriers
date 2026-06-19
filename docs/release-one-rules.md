@@ -48,7 +48,16 @@ Confirmed launch roles:
 - Client: `ACT-CRM-001a/b`.
 - Driver: `ACT-INT-001`.
 - Admin: `ACT-INT-002`.
-- Receiver: `ACT-INT-003`, no login.
+- Super Admin: `ACT-INT-003`.
+- Receiver: `ACT-INT-004`, no login.
+
+Confirmed access model from BOAS v1.8 / `SOP-IAM-03`:
+
+- Super Admin is one person at launch and is bootstrapped manually by Digiverse server-side.
+- Super Admin creates/removes Admin users inside the app after bootstrap.
+- Admin creates Client Ops, Client Billing, and Driver users inside the app.
+- Login-user provisioning must run through a server-side API/Edge Function using `service_role`; the `service_role` key must never be exposed in the browser.
+- Admin can add/update customer/workshop, supplier, driver, vehicle, and login-user master data with required approval/audit evidence.
 
 Exceptions:
 

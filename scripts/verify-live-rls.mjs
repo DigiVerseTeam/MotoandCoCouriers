@@ -107,6 +107,18 @@ requireText(
 );
 
 requireText(
+  "supabase/migrations/202606190034_super_admin_provisioning.sql",
+  [
+    "SOP-IAM-03 Admin Master Data & User Provisioning",
+    "super_admin",
+    "client_ops",
+    "public.is_super_admin()",
+    "service_role key must never be exposed to the browser",
+  ],
+  "SOP-IAM-03 Super Admin provisioning migration"
+);
+
+requireText(
   "supabase/migrations/202606180020_delivery_proof_storage_contract.sql",
   [
     "delivery-proof",
@@ -200,16 +212,31 @@ if (priceRuleCount < 1) failures.push("price_rules: no pricing records found");
 countSql("select count(*)::int as count from public.runtime_records;", "runtime_records live bridge");
 const appliedImports = countSql(
   "select count(*)::int as count from public.production_seed_imports where status = 'applied';",
-  "approved production master-data imports"
+  "approved production master-data import evidence"
 );
+const requiredMasterDataTypes = ["client", "supplier", "driver", "vehicle"];
+for (const recordType of requiredMasterDataTypes) {
+  const count = countSql(
+    `select count(*)::int as count from public.runtime_records where record_type = '${recordType}';`,
+    `approved production master-data record ${recordType}`
+  );
+  if (count < 1) {
+    failures.push(`approved production master-data record ${recordType}: missing approved launch record`);
+  }
+}
 if (appliedImports < 1) {
-  failures.push("approved production master-data imports: none applied, so live actor journey tests are blocked");
+  passes.push("approved production master-data import evidence: no bulk import applied; SOP-IAM-03 app-managed records are allowed when the required runtime records exist");
 }
 
-const requiredRoles = ["admin", "driver", "client_operational", "client_billing"];
+const requiredRoles = ["super_admin", "admin", "driver", "client_ops", "client_billing"];
 for (const role of requiredRoles) {
   const count = countSql(
-    `select count(*)::int as count from public.access_role_assignments where application_role = '${role}' and status = 'active';`,
+    `select count(*)::int as count
+     from public.access_role_assignments ara
+     join public.profiles p on p.id = ara.profile_id
+     where ara.application_role = '${role}'
+       and ara.status = 'active'
+       and p.status = 'active';`,
     `active access role ${role}`
   );
   if (count < 1) failures.push(`active access role ${role}: missing approved launch record`);

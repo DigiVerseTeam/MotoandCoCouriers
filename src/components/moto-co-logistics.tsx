@@ -8,11 +8,14 @@ import {
   canSyncDomainForRole,
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
+  listLiveProvisionedUsers,
   onLiveAuthStateChange,
+  provisionLiveUser,
   requestLiveMagicLink,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
   syncLiveRuntimeDomain,
+  updateLiveProvisionedUserStatus,
   uploadLiveDeliveryProof,
 } from "@/lib/live-runtime";
 
@@ -1869,6 +1872,25 @@ function runDateAdjustmentLabel(reason) {
 }
 function accessKey(role, subjectId, email) { return `${role}:${subjectId}:${String(email || "").toLowerCase()}`; }
 function accessBadgeClass(status) { return status === "Revoked" ? "b-cancelled" : status === "Review Due" ? "b-pending" : "b-done"; }
+const SOP_IAM_03_ROLES = [
+  { value: "client_ops", label: "Client Operational", actorCode: "ACT-CRM-001a" },
+  { value: "client_billing", label: "Client Billing", actorCode: "ACT-CRM-001b" },
+  { value: "driver", label: "Driver", actorCode: "ACT-INT-001" },
+  { value: "admin", label: "Admin", actorCode: "ACT-INT-002" },
+];
+function sopIamRoleLabel(value) {
+  if (value === "super_admin") return "Super Admin";
+  return SOP_IAM_03_ROLES.find(role => role.value === value)?.label || value || "User";
+}
+function sopIamActorCode(value) {
+  if (value === "super_admin") return "ACT-INT-003";
+  return SOP_IAM_03_ROLES.find(role => role.value === value)?.actorCode || "SOP-IAM-03";
+}
+function liveUserStatusBadge(status) {
+  if (status === "active") return "b-done";
+  if (status === "revoked" || status === "inactive") return "b-cancelled";
+  return "b-pending";
+}
 const ACCESS_REVIEW_TYPES = [
   { value: "annual", label: "Annual" },
   { value: "role_change", label: "Role Change" },
@@ -4762,7 +4784,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
 }
 
 // ─── ADMIN PORTAL ─────────────────────────────────────────────────────────────
-function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, priceRules, exceptions, audit, masterDataChanges, invoices, billingNotices, operationalNotices = [], proofs, exceptionAlerts, driverAvailability, financialReconciliations = [], aiDrafts = [], dataBreachIncidents = [], dataUseRecords = [], privacyRequests = [], accessRecords, runClosures = [], onUpdateOrder, onUpdateOrders, onUpdateClient, onSaveSupplier, onArchiveSupplier, onSavePriceRule, onSaveVehicle, onSaveDriver, onCreateInvoice, onUpdateInvoice, onRecordBillingNotice, onSaveFinancialReconciliation, onCreateAiDraft, onUpdateAiDraft, onSaveDataBreachIncident, onSaveDataUseRecord, onSavePrivacyRequest, onSaveAccessChange, onCreateSupplierReviewException, onCreateSupplierPickupStandardsException, onCreatePricingReviewException, onCreateUnmatchedBillingException, onCreateRunPlanningException, onAcknowledgeException, onUpdateException, onAcknowledgeExceptionAlert, onSaveDriverAvailability, onLogout }) {
+function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, clients, drivers, vehicles = [], suppliers, priceRules, exceptions, audit, masterDataChanges, invoices, billingNotices, operationalNotices = [], proofs, exceptionAlerts, driverAvailability, financialReconciliations = [], aiDrafts = [], dataBreachIncidents = [], dataUseRecords = [], privacyRequests = [], accessRecords, runClosures = [], onUpdateOrder, onUpdateOrders, onUpdateClient, onSaveSupplier, onArchiveSupplier, onSavePriceRule, onSaveVehicle, onSaveDriver, onCreateInvoice, onUpdateInvoice, onRecordBillingNotice, onSaveFinancialReconciliation, onCreateAiDraft, onUpdateAiDraft, onSaveDataBreachIncident, onSaveDataUseRecord, onSavePrivacyRequest, onSaveAccessChange, onCreateSupplierReviewException, onCreateSupplierPickupStandardsException, onCreatePricingReviewException, onCreateUnmatchedBillingException, onCreateRunPlanningException, onAcknowledgeException, onUpdateException, onAcknowledgeExceptionAlert, onSaveDriverAvailability, onLogout }) {
   function blankSupplierDraft() {
     return {
       name: "",
@@ -4923,6 +4945,19 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const [accessAction, setAccessAction] = useState("");
   const [accessReviewType, setAccessReviewType] = useState("annual");
   const [accessReason, setAccessReason] = useState("");
+  const [liveProvisionedUsers, setLiveProvisionedUsers] = useState([]);
+  const [liveProvisioningStatus, setLiveProvisioningStatus] = useState("");
+  const [liveProvisioningBusy, setLiveProvisioningBusy] = useState(false);
+  const [userProvisionDraft, setUserProvisionDraft] = useState({
+    displayName: "",
+    email: "",
+    role: "client_ops",
+    linkId: "",
+    approvalReference: "",
+    reason: "",
+  });
+  const [provisionStatusAction, setProvisionStatusAction] = useState(null);
+  const [provisionStatusReason, setProvisionStatusReason] = useState("");
   const [activationTarget, setActivationTarget] = useState(null);
   const [activationReview, setActivationReview] = useState({
     b2bConfirmed: false,
@@ -4976,6 +5011,20 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const activeAccessCount = (accessRecords || []).filter(record => record.status !== "Revoked").length;
   const revokedAccessCount = (accessRecords || []).filter(record => record.status === "Revoked").length;
   const staffReviewDueCount = (accessRecords || []).filter(record => record.reviewDue).length;
+  const isLiveRuntime = Boolean(liveRuntimeStatus?.enabled);
+  const isSuperAdminSession = currentSession?.role === "super_admin" || currentSession?.user?.accessRole === "super_admin";
+  const assignableProvisionRoles = SOP_IAM_03_ROLES.filter(role => isSuperAdminSession || role.value !== "admin");
+  const selectedProvisionRole = userProvisionDraft.role;
+  const provisionLinkOptions = selectedProvisionRole === "driver"
+    ? (drivers || []).map(driver => ({ id: driver.id, label: driver.name || driver.email || driver.id, actorId: "", driverId: driver.id }))
+    : ["client_ops", "client_billing"].includes(selectedProvisionRole)
+      ? (clients || []).map(client => ({ id: client.id, label: client.name || client.email || client.id, actorId: client.actorId || "", accountId: client.id }))
+      : [];
+  const liveUserRows = (liveProvisionedUsers || []).map(profile => ({
+    ...profile,
+    roleLabel: sopIamRoleLabel(profile.role),
+    accessRows: profile.accessRows || [],
+  }));
   const operationalNoticeRows = (operationalNotices || []).slice().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const operationalNoticeClients = new Set(operationalNoticeRows.map(notice => notice.clientId).filter(Boolean)).size;
   const providerNotConfiguredCount = operationalNoticeRows.filter(notice => notice.externalDeliveryStatus === "provider_not_configured").length;
@@ -5184,6 +5233,113 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
 
   function showWorkflowNotice(message) {
     setWorkflowNotice(String(message || "A workflow rule blocked this action."));
+  }
+
+  async function refreshLiveProvisionedUsers() {
+    if (!isLiveRuntime) return;
+    setLiveProvisioningStatus("Loading live SOP-IAM-03 users.");
+    try {
+      const payload = await listLiveProvisionedUsers();
+      const assignmentsByProfile = new Map();
+      (payload.accessRoleAssignments || []).forEach(row => {
+        const rows = assignmentsByProfile.get(row.profile_id) || [];
+        rows.push(row);
+        assignmentsByProfile.set(row.profile_id, rows);
+      });
+      setLiveProvisionedUsers((payload.profiles || []).map(profile => ({
+        ...profile,
+        accessRows: assignmentsByProfile.get(profile.id) || [],
+      })));
+      setLiveProvisioningStatus("Live SOP-IAM-03 users loaded.");
+    } catch (error) {
+      setLiveProvisioningStatus(error?.message || "Could not load live provisioned users.");
+    }
+  }
+
+  useEffect(() => {
+    if (view !== "access" || !isLiveRuntime) return;
+    refreshLiveProvisionedUsers();
+  }, [view, isLiveRuntime, currentSession?.user?.profileId]);
+
+  function resetUserProvisionDraft(nextRole = userProvisionDraft.role) {
+    setUserProvisionDraft({
+      displayName: "",
+      email: "",
+      role: nextRole,
+      linkId: "",
+      approvalReference: "",
+      reason: "",
+    });
+  }
+
+  async function submitProvisionUser() {
+    if (!isLiveRuntime) return showWorkflowNotice("SOP-IAM-03 user provisioning requires live Supabase runtime.");
+    const displayName = userProvisionDraft.displayName.trim();
+    const email = userProvisionDraft.email.trim();
+    const role = userProvisionDraft.role;
+    const approvalReference = userProvisionDraft.approvalReference.trim();
+    const reason = userProvisionDraft.reason.trim() || approvalReference;
+    if (!displayName) return showWorkflowNotice("SOP-IAM-03 requires a display name.");
+    if (!email) return showWorkflowNotice("SOP-IAM-03 requires an email address.");
+    if (!approvalReference) return showWorkflowNotice("SOP-IAM-03 requires an approval reference.");
+    if (role === "admin" && !isSuperAdminSession) return showWorkflowNotice("Only Super Admin can create Admin users.");
+    const selectedLink = provisionLinkOptions.find(item => item.id === userProvisionDraft.linkId);
+    if (["client_ops", "client_billing", "driver"].includes(role) && !selectedLink) {
+      return showWorkflowNotice("SOP-IAM-03 requires the login user to be linked to the relevant customer or driver record.");
+    }
+    setLiveProvisioningBusy(true);
+    setLiveProvisioningStatus("Creating pending user through server-side provisioning API.");
+    try {
+      await provisionLiveUser({
+        displayName,
+        email,
+        role,
+        actorCode: sopIamActorCode(role),
+        actorId: selectedLink?.actorId || "",
+        accountId: selectedLink?.accountId || "",
+        driverId: selectedLink?.driverId || "",
+        approvalReference,
+        reason,
+      });
+      setLiveProvisioningStatus(`${sopIamRoleLabel(role)} user created as Pending. Activate after account/profile/role checks are complete.`);
+      resetUserProvisionDraft(role);
+      await refreshLiveProvisionedUsers();
+    } catch (error) {
+      setLiveProvisioningStatus(error?.message || "SOP-IAM-03 provisioning failed.");
+    } finally {
+      setLiveProvisioningBusy(false);
+    }
+  }
+
+  function openProvisionStatusAction(profile, status) {
+    setProvisionStatusAction({ profile, status });
+    setProvisionStatusReason(status === "active" ? "SOP-IAM-03 activation confirmed" : "SOP-IAM-04 access status review");
+  }
+
+  async function confirmProvisionStatusAction() {
+    const profile = provisionStatusAction?.profile;
+    const status = provisionStatusAction?.status;
+    if (!profile || !status) return;
+    if (!isLiveRuntime) return showWorkflowNotice("Live Supabase runtime required.");
+    const reason = provisionStatusReason.trim();
+    if (!reason) return showWorkflowNotice("SOP-IAM-03/SOP-IAM-04 requires a reason or approval reference.");
+    setLiveProvisioningBusy(true);
+    try {
+      await updateLiveProvisionedUserStatus({
+        profileId: profile.id,
+        status,
+        reason,
+        approvalReference: reason,
+      });
+      setLiveProvisioningStatus(`${profile.email || profile.display_name} status updated to ${status}.`);
+      setProvisionStatusAction(null);
+      setProvisionStatusReason("");
+      await refreshLiveProvisionedUsers();
+    } catch (error) {
+      setLiveProvisioningStatus(error?.message || "SOP-IAM-03 status update failed.");
+    } finally {
+      setLiveProvisioningBusy(false);
+    }
   }
 
   function localAiDraftTextForTarget(target) {
@@ -7755,7 +7911,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
             <div className="card">
               <div className="card-title" style={{ marginBottom: ".45rem" }}>Receiver Access Model</div>
               <div className="meta">
-                <span>ACT-INT-003</span>
+                <span>ACT-INT-004</span>
                 <span>No login</span>
                 <span>POD signature only</span>
               </div>
@@ -7763,6 +7919,69 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 Receiver remains no-login as confirmed. Receiver name and signature are captured only inside the driver POD workflow.
               </div>
             </div>
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <div className="card-title">SOP-IAM-03 User Provisioning</div>
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
+                    Server-side provisioning API only. Admin creates Client Ops, Client Billing, and Driver users. Super Admin creates Admin users.
+                  </div>
+                </div>
+                <span className={`badge ${isLiveRuntime ? "b-done" : "b-pending"}`}>{isLiveRuntime ? "Live API" : "Live Required"}</span>
+              </div>
+              <div className="grid2" style={{ marginTop: ".9rem" }}>
+                <div className="f"><label>Display Name *</label><input value={userProvisionDraft.displayName} onChange={e => setUserProvisionDraft(prev => ({ ...prev, displayName: e.target.value }))} placeholder="Approved user name" /></div>
+                <div className="f"><label>Email *</label><input value={userProvisionDraft.email} onChange={e => setUserProvisionDraft(prev => ({ ...prev, email: e.target.value }))} placeholder="user@example.com" /></div>
+                <div className="f"><label>Role</label><select value={userProvisionDraft.role} onChange={e => resetUserProvisionDraft(e.target.value)}>
+                  {assignableProvisionRoles.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
+                </select></div>
+                {provisionLinkOptions.length > 0 && (
+                  <div className="f"><label>{selectedProvisionRole === "driver" ? "Driver Record" : "Customer / Workshop"}</label><select value={userProvisionDraft.linkId} onChange={e => setUserProvisionDraft(prev => ({ ...prev, linkId: e.target.value }))}>
+                    <option value="">Select record</option>
+                    {provisionLinkOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                  </select></div>
+                )}
+              </div>
+              <div className="f"><label>Approval Reference *</label><input value={userProvisionDraft.approvalReference} onChange={e => setUserProvisionDraft(prev => ({ ...prev, approvalReference: e.target.value }))} placeholder="Owner approved launch access - 2026-06-19" /></div>
+              <div className="f"><label>Reason / Evidence</label><textarea value={userProvisionDraft.reason} onChange={e => setUserProvisionDraft(prev => ({ ...prev, reason: e.target.value }))} placeholder="Why this user needs this role; defaults to approval reference." /></div>
+              <button className="btn b-teal" onClick={submitProvisionUser} disabled={liveProvisioningBusy || !isLiveRuntime}>
+                {liveProvisioningBusy ? <><span className="spin" />Provisioning...</> : "Create Pending User"}
+              </button>
+              {liveProvisioningStatus && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".55rem" }}>{liveProvisioningStatus}</div>}
+              {!isSuperAdminSession && (
+                <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+                  Admin users are hidden for this session because SOP-IAM-03 requires Super Admin for Admin provisioning.
+                </div>
+              )}
+            </div>
+            {isLiveRuntime && (
+              <div className="card">
+                <div className="card-head">
+                  <div className="card-title">Live Profiles</div>
+                  <button className="btn b-ghost b-sm" onClick={refreshLiveProvisionedUsers} disabled={liveProvisioningBusy}>Refresh</button>
+                </div>
+                {liveUserRows.length === 0 ? (
+                  <div className="empty">No live profiles returned for this Admin session.</div>
+                ) : liveUserRows.map(profile => (
+                  <div key={profile.id} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".7rem", marginTop: ".7rem" }}>
+                    <div className="card-head" style={{ marginBottom: ".35rem" }}>
+                      <div className="card-title" style={{ fontSize: ".92rem" }}>{profile.display_name || profile.email}</div>
+                      <span className={`badge ${liveUserStatusBadge(profile.status)}`}>{profile.status || "unknown"}</span>
+                    </div>
+                    <div className="meta">
+                      <span>{sopIamRoleLabel(profile.role)}</span>
+                      <span>{profile.email || "Email not stored"}</span>
+                      {profile.account_id && <span>Account {profile.account_id}</span>}
+                      {profile.driver_id && <span>Driver {profile.driver_id}</span>}
+                    </div>
+                    <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginTop: ".55rem" }}>
+                      {profile.status !== "active" && <button className="btn b-acc b-sm" onClick={() => openProvisionStatusAction(profile, "active")} disabled={liveProvisioningBusy}>Activate</button>}
+                      {profile.status !== "revoked" && <button className="btn b-red b-sm" onClick={() => openProvisionStatusAction(profile, "revoked")} disabled={liveProvisioningBusy}>Revoke</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {(accessRecords || []).map(record => (
               <div className="card" key={record.key}>
                 <div className="card-head">
@@ -9461,6 +9680,27 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 {accessAction === "revoke" ? "Confirm Revoke" : accessAction === "restore" ? "Confirm Restore" : "Confirm Review"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setAccessTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {provisionStatusAction && (
+          <div className="overlay" onClick={() => { setProvisionStatusAction(null); setProvisionStatusReason(""); }}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h3>{provisionStatusAction.status === "active" ? "Activate User" : "Revoke User"} - {provisionStatusAction.profile?.display_name || provisionStatusAction.profile?.email}</h3>
+              <div className="meta" style={{ marginBottom: ".7rem" }}>
+                <span>{sopIamRoleLabel(provisionStatusAction.profile?.role)}</span>
+                <span>{provisionStatusAction.profile?.email}</span>
+                <span>Current: {provisionStatusAction.profile?.status}</span>
+              </div>
+              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
+                SOP-IAM-03/SOP-IAM-04 requires reason or approval evidence before a live user status changes.
+              </div>
+              <div className="f"><label>Reason / Approval Reference *</label><textarea value={provisionStatusReason} onChange={e => setProvisionStatusReason(e.target.value)} placeholder="Activation approval, access review, departure, role change..." /></div>
+              <button className={`btn ${provisionStatusAction.status === "active" ? "b-acc" : "b-red"}`} onClick={confirmProvisionStatusAction} disabled={liveProvisioningBusy}>
+                {liveProvisioningBusy ? <><span className="spin" />Saving...</> : provisionStatusAction.status === "active" ? "Confirm Activate" : "Confirm Revoke"}
+              </button>
+              <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => { setProvisionStatusAction(null); setProvisionStatusReason(""); }}>Cancel</button>
             </div>
           </div>
         )}
@@ -11771,7 +12011,7 @@ export default function App() {
       ) : session.role === "driver" ? (
         <DriverPortal user={session.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
       ) : (
-        <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
+        <AdminPortal currentSession={session} liveRuntimeStatus={liveRuntimeStatus} orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
       )}
     </div>
   );

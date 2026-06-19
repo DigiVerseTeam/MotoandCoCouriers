@@ -55,15 +55,21 @@ Supabase.
 
 Use `npm.cmd run verify:live` after Supabase is linked to confirm the production
 live bridge, private POD bucket, price rules, Supabase API table privileges,
-seed import evidence, and active Admin/Driver/Client/Billing role records. The
-first Admin has been bootstrapped in production; the verifier is expected to
-fail until an approved private production master-data file has been imported for
-the Driver and Client role records.
+seed import evidence, and active Super Admin/Admin/Driver/Client Ops/Client
+Billing role records. The first Admin has been bootstrapped in production, but
+the first Super Admin still needs the SOP-IAM-03 bootstrap values. The verifier
+is expected to fail until the Super Admin exists and approved launch customer,
+supplier, driver, vehicle, and client/driver role records are present.
+
+Use `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`
+only for the one-time SOP-IAM-03 Super Admin bootstrap after those three values
+are approved. It requires a service-role key in the local environment and records
+the change in `profiles`, `access_role_assignments`, `master_data_changes`, and
+`runtime_records`.
 
 Use `node scripts/bootstrap-first-admin.mjs <email> [display-name] [evidence]`
-only for the initial production Admin or recovery Admin bootstrap. It requires a
-service-role key in the local environment and records the change in
-`runtime_records`.
+only for a recovery Admin bootstrap. Routine Admin creation now belongs to
+Super Admin through the app.
 
 Use `node scripts/import-production-master-data.mjs --file=<private-json> --apply`
 only after the launch master-data file has approval evidence. Start from

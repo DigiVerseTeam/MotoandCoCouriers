@@ -47,6 +47,8 @@ This checklist is staged around confirmed source material and known platform dir
 ## Runtime release
 
 - [x] Confirm user roles.
+- [x] Add BOAS v1.8/SOP-IAM-03 two-tier Super Admin/Admin provisioning model.
+- [ ] Bootstrap first Super Admin from approved display name, email, and approval reference.
 - [ ] Confirm booking workflow fields and rules.
 - [ ] Confirm tracking statuses.
 - [x] Confirm POD requirements.
@@ -66,9 +68,10 @@ This checklist is staged around confirmed source material and known platform dir
 - [x] Apply active logistics migrations to production Supabase.
 - [x] Load source-backed Policy #9 pricing seed.
 - [x] Add live Supabase runtime bridge and API table privileges.
-- [ ] Load approved production master data for customers, suppliers, drivers, vehicles, and role records.
+- [x] Add server-side SOP-IAM-03 user provisioning route for Admin-managed launch users.
+- [ ] Enter or import approved production master data for customers, suppliers, drivers, vehicles, and role records.
 - [ ] Run live actor journey tests.
-- [ ] Complete Supabase Auth role binding for Driver, Client Operational, and Client Billing.
+- [ ] Complete Supabase Auth role binding for Super Admin, Driver, Client Ops, and Client Billing.
 - [x] Confirm storage needs for POD assets.
 - [x] Confirm Row Level Security model for launch roles.
 - [ ] Confirm backup and retention requirements.

@@ -25,6 +25,7 @@ Principle: do not fill gaps. If a detail is not confirmed by the source document
 - `current-state-audit.md` - requirement-by-requirement audit of local software evidence versus production blockers.
 - `production-blocker-register.md` - strict launch blocker register showing what must be answered or connected before production behavior is built.
 - `hcm-boundary.md` - corrected boundary for driver legal/HCM material extracted from the logistics app.
+- BOAS v1.8 / `SOP-IAM-03` updates are reflected in the runtime docs: Super Admin is `ACT-INT-003`, Receiver is `ACT-INT-004`, and Admin provisioning/master-data changes must run through server-side audited paths.
 
 ## Source status
 
@@ -36,6 +37,7 @@ Local assets identified but not yet fully extracted:
 
 - Policy zip archives
 - SOP zip archives
+- `super admin boas.zip`
 - Capability documents
 - Logo image asset
 - Word documents in the workspace root

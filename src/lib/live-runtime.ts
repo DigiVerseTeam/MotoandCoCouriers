@@ -57,12 +57,17 @@ function profileDisplayName(profile, email) {
 
 function localRoleFromAccess(profile, accessRows = []) {
   const active = (accessRows || []).find((row) => row.status === "active");
+  if (active?.application_role === "super_admin") return "super_admin";
   if (active?.application_role === "admin") return "admin";
   if (active?.application_role === "driver") return "driver";
   if (active?.application_role === "client_billing") return "billing";
+  if (active?.application_role === "client_ops") return "client";
   if (active?.application_role === "client_operational") return "client";
+  if (profile?.role === "super_admin") return "super_admin";
   if (profile?.role === "admin") return "admin";
   if (profile?.role === "driver") return "driver";
+  if (profile?.role === "client_ops") return "client";
+  if (profile?.role === "client_billing") return "billing";
   if (profile?.role === "client") return "client";
   return "";
 }
@@ -78,6 +83,8 @@ function appUserFromProfile({ session, profile, accessRows }) {
       profileId: profile?.id || session?.user?.id,
       actorId: profile?.actor_id || assignment.actor_id || "",
       contactId: assignment.contact_id || "",
+      accountId: profile?.account_id || "",
+      driverId: profile?.driver_id || "",
       name: profileDisplayName(profile, email),
       displayName: profileDisplayName(profile, email),
       email,
@@ -129,7 +136,7 @@ export async function resolveLiveRuntimeSession() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, actor_id, role, display_name")
+    .select("id, actor_id, account_id, driver_id, role, status, display_name, email")
     .eq("id", authUser.id)
     .maybeSingle();
 
@@ -138,6 +145,13 @@ export async function resolveLiveRuntimeSession() {
     return {
       blocked: true,
       reason: "Supabase Auth session exists, but no Moto & Co profile/role record has been approved for this user.",
+      email: authUser.email,
+    };
+  }
+  if (profile.status && profile.status !== "active") {
+    return {
+      blocked: true,
+      reason: `Moto & Co profile exists, but the account is ${profile.status}. Admin activation is required before login.`,
       email: authUser.email,
     };
   }
@@ -229,11 +243,46 @@ function driverProfileForRow(row, appSession) {
 
 export function canSyncDomainForRole(domainKey, role) {
   if (!role) return false;
-  if (role === "admin") return true;
+  if (role === "admin" || role === "super_admin") return true;
   if (role === "client") return ["orders", "exceptions", "operationalNotices"].includes(domainKey);
   if (role === "billing") return ["exceptions", "billingNotices"].includes(domainKey);
   if (role === "driver") return ["orders", "proofs", "exceptions", "runClosures"].includes(domainKey);
   return false;
+}
+
+async function liveAccessToken() {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase is not configured for this runtime.");
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data?.session?.access_token) throw new Error("A live Supabase Admin session is required.");
+  return data.session.access_token;
+}
+
+async function provisioningApi(method, body = null) {
+  const token = await liveAccessToken();
+  const response = await fetch("/api/admin/provision-user", {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || `SOP-IAM-03 provisioning API failed (${response.status}).`);
+  return payload;
+}
+
+export async function listLiveProvisionedUsers() {
+  return provisioningApi("GET");
+}
+
+export async function provisionLiveUser(input) {
+  return provisioningApi("POST", input);
+}
+
+export async function updateLiveProvisionedUserStatus(input) {
+  return provisioningApi("PATCH", input);
 }
 
 export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {

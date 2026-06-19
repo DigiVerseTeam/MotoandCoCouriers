@@ -1,6 +1,6 @@
 # Source Index
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 This index records what has been identified in the local workspace. It is not a full content extraction.
 
@@ -21,6 +21,7 @@ This index records what has been identified in the local workspace. It is not a 
 - `SOP DEL 04.zip`
 - `unified boas and village.zip`
 - `customer journey.zip`
+- `super admin boas.zip`
 
 ## External source files
 
@@ -157,6 +158,20 @@ This index records what has been identified in the local workspace. It is not a 
 - `UJ-CRM-001B-ClientBillingContactJourney.xlsx`
 - `UJ-CRM-001B-ClientBillingContactJourney.json`
 - `MotoCo_Unified_BOAS_Hierarchy_v1.7.xlsx`
+
+### `super admin boas.zip`
+
+- `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`
+- `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`
+- `SOP-IAM-03-AdminMasterDataUserProvisioning.png`
+- `UJ-ADM-001-AdminJourney.xlsx`
+- `UJ-ADM-001-AdminJourney.json`
+
+Confirmed extraction notes:
+
+- BOAS v1.8 adds `ACT-INT-003` Super Admin and renumbers Receiver to `ACT-INT-004`.
+- `SOP-IAM-03` confirms Admin master data and user provisioning for customers/workshops, suppliers, drivers, vehicles, and login users.
+- First Super Admin bootstrap requires display name, email address, and approval reference before in-app provisioning can begin.
 
 ## Extraction still needed
 

@@ -675,6 +675,15 @@ requireText(
 );
 
 requireText(
+  "next.config.mjs",
+  [
+    "allowedDevOrigins",
+    "127.0.0.1",
+  ],
+  "local browser dev origin remains interactive"
+);
+
+requireText(
   "scripts/production-readiness.mjs",
   [
     "Strict platform environment gate",
@@ -715,11 +724,24 @@ requireText(
 );
 
 requireText(
+  "scripts/bootstrap-super-admin.mjs",
+  [
+    "Super Admin bootstrap failed",
+    "role: \"super_admin\"",
+    "application_role: \"super_admin\"",
+    "ACT-INT-003",
+    "approvalReference",
+    "SOP-IAM-03 approved Super Admin bootstrap",
+  ],
+  "SOP-IAM-03 Super Admin bootstrap script"
+);
+
+requireText(
   "scripts/verify-live-rls.mjs",
   [
     "delivery-proof bucket",
-    "approved production master-data imports",
-    "const requiredRoles = [\"admin\", \"driver\", \"client_operational\", \"client_billing\"]",
+    "approved production master-data record",
+    "const requiredRoles = [\"super_admin\", \"admin\", \"driver\", \"client_ops\", \"client_billing\"]",
     "`active access role ${role}`",
     "receiver no-login boundary",
   ],
@@ -767,6 +789,7 @@ requireText(
     "Policy #21 / Policy #7 data use",
     "Policy #3/#4/#5 privacy request controls",
     "BOAS Sheet 05 role access RLS draft",
+    "SOP-IAM-03",
   ],
   "Supabase migration verifier"
 );
@@ -808,6 +831,7 @@ const migrations = [
   "supabase/migrations/202606190027_privacy_requests_policy3_policy4_policy5.sql",
   "supabase/migrations/202606190032_live_runtime_records.sql",
   "supabase/migrations/202606190033_authenticated_table_privileges.sql",
+  "supabase/migrations/202606190034_super_admin_provisioning.sql",
 ];
 
 for (const migration of migrations) exists(migration, `source-backed migration ${migration}`);
@@ -816,7 +840,7 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "Approved production master data and non-admin Auth role records are missing",
+    "First Super Admin, approved production master data, and non-admin Auth role records are missing",
     "Vercel production deployment must be redeployed and smoke-tested after the live bridge commit",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
@@ -833,6 +857,7 @@ requireText(
     "provider_not_configured",
     "Zoho Books integration is not confirmed",
     "Privacy Owner is unnamed",
+    "SOP-IAM-03",
     "Public secure tracking-token model is not confirmed",
     "Production invoice PDF/email rendering",
   ],

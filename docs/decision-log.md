@@ -298,8 +298,18 @@ Notes: Project `motoandcocouriers` is `ACTIVE_HEALTHY` in region `ap-southeast-2
 
 Status: Confirmed implementation; live actor journey tests blocked by missing approved launch data.
 
-Decision: Connect the V1 app shell to Supabase Auth, `profiles`, `access_role_assignments`, RLS-protected `runtime_records`, and private `delivery-proof` Storage, while refusing to seed unapproved customers, suppliers, drivers, vehicles, or users. Production launch master data must enter through an approved private import file and be recorded in `production_seed_imports`.
+Decision: Connect the V1 app shell to Supabase Auth, `profiles`, `access_role_assignments`, RLS-protected `runtime_records`, and private `delivery-proof` Storage, while refusing to seed unapproved customers, suppliers, drivers, vehicles, or users. Production launch master data must be approved and can enter through SOP-IAM-03 app-managed records after Super Admin bootstrap or through an approved private import file recorded in `production_seed_imports`.
 
 Source: User instruction on 2026-06-19 to build Supabase Auth/roles, live data wiring, production seed/master data, POD Storage, and live journey tests without filling unknown gaps.
 
-Notes: The app now sends Supabase login links in production mode, resolves approved role records, hydrates/syncs workflow objects through Supabase, and uploads POD signatures to the private bucket. `scripts/import-production-master-data.mjs` rejects placeholders and requires approval evidence before applying launch records. `npm.cmd run verify:live` reaches production and passes structural checks, then fails on the expected missing Admin, Driver, Client Operational, and Client Billing role records until an approved import file is provided.
+Notes: The app now sends Supabase login links in production mode, resolves approved role records, hydrates/syncs workflow objects through Supabase, and uploads POD signatures to the private bucket. `scripts/import-production-master-data.mjs` rejects placeholders and requires approval evidence before applying launch records. `npm.cmd run verify:live` reaches production and passes structural checks, then fails on the expected missing Driver, Client Ops, and Client Billing role records until approved launch records are provided.
+
+### 2026-06-19 - BOAS v1.8 SOP-IAM-03 Super Admin provisioning
+
+Status: Production migration applied; first Super Admin bootstrap values pending.
+
+Decision: Use the BOAS v1.8 two-tier access model. `ACT-INT-003` is Super Admin, Receiver is renumbered to `ACT-INT-004`, Super Admin creates/removes Admin users, Admin creates Client Ops, Client Billing, and Driver users, and all login-user provisioning must run server-side with audit evidence. Customer/workshop, supplier, driver, vehicle, and login-user master data must be Admin-manageable rather than hard-coded.
+
+Source: User-provided `super admin boas.zip` files on 2026-06-19: `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.png`, `UJ-ADM-001-AdminJourney.xlsx`, and `UJ-ADM-001-AdminJourney.json`.
+
+Notes: The first Super Admin is not created inside the app. It requires an approved display name, email address, and approval reference, then `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`. Existing Admin `gerrard@otimi.com.au` remains an Admin unless explicitly approved as first Super Admin.

@@ -374,19 +374,27 @@ export const roleAccessRules: RoleAccessRule[] = [
   },
   {
     roleId: "ACT-INT-002",
-    role: "Admin / Business Owner",
-    canDo: "Approve billing groups, manage suppliers/pricing after required approvals, resolve exceptions, suspend/reinstate accounts, manage access.",
-    cannotDo: "Should not edit code, environment variables, secrets, or deployment settings as routine business operation.",
-    accessNotes: "Full platform access, but production changes and support access must be audited.",
-    source: "BOAS Sheet 05 Roles & Access; UJ-ADM-001"
+    role: "Admin",
+    canDo: "Approve billing groups, manage supplier/customer/driver/vehicle master data, resolve exceptions, suspend/reinstate accounts, and create Client Ops, Client Billing, and Driver users.",
+    cannotDo: "Cannot create or remove Admin or Super Admin users, self-approve pricing changes, edit code, environment variables, secrets, or deployment settings as routine business operation.",
+    accessNotes: "Created by Super Admin through SOP-IAM-03. Production changes and support access must be audited.",
+    source: "BOAS v1.8 Sheet 05 Roles & Access; UJ-ADM-001; SOP-IAM-03"
   },
   {
     roleId: "ACT-INT-003",
+    role: "Super Admin",
+    canDo: "Create/remove Admin users, perform second pricing approval gate, and do everything Admin can do.",
+    cannotDo: "Cannot be created inside the app. Routine business data changes still need source-backed approval evidence.",
+    accessNotes: "One person at launch, bootstrapped manually by Digiverse server-side before in-app Admin provisioning begins.",
+    source: "BOAS v1.8 Sheet 05 Roles & Access; SOP-IAM-03"
+  },
+  {
+    roleId: "ACT-INT-004",
     role: "Receiver",
     canDo: "Provide receiver name and sign delivery confirmation on driver device.",
     cannotDo: "No login. Cannot access app, authorise account/order changes, or view records.",
     accessNotes: "Name/signature are linked to delivery proof, not a standing user account.",
-    source: "BOAS Sheet 05 Roles & Access"
+    source: "BOAS v1.8 Sheet 05 Roles & Access"
   },
   {
     roleId: "ACT-PRM-001",
