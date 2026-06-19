@@ -1,0 +1,83 @@
+# Production Blocker Register
+
+Last updated: 2026-06-19
+
+This register separates the local software package from production launch blockers. It is intentionally strict: if a production behavior needs a missing platform credential, owner decision, policy approval, or unconfirmed business rule, it stays blocked instead of being invented.
+
+Driver legal classification, driver agreements, driver verification evidence, disciplinary/removal consequences, and driver/courier expansion employment-payment models are HCM requirements, not logistics production blockers. Draft material for those items is preserved in `hcm-extract/` and tracked in `docs/hcm-boundary.md`.
+
+Production-first V1 is confirmed. The blockers below are the evidence and access needed before the first production deployment can be treated as live.
+
+## P0 Platform Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| GitHub repository is not connected from local workspace. | GitHub connector can see `DigiVerseTeam/MotoandCoCouriers` with repo permissions; local Next.js app, docs, Supabase migrations, and seed SQL exist in the workspace. `npm.cmd run verify:launch` reports Git CLI and local Git initialisation as open. | Install/expose local Git, initialise or clone the repo safely, push to a branch such as `codex/v1-logistics-runtime`, and open a draft PR without overwriting the old build on `main`. |
+| Production Supabase project is not fully connected. | Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; source-backed draft migrations exist for schema, RLS, Storage, audit, retention, billing, pricing, exceptions, POD, and local guardrails. | Confirm region/data residency, production URL/keys/secrets, Auth settings, migration execution authority, and live tool exposure before running migrations. |
+| Australian Supabase data residency is not proven. | User direction says intended yes; docs keep Digiverse confirmation open. | Digiverse must confirm Supabase region/infrastructure before production data is stored. |
+| Live RLS/Auth binding is untested. | First-pass BOAS Sheet 05 RLS migration exists; local login uses generated testing codes. | Confirm Supabase Auth identity claims/role mapping, run live RLS tests for Client Operational, Client Billing, Driver, Admin, and Receiver no-login boundaries. |
+| Private POD Storage flow is not live. | Migration defines private `delivery-proof` bucket, `deliveries/{delivery_id}/...` path contract, assigned-driver/Admin upload policy, linked-role read policy, SOP-DEL-04 proof sign-off fields/constraints, and retention queueing. | Confirm live Supabase Storage project, upload transport choice, device model/offline behavior, and signed-upload/RPC/browser-upload authority. |
+| Production Vercel project is not connected. | Production build passes locally, app-side guard blocks local/preview app builds from production-labelled Supabase, and `npm.cmd run verify:launch` reports Vercel CLI/deployment values as open. | Confirm Vercel team/account, production project, production domain, environment variables, and deployment ownership. Preview deployments must not point at production Supabase. |
+
+## P0 Integration Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| Notification provider and channel are unconfirmed. | Local operational and billing notice records exist with `local_record_only` and `provider_not_configured`; failed notice rows route to APP-ADM-005. | Confirm launch channels for activation, booking, tracking updates, invoice, overdue, suspension, reinstatement, termination, disputes, and Admin alerts. |
+| Production invoice dispatch is unconfirmed. | Admin can create draft invoices, preview line items, approve the rendered invoice for dispatch under SOP-BIL-04, and record local dispatch evidence. | Confirm Zoho Books integration versus export/manual reconciliation, invoice PDF/email template, dispatch provider, bounce handling, and accounting handoff. |
+| Production next-period treatment for already-invoiced account corrections is unconfirmed. | SOP-EXC-03 local workflow excludes unmatched work before invoicing and the Supabase correction function blocks retro-modifying already-invoiced work. | Confirm how already-invoiced account corrections are noted, carried forward, approved, and evidenced in Zoho/export/manual reconciliation. |
+| Production payment confirmation source is unconfirmed. | Admin can record local payment evidence before marking an invoice paid or reinstating an account. | Confirm EFT/payment source of truth, reconciliation workflow, and who is allowed to mark payment received. |
+| BAS/accountant handoff and Otimi Rules reporting are unconfirmed. | Admin can record local Policy #24 month-end reconciliation evidence, confirm no off-system revenue, see 5-business-day due dates, retain financial-control records for 7 years, and keep accountant/Otimi gaps visible. | Name the external accountant; confirm BAS/tax handoff evidence; confirm Otimi Rules reporting cadence, format, recipient, delivery method, and who marks reporting complete. |
+| Policy #18 credit-note/corrected-invoice issue path is unconfirmed. | Local Policy #18 findings create remedy obligations and due dates without claiming external accounting issue. | Confirm whether Zoho, export, or manual process issues credit notes and corrected invoices, and what evidence is written back. |
+| Policy #20 live AI provider and send path are unconfirmed. | Admin can create and review local Policy #20 CTA draft records from flagged CRM, supplier, and exception records; approved drafts remain `Approved - Not Sent` with `not_sent_provider_not_configured`; Supabase draft migration stores review evidence and blocks autonomous send/batch approval/commercial decisions. | Confirm AI provider, model, prompt registry, prompt approval authority, agent orchestration, production review UX, outbound delivery channel, send evidence write-back, and whether sending is in scope for V1. |
+| Scheduled production jobs are not configured. | Local runtime and draft SQL can generate Day 8 notice evidence; migrations represent retention queues and some monitoring triggers. | Confirm live scheduler/`pg_cron` authority for Day 8 notices, retention reviews, supplier monitoring, APP-FLT-001 checks, and night-before run preparation. |
+
+## P1 Compliance And Legal Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| Privacy Owner is unnamed. | Local retention register blocks destruction pending Privacy Owner approval. Policy #6 NDB register allows Admin suspected-incident intake and containment evidence only; Privacy Owner assessment, eligible/not-eligible decision, notification, post-breach review, and closure stages are blocked while ACT-TECH-002 is unnamed. | Name Privacy Owner and confirm approval workflow before any destruction execution is built; confirm Policy #6 NDB decision ownership and contact details. |
+| Some retention periods remain TBD. | Confirmed 7-year rules are implemented locally for pickup requests, supplier records, master-data change logs, and POD proof. | Confirm remaining Policy #5 retention periods and legal-hold/destruction evidence requirements. |
+| Legal pages are not publishable. | `/legal` lists required legal surfaces but does not publish draft legal copy. | Provide approved Booking Terms, Credit Terms, Dangerous Goods Policy, Delivery Disclaimer, Privacy Policy, and Collection Notice copy. |
+| Privacy Policy and Collection Notice are draft. | Local Admin Privacy register records APP 12 access requests, APP 13 correction requests, privacy complaints, APP 4 unsolicited-information assessments, Policy #4 collection-notice version evidence, and Policy #5 Privacy Owner destruction blocking. | Name Privacy Owner; approve Policy #3 and Policy #4 text; insert ABN/contact details; confirm APP 5 non-collection consequences, APP 6 Digiverse assessment, and Supabase data-location statement before publishing notices. |
+| WHS regulator procedure and full fatigue framework are not final. | Local Policy #27 controls let Driver report fatigue/health concerns, WHS incident/near-miss issues, and supplier-premises WHS hazards; Admin receives WHS exceptions and supplier follow-up evidence, and the app records the unresolved-return block. | Confirm WHSQ notifiable-incident procedure, production WHS notification owner, and the trigger/evidence model for the formal fatigue framework/risk register when driver pool expansion, WHS incident, or regular fatigue risk occurs. |
+| Production security confirmations are missing. | Local docs and migrations represent access, audit, RLS, and environment separation. | Digiverse must confirm TLS, encryption at rest, production access logging, backup posture, and incident responsibilities. |
+| Policy #21 / Policy #7 production data-use evidence is unconfirmed. | Local Admin Data Use register records operational access, export requests, Digiverse production access, third-party sharing, marketing use, data-access breach escalation, blocked reasons, and APP-PRV-004 audit rows. Supabase draft `data_use_reviews` prevents blocked/prohibited data use from being approved. | Confirm Supabase Auth/RLS identity binding, Digiverse production access-log format, export approval evidence, consent evidence format, data-processing agreement/security schedule, and who reviews production data-use records. |
+| Policy #6 NDB notification artefacts are missing. | Local Admin can record suspected incidents, containment actions, APP-PRV-004 audit refs, system/Digiverse evidence, and 30-day assessment due date. Supabase draft blocks eligible-breach decision without Privacy Owner evidence. | Provide OAIC notification process owner, affected-individual notification template, website public-statement URL/content process, and Digiverse incident handoff procedure. |
+
+## P1 Product And Workflow Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| Public tracking model is unconfirmed. | Authenticated Client Operational tracking exists and is account-scoped. | Confirm whether launch tracking is public token, authenticated, staff-only, or mixed; confirm visible statuses and event visibility. |
+| Booking fields beyond source-backed fields are unconfirmed. | Local booking uses confirmed supplier, requested run date, and notes, with 12:30pm Brisbane cut-off and Tuesday/Thursday cadence. | Confirm any additional required pickup fields and whether unregistered customers can submit any request. |
+| POD photo and device assumptions are unconfirmed. | Receiver name, signature, address/goods/receiver/handover/price confirmations, and driver-supervised signature capture are mandatory; GPS is not required; local proof path/storage contract exists. | Confirm whether POD photos are excluded, optional, conditional, or mandatory, and what device model/offline behavior drivers use. |
+| Production reason-code taxonomy is incomplete. | Local No Pickup now uses confirmed SOP-PUP-03 / Policy #16 categories; SOP-PUP-02 supplier-stop closeout is built, but its Step 7 `Time constraint` wording is not added as a No Pickup category because SOP-PUP-03's confirmed taxonomy does not include it; SOP-RUN-04 Bring Forward is modelled as early collection of a future pickup from a supplier already on today's route; Failed Delivery now uses source-backed SOP-DEL-04 categories. | Reconcile SOP-PUP-02 `Time constraint` wording against SOP-PUP-03, then confirm final production reason codes beyond the SOP-DEL-04 categories for driver issues, redelivery, retained goods, offline/upload retry, and any extra wrong-address handling. |
+| Route optimisation and night-before automation are not final. | Local APP-ADM-002 compiles runs by supplier and delivery geography, with driver and fleet checks. | Confirm whether V1 requires automated route optimisation, manual sequencing only, or a hybrid, and who owns the automation. |
+| Supplier-health scoring beyond CAP-MCL-001 targets is unspecified. | Local supplier monitor checks No Pickup rate and packaging/label refusal patterns against source targets. | Confirm any additional supplier scoring algorithm, named dock contacts, cadence, and Owner/Admin review authority. |
+| Policy #23 repeated non-payment termination is not final. | Local voluntary and conduct termination workflows are interactive with Owner consultation and written notice evidence. Repeated non-payment termination is blocked in the runtime and Supabase draft trigger because the policy states the debt-recovery escalation path/write-off thresholds are open. | Confirm the debt recovery escalation path, external recovery trigger, write-off thresholds, authority, notice wording, and evidence required before repeated non-payment termination can be enabled. |
+| Production price-change authority has source tension. | Admin can maintain local `price_rules` only with written reason and Owner approval reference; Supabase guardrails require change-log evidence. | Confirm whether Admin may directly apply approved production price changes or whether Digiverse executes after Admin + Owner approval. |
+
+## P1 Brand And Website Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| Public trading name and hierarchy are not launch-locked. | Website uses Moto and Co Couriers with approved PNG logo. | Confirm hierarchy between Moto and Co, Moto and Co Couriers, GCMTM, and any legal entity text. |
+| Public geography wording needs approval. | Website uses confirmed operating geography/cadence cautiously. | Approve exact launch geography wording. |
+| Final sitemap and public copy are not approved. | `/website` has safe app-entry content and placeholders. | Confirm homepage copy, booking entry copy, tracking entry copy, case/origin-story approval, and sitemap. |
+| Approved photography is unavailable. | Website uses explicit black-and-white placeholders. | Provide approved black-and-white photos or approve placeholder strategy for launch. |
+| Semantic UI state colours and icon library remain open. | Local UI uses confirmed V1 colours and `lucide-react` as an implementation placeholder. | Confirm exact success/warning/error hex values and final icon library. |
+
+## P2 Production Data Blockers
+
+| Blocker | Current local evidence | Required answer or access |
+| --- | --- | --- |
+| Production fleet vehicle records are missing. | Local Admin fleet register exists and dispatch blocks non-compliant vehicles. | Provide ACT-VEH-001/002 registration, expiry, insurance, GVM, make/model/year, ownership, assigned driver, service schedule, and defect history. |
+| Driver availability operating rule is not final. | Local Admin can record Policy #22 unavailable/leave periods with note, notice received date, calculated due date, late-notice flag, contingency evidence, and dispatch/run-compiler blocking for unavailable drivers. | Confirm daily in-app entry versus exception-only availability entry for V1, and confirm whether production needs an exact "evening before" time cut-off beyond the previous calendar day. |
+| Live supplier/pricing/fleet monitoring execution is unproven. | Local monitors and Supabase draft structures exist. | Connect live Supabase and confirm who runs/owns the monitoring jobs and exception follow-up. |
+
+## Build Rule
+
+Do not convert any blocker above into production behavior until its required answer or access is supplied and recorded in `decision-log.md`. Local evidence can continue to be refined only where the source material already defines the rule.
+
+`npm.cmd run verify:production` is the strict production gate. It is expected to fail while this register still has unresolved GitHub, Supabase, Vercel, local Git, live-tooling, or platform-value blockers.
