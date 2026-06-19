@@ -286,10 +286,20 @@ Notes: The production alias `https://motoandcocouriers.vercel.app` is Ready, and
 
 ### 2026-06-19 - Supabase production migrations and seed
 
-Status: Confirmed schema deployment; actor workflow data wiring pending.
+Status: Confirmed schema deployment; approved actor seed import pending.
 
 Decision: Apply the active logistics migration set to Supabase project `fhrqfrhqopicekaiibyj` and seed the approved Policy #9 / SOP-MDM-02 starting price rules.
 
 Source: Supabase CLI project metadata, migration push, and post-apply SQL verification on 2026-06-19.
 
-Notes: Project `motoandcocouriers` is `ACTIVE_HEALTHY` in region `ap-southeast-2`. All active logistics migrations through `202606190031` are applied; HCM migrations remain excluded under `hcm-extract/`. Private bucket `delivery-proof` exists with `public=false`. Seed verification found 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows. Public schema verification found 40 public base tables and all 40 with RLS enabled. Production Auth identity binding, actor workflow data wiring, and live actor-by-actor RLS tests remain open.
+Notes: Project `motoandcocouriers` is `ACTIVE_HEALTHY` in region `ap-southeast-2`. All active logistics migrations through `202606190032` are applied; HCM migrations remain excluded under `hcm-extract/`. Private bucket `delivery-proof` exists with `public=false`. Seed verification found 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows. Public schema verification found 40 public base tables and all 40 with RLS enabled before the live bridge was added; the live verifier now also confirms `runtime_records`, `production_seed_imports`, private POD bucket, RLS policies, and pricing. Approved production master data and active launch role records remain open.
+
+### 2026-06-19 - Live Supabase runtime bridge and approved seed gate
+
+Status: Confirmed implementation; live actor journey tests blocked by missing approved launch data.
+
+Decision: Connect the V1 app shell to Supabase Auth, `profiles`, `access_role_assignments`, RLS-protected `runtime_records`, and private `delivery-proof` Storage, while refusing to seed unapproved customers, suppliers, drivers, vehicles, or users. Production launch master data must enter through an approved private import file and be recorded in `production_seed_imports`.
+
+Source: User instruction on 2026-06-19 to build Supabase Auth/roles, live data wiring, production seed/master data, POD Storage, and live journey tests without filling unknown gaps.
+
+Notes: The app now sends Supabase login links in production mode, resolves approved role records, hydrates/syncs workflow objects through Supabase, and uploads POD signatures to the private bucket. `scripts/import-production-master-data.mjs` rejects placeholders and requires approval evidence before applying launch records. `npm.cmd run verify:live` reaches production and passes structural checks, then fails on the expected missing Admin, Driver, Client Operational, and Client Billing role records until an approved import file is provided.

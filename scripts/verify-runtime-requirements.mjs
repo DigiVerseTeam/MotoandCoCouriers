@@ -634,11 +634,41 @@ requireText(
 );
 
 requireText(
+  "src/lib/live-runtime.ts",
+  [
+    "requestLiveMagicLink",
+    "resolveLiveRuntimeSession",
+    "loadLiveRuntimeSnapshot",
+    "canSyncDomainForRole",
+    "syncLiveRuntimeDomain",
+    "uploadLiveDeliveryProof",
+    "delivery-proof",
+  ],
+  "Supabase Auth, role, live-data, and POD Storage bridge"
+);
+
+requireText(
+  "src/components/moto-co-logistics.tsx",
+  [
+    "liveRuntimeStatus",
+    "Live Supabase Runtime",
+    "Send Supabase Login Link",
+    "resolveLiveRuntimeSession",
+    "loadLiveRuntimeSnapshot",
+    "syncLiveRuntimeDomain",
+    "uploadLiveDeliveryProof",
+    "POD Storage Failure",
+  ],
+  "active runtime uses Supabase Auth, RLS bridge, and private POD upload"
+);
+
+requireText(
   "package.json",
   [
     "\"typecheck\": \"next typegen && tsc --noEmit\"",
     "\"verify:launch\": \"node scripts/check-launch-readiness.mjs\"",
     "\"verify:local\": \"node scripts/local-preflight.mjs\"",
+    "\"verify:live\": \"node scripts/verify-live-rls.mjs\"",
     "\"verify:production\": \"node scripts/production-readiness.mjs\"",
   ],
   "clean local verification scripts"
@@ -668,6 +698,32 @@ requireText(
     "This check is read-only",
   ],
   "launch readiness checker"
+);
+
+requireText(
+  "scripts/import-production-master-data.mjs",
+  [
+    "production_seed_imports",
+    "ensureAuthProfile",
+    "ensureAccessRole",
+    "actor_supplier_links",
+    "fleet_vehicles",
+    "runtime_records",
+    "Dry run only",
+  ],
+  "approved production master-data import gate"
+);
+
+requireText(
+  "scripts/verify-live-rls.mjs",
+  [
+    "delivery-proof bucket",
+    "approved production master-data imports",
+    "const requiredRoles = [\"admin\", \"driver\", \"client_operational\", \"client_billing\"]",
+    "`active access role ${role}`",
+    "receiver no-login boundary",
+  ],
+  "live Supabase RLS and actor-boundary verifier"
 );
 
 requireText(
@@ -750,6 +806,7 @@ const migrations = [
   "supabase/migrations/202606190024_ai_use_policy20.sql",
   "supabase/migrations/202606190026_data_use_policy21_policy7.sql",
   "supabase/migrations/202606190027_privacy_requests_policy3_policy4_policy5.sql",
+  "supabase/migrations/202606190032_live_runtime_records.sql",
 ];
 
 for (const migration of migrations) exists(migration, `source-backed migration ${migration}`);
@@ -758,8 +815,8 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "Production Supabase workflow wiring is not complete",
-    "Vercel production deployment is live but actor workflows still use local/mock state",
+    "Approved production master data and Auth role records are missing",
+    "Vercel production deployment must be redeployed and smoke-tested after the live bridge commit",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
     "Public tracking model is unconfirmed",

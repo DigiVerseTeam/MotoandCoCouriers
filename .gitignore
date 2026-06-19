@@ -21,3 +21,7 @@ dist/
 
 .vercel
 supabase/.temp/
+
+# Private launch master data imports contain PII and must stay local.
+data/*.json
+private-production-master-data*.json

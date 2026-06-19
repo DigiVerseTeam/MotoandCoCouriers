@@ -1,0 +1,94 @@
+{
+  "_instructions": [
+    "Copy this structure to a private, uncommitted JSON file before running scripts/import-production-master-data.mjs.",
+    "Do not commit the completed file. It contains launch PII and operational master data.",
+    "The importer refuses placeholder values and refuses to apply without approval.approvedBy, approval.approvedAt, and approval.evidenceRef."
+  ],
+  "approval": {
+    "importName": "REPLACE_WITH_APPROVED_IMPORT_NAME",
+    "approvedBy": "REPLACE_WITH_APPROVER_NAME",
+    "approvedAt": "2026-06-19T00:00:00.000Z",
+    "evidenceRef": "REPLACE_WITH_APPROVAL_EVIDENCE_LOCATION",
+    "sourceFile": "private-production-master-data.json"
+  },
+  "adminUsers": [
+    {
+      "code": "ADMIN-001",
+      "email": "admin@example.com",
+      "displayName": "Approved Admin Name"
+    }
+  ],
+  "suppliers": [
+    {
+      "code": "SUP-001",
+      "legalName": "Approved Supplier Legal Name",
+      "tradingName": "Approved Supplier Trading Name",
+      "dockAddress": "Approved physical dock address",
+      "dockContact": {
+        "fullName": "Approved Dock Contact",
+        "email": "dock@example.com",
+        "phone": "",
+        "roleTitle": "Dock Contact"
+      },
+      "pickupWindow": "Approved pickup window",
+      "packagingNotes": "Approved packaging standard",
+      "approvalEvidenceRef": "Supplier approval evidence reference"
+    }
+  ],
+  "customers": [
+    {
+      "code": "CUST-001",
+      "legalName": "Approved Workshop Legal Name",
+      "tradingName": "Approved Workshop Trading Name",
+      "deliveryAddress": "Approved physical workshop delivery address",
+      "phone": "",
+      "operationalContact": {
+        "fullName": "Approved Operational Contact",
+        "email": "ops@example.com",
+        "phone": "",
+        "roleTitle": "Operational Contact"
+      },
+      "billingContact": {
+        "fullName": "Approved Billing Contact",
+        "email": "billing@example.com",
+        "phone": "",
+        "roleTitle": "Billing Contact"
+      },
+      "receiverContacts": [
+        {
+          "fullName": "Approved Receiver Name",
+          "phone": "",
+          "roleTitle": "Receiver"
+        }
+      ],
+      "supplierCodes": ["SUP-001"]
+    }
+  ],
+  "drivers": [
+    {
+      "code": "DRV-001",
+      "email": "driver@example.com",
+      "displayName": "Approved Driver Display Name",
+      "phone": "",
+      "status": "active"
+    }
+  ],
+  "vehicles": [
+    {
+      "code": "VEH-001",
+      "registrationPlate": "APPROVED",
+      "make": "",
+      "model": "",
+      "year": null,
+      "ownershipType": "company",
+      "status": "active",
+      "assignedDriverCode": "DRV-001",
+      "registrationExpiry": "2027-06-19",
+      "insurancePolicy": "Approved policy reference",
+      "insuranceExpiry": "2027-06-19",
+      "gvmKg": null,
+      "defectStatus": "clear",
+      "notes": ""
+    }
+  ]
+}

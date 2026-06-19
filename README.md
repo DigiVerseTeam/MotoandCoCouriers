@@ -8,7 +8,8 @@ The build follows the project documentation in `docs/` and does not treat unknow
 
 - Next.js for the Vercel-ready website and app.
 - Supabase for auth, database, storage, and RLS.
-- Local mock state for workflow verification while production workflow data wiring is completed.
+- Supabase live runtime bridge for production Auth, role records, RLS-protected workflow persistence, and private POD Storage.
+- Local mock state remains available only for non-live workflow verification.
 
 ## Environment Guardrail
 
@@ -17,8 +18,9 @@ The browser Supabase client is intentionally blocked when `NEXT_PUBLIC_APP_ENV` 
 
 This implements the confirmed release-control rule that preview deployments must
 not connect to production Supabase. GitHub, Vercel, Supabase region, production
-keys, migrations, private POD bucket, and the initial pricing seed are connected.
-Production Auth identity binding and workflow data wiring remain open.
+keys, migrations, private POD bucket, the initial pricing seed, and the live
+runtime bridge are connected. Approved launch master data and actor-by-actor
+journey evidence remain open.
 
 ## Local Commands
 
@@ -28,6 +30,7 @@ npm.cmd run dev
 npm.cmd run verify:local
 npm.cmd run verify:launch
 npm.cmd run verify:production
+npm.cmd run verify:live
 npm.cmd run typecheck
 npm.cmd run verify:requirements
 npm.cmd run verify:platform
@@ -49,6 +52,16 @@ Use `npm.cmd run verify:production` as the strict production readiness gate. It
 passes when production values are supplied and the local Git/Supabase/Vercel
 tooling is available. It does not prove actor workflow data has been wired into
 Supabase.
+
+Use `npm.cmd run verify:live` after Supabase is linked to confirm the production
+live bridge, private POD bucket, price rules, seed import evidence, and active
+Admin/Driver/Client/Billing role records. It is expected to fail until an
+approved private production master-data file has been imported.
+
+Use `node scripts/import-production-master-data.mjs --file=<private-json> --apply`
+only after the launch master-data file has approval evidence. Start from
+`docs/production-master-data.template.json`, keep the completed file uncommitted,
+and do not use placeholder records.
 
 The draft GitHub Actions workflow at `.github/workflows/runtime-ci.yml` runs the
 same requirement, platform-contract, Supabase migration, typecheck, and build

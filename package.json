@@ -9,6 +9,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "verify:launch": "node scripts/check-launch-readiness.mjs",
     "verify:local": "node scripts/local-preflight.mjs",
+    "verify:live": "node scripts/verify-live-rls.mjs",
     "verify:migrations": "node scripts/verify-supabase-migrations.mjs",
     "verify:platform": "node scripts/check-platform-env.mjs",
     "verify:production": "node scripts/production-readiness.mjs",

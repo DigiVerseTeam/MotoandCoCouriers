@@ -239,6 +239,17 @@ requireMarkers("supabase/migrations/202606190031_run_close_confirmation_uj_drv00
   "run_closures_uj_drv001_confirmation_check",
 ], "UJ-DRV-001 run close confirmation");
 
+requireMarkers("supabase/migrations/202606190032_live_runtime_records.sql", [
+  "runtime_records",
+  "record_type in",
+  "production_seed_imports",
+  "public.can_client_operational_account(owner_actor_id)",
+  "public.can_client_billing_account(owner_actor_id)",
+  "driver_profile_id = auth.uid()",
+  "public.is_admin()",
+  "No production customers, suppliers, drivers, or vehicles are seeded",
+], "V1 live runtime records and approved seed import gate");
+
 requireMarkers("supabase/migrations/202606190015_run_planning_monitor_cap_mcl002.sql", [
   "CAP-MCL-002",
   "APP-ADM-002",

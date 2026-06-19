@@ -1,0 +1,309 @@
+// @ts-nocheck
+
+import { createBrowserSupabaseClient, getBrowserSupabaseEnvironmentStatus } from "@/lib/supabase";
+
+export const liveRuntimeDomains = {
+  clients: "client",
+  suppliers: "supplier",
+  drivers: "driver",
+  vehicles: "vehicle",
+  priceRules: "price_rule",
+  orders: "order",
+  proofs: "delivery_proof",
+  exceptions: "exception",
+  audit: "audit",
+  invoices: "invoice",
+  billingNotices: "billing_notice",
+  operationalNotices: "operational_notice",
+  runClosures: "run_close",
+  masterDataChanges: "master_data_change",
+  exceptionAlerts: "exception_alert",
+  driverAvailability: "driver_availability",
+  financialReconciliations: "financial_reconciliation",
+  aiDrafts: "ai_draft",
+  dataBreachIncidents: "data_breach_incident",
+  dataUseRecords: "data_use_record",
+  privacyRequests: "privacy_request",
+};
+
+const allSnapshotKeys = Object.keys(liveRuntimeDomains);
+
+export function getLiveRuntimeStatus() {
+  const status = getBrowserSupabaseEnvironmentStatus();
+  return {
+    ...status,
+    enabled: status.ok,
+    label: status.ok
+      ? `Supabase ${status.supabaseEnv}`
+      : "Local runtime",
+  };
+}
+
+function client() {
+  return createBrowserSupabaseClient();
+}
+
+function normaliseEmail(email = "") {
+  return String(email || "").trim().toLowerCase();
+}
+
+function runtimeRecordId(row) {
+  return String(row?.id || row?.localId || row?.invoiceNumber || row?.orderId || row?.email || crypto.randomUUID());
+}
+
+function profileDisplayName(profile, email) {
+  return profile?.display_name || email || "Supabase User";
+}
+
+function localRoleFromAccess(profile, accessRows = []) {
+  const active = (accessRows || []).find((row) => row.status === "active");
+  if (active?.application_role === "admin") return "admin";
+  if (active?.application_role === "driver") return "driver";
+  if (active?.application_role === "client_billing") return "billing";
+  if (active?.application_role === "client_operational") return "client";
+  if (profile?.role === "admin") return "admin";
+  if (profile?.role === "driver") return "driver";
+  if (profile?.role === "client") return "client";
+  return "";
+}
+
+function appUserFromProfile({ session, profile, accessRows }) {
+  const email = normaliseEmail(session?.user?.email);
+  const role = localRoleFromAccess(profile, accessRows);
+  const assignment = (accessRows || []).find((row) => row.status === "active") || {};
+  return {
+    role,
+    user: {
+      id: profile?.actor_id || profile?.id || session?.user?.id,
+      profileId: profile?.id || session?.user?.id,
+      actorId: profile?.actor_id || assignment.actor_id || "",
+      contactId: assignment.contact_id || "",
+      name: profileDisplayName(profile, email),
+      displayName: profileDisplayName(profile, email),
+      email,
+      role,
+      supabaseRole: profile?.role || "",
+      accessRole: assignment.application_role || "",
+      status: assignment.status === "revoked" ? "Revoked" : "Active",
+    },
+    profile,
+    accessRows,
+  };
+}
+
+export async function requestLiveMagicLink(email, roleHint = "client") {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase is not configured for this runtime.");
+  const redirectTo = typeof window !== "undefined" ? window.location.href : undefined;
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normaliseEmail(email),
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: redirectTo,
+      data: { role_hint: roleHint },
+    },
+  });
+  if (error) throw error;
+  return true;
+}
+
+export async function signOutLiveRuntime() {
+  const supabase = client();
+  if (!supabase) return;
+  await supabase.auth.signOut();
+}
+
+export function onLiveAuthStateChange(callback) {
+  const supabase = client();
+  if (!supabase) return () => {};
+  const { data } = supabase.auth.onAuthStateChange(() => callback());
+  return () => data?.subscription?.unsubscribe?.();
+}
+
+export async function resolveLiveRuntimeSession() {
+  const supabase = client();
+  if (!supabase) return null;
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session?.user) return null;
+  const authUser = sessionData.session.user;
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, actor_id, role, display_name")
+    .eq("id", authUser.id)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+  if (!profile) {
+    return {
+      blocked: true,
+      reason: "Supabase Auth session exists, but no Moto & Co profile/role record has been approved for this user.",
+      email: authUser.email,
+    };
+  }
+
+  const { data: accessRows, error: accessError } = await supabase
+    .from("access_role_assignments")
+    .select("id, profile_id, actor_id, contact_id, application_role, actor_code, status")
+    .eq("profile_id", authUser.id);
+
+  if (accessError) throw accessError;
+  const appSession = appUserFromProfile({ session: sessionData.session, profile, accessRows: accessRows || [] });
+  if (!appSession.role) {
+    return {
+      blocked: true,
+      reason: "Supabase profile exists, but no active launch role is assigned.",
+      email: authUser.email,
+    };
+  }
+  return appSession;
+}
+
+function emptySnapshot() {
+  return Object.fromEntries(allSnapshotKeys.map((key) => [key, []]));
+}
+
+function priceRuleFromRow(row) {
+  return {
+    id: row.id,
+    serviceVariant: row.service_variant,
+    label: row.label,
+    itemType: row.item_type,
+    tyreCountMin: row.tyre_count_min,
+    tyreCountMax: row.tyre_count_max,
+    weightBand: row.weight_band,
+    rateCents: row.rate_cents,
+    rateMode: row.rate_mode,
+    effectiveFrom: row.effective_from,
+    effectiveTo: row.effective_to,
+    status: row.status || "active",
+    changeLogId: row.change_log_id,
+  };
+}
+
+export async function loadLiveRuntimeSnapshot() {
+  const supabase = client();
+  const snapshot = emptySnapshot();
+  if (!supabase) return snapshot;
+
+  const { data: records, error } = await supabase
+    .from("runtime_records")
+    .select("record_type, local_id, payload, owner_actor_id, driver_profile_id, updated_at")
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+
+  const typeToKey = Object.fromEntries(Object.entries(liveRuntimeDomains).map(([key, type]) => [type, key]));
+  for (const record of records || []) {
+    const key = typeToKey[record.record_type];
+    if (!key) continue;
+    snapshot[key].push({
+      ...(record.payload || {}),
+      id: record.payload?.id || record.local_id,
+      actorId: record.payload?.actorId || record.owner_actor_id || "",
+      profileId: record.payload?.profileId || record.driver_profile_id || "",
+      liveUpdatedAt: record.updated_at,
+    });
+  }
+
+  const { data: priceRows } = await supabase
+    .from("price_rules")
+    .select("id, service_variant, label, item_type, tyre_count_min, tyre_count_max, weight_band, rate_cents, rate_mode, effective_from, effective_to, status, change_log_id")
+    .eq("status", "active")
+    .order("effective_from", { ascending: true });
+
+  if (!snapshot.priceRules.length && priceRows?.length) {
+    snapshot.priceRules = priceRows.map(priceRuleFromRow);
+  }
+
+  return snapshot;
+}
+
+function ownerActorForRow(row, appSession) {
+  return row?.actorId || row?.accountActorId || row?.account_actor_id || row?.clientActorId || appSession?.user?.actorId || null;
+}
+
+function driverProfileForRow(row, appSession) {
+  return row?.driverProfileId || row?.driver_profile_id || row?.profileId || (appSession?.role === "driver" ? appSession?.user?.profileId : null);
+}
+
+export function canSyncDomainForRole(domainKey, role) {
+  if (!role) return false;
+  if (role === "admin") return true;
+  if (role === "client") return ["orders", "exceptions", "operationalNotices"].includes(domainKey);
+  if (role === "billing") return ["exceptions", "billingNotices"].includes(domainKey);
+  if (role === "driver") return ["orders", "proofs", "exceptions", "runClosures"].includes(domainKey);
+  return false;
+}
+
+export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {
+  const supabase = client();
+  const recordType = liveRuntimeDomains[domainKey];
+  if (!supabase || !recordType || !appSession?.role || !canSyncDomainForRole(domainKey, appSession.role)) {
+    return { skipped: true };
+  }
+
+  const payload = (rows || []).map((row) => ({
+    record_type: recordType,
+    local_id: runtimeRecordId(row),
+    owner_actor_id: ownerActorForRow(row, appSession),
+    driver_profile_id: driverProfileForRow(row, appSession),
+    payload: row || {},
+    updated_by: appSession?.user?.profileId || null,
+    source_ref: "Moto & Co V1 live runtime bridge",
+  }));
+
+  if (!payload.length) return { skipped: true };
+
+  const { error } = await supabase
+    .from("runtime_records")
+    .upsert(payload, { onConflict: "record_type,local_id" });
+
+  if (error) throw error;
+  return { synced: payload.length };
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [meta, encoded] = String(dataUrl || "").split(",");
+  if (!meta?.startsWith("data:") || !encoded) return null;
+  const mime = meta.match(/^data:([^;]+)/)?.[1] || "application/octet-stream";
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new Blob([bytes], { type: mime });
+}
+
+export async function uploadLiveDeliveryProof(proof, appSession) {
+  const supabase = client();
+  if (!supabase || !proof?.signatureUrl || !appSession?.role) return { skipped: true };
+  const blob = dataUrlToBlob(proof.signatureUrl);
+  if (!blob) return { skipped: true };
+
+  const path = proof.signaturePath || `deliveries/${proof.deliveryId || proof.id}/signature.png`;
+  const { error: uploadError } = await supabase.storage
+    .from("delivery-proof")
+    .upload(path, blob, {
+      upsert: false,
+      contentType: blob.type || "image/png",
+    });
+
+  if (uploadError && !String(uploadError.message || "").toLowerCase().includes("already exists")) {
+    throw uploadError;
+  }
+
+  await syncLiveRuntimeDomain("proofs", [{ ...proof, signaturePath: path, storage: `delivery-proof/${path}` }], appSession);
+
+  if (proof.deliveryId && /^[0-9a-f-]{36}$/i.test(proof.deliveryId)) {
+    await supabase
+      .from("delivery_proof")
+      .insert({
+        delivery_id: proof.deliveryId,
+        receiver_name: proof.receiverName,
+        signature_path: path,
+        captured_by: appSession?.user?.profileId || null,
+        captured_at: proof.capturedAt || proof.deliveredAt || new Date().toISOString(),
+      });
+  }
+
+  return { uploaded: true, path };
+}

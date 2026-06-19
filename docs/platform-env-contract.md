@@ -2,9 +2,9 @@
 
 Last updated: 2026-06-19
 
-This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub, Vercel, Supabase project metadata, production keys, migrations, private POD Storage bucket, and initial pricing seed evidence are now recorded here. Production Auth identity binding and actor workflow data wiring remain open.
+This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub, Vercel, Supabase project metadata, production keys, migrations, private POD Storage bucket, initial pricing seed evidence, and the live runtime bridge are now recorded here. Approved launch master data and actor-by-actor journey evidence remain open.
 
-Production-first V1 is now the confirmed platform direction. The Vercel production deployment is live, and the Supabase schema is deployed. The UI runtime is not yet a fully live-backed production system until its actor workflows read/write Supabase instead of local mock state.
+Production-first V1 is now the confirmed platform direction. The Vercel production deployment is live, and the Supabase schema is deployed. The UI runtime now has Supabase Auth, role resolution, RLS-protected live persistence, and private POD upload wiring, but it is not launch-complete until approved launch users/master data are imported and the live actor journeys pass.
 
 ## Local Command
 
@@ -12,6 +12,7 @@ Production-first V1 is now the confirmed platform direction. The Vercel producti
 npm.cmd run verify:platform
 npm.cmd run verify:launch
 npm.cmd run verify:production
+node scripts/verify-live-rls.mjs
 ```
 
 For a production preflight report:
@@ -103,11 +104,13 @@ These record the connected Vercel production deployment.
 | --- | --- |
 | Project | `motoandcocouriers`, ref `fhrqfrhqopicekaiibyj`, status `ACTIVE_HEALTHY` |
 | Region | `ap-southeast-2` |
-| Migrations | Active logistics migrations `202606180001` through `202606190031` applied on 2026-06-19; HCM migrations remain excluded under `hcm-extract/` |
+| Migrations | Active logistics migrations `202606180001` through `202606190032` applied on 2026-06-19; HCM migrations remain excluded under `hcm-extract/` |
 | Storage | Private `delivery-proof` bucket exists with `public=false` |
 | Pricing seed | 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows loaded from `supabase/seed/release_one_seed.sql` |
 | RLS coverage | 40 public base tables exist and all 40 have RLS enabled |
 | Production env | Vercel production has app env labels, site URL, Supabase URL, project ref, region, publishable key, and sensitive server key |
+
+Update 2026-06-19: migration `202606190032_live_runtime_records.sql` is now also applied. It creates the RLS-protected `runtime_records` bridge and `production_seed_imports` approval-evidence table. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, private `delivery-proof` bucket, and price rules. It fails, as intended, until an approved production seed import creates active Admin, Driver, Client Operational, and Client Billing role records.
 
 ## Not Environment Variables
 

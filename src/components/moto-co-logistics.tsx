@@ -4,6 +4,17 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { nextAvailableRunDate, resolveActualRunDate } from "@/lib/date-rules";
+import {
+  canSyncDomainForRole,
+  getLiveRuntimeStatus,
+  loadLiveRuntimeSnapshot,
+  onLiveAuthStateChange,
+  requestLiveMagicLink,
+  resolveLiveRuntimeSession,
+  signOutLiveRuntime,
+  syncLiveRuntimeDomain,
+  uploadLiveDeliveryProof,
+} from "@/lib/live-runtime";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const T = {
@@ -2100,15 +2111,17 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", entryNotice = "" }) {
+function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
   const [tab, setTab] = useState(defaultRole || "client");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [err, setErr] = useState("");
   const [pendingUser, setPendingUser] = useState(null);
   const [notice, setNotice] = useState("");
+  const [requestingLiveLink, setRequestingLiveLink] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [requestHistory, setRequestHistory] = useState({});
+  const liveLoginEnabled = Boolean(liveRuntimeStatus?.enabled);
 
   useEffect(() => {
     resetForRole(defaultRole || "client");
@@ -2136,11 +2149,23 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     return (requestHistory[key] || []).filter(at => now - at < LOCAL_OTP_REQUEST_WINDOW_MS);
   }
 
-  function requestCode() {
+  async function requestCode() {
     setErr("");
     setNotice("");
     if (!email.trim()) { setErr("Email required"); return; }
     const loginEmail = email.trim().toLowerCase();
+    if (liveLoginEnabled) {
+      setRequestingLiveLink(true);
+      try {
+        await requestLiveMagicLink(loginEmail, tab);
+        setNotice("Supabase login link sent. Open the link from that email, then return here and the app will resolve your approved role record.");
+      } catch (error) {
+        setErr(error?.message || "Supabase Auth could not send a login link for this address.");
+      } finally {
+        setRequestingLiveLink(false);
+      }
+      return;
+    }
     const requestKey = localLoginKey(tab, loginEmail);
     const now = Date.now();
     const recentRequests = eligibleRequestTimes(requestKey, now);
@@ -2249,11 +2274,16 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
         {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{notice}</div>}
         {!pendingUser ? (
           <>
-            <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>Enter the email registered for this role. The local prototype issues a one-use testing code on screen.</p>
+            {liveRuntimeError && <div className="card" style={{ fontSize: ".82rem", color: T.acc, marginBottom: ".8rem", borderColor: T.acc }}>{liveRuntimeError}</div>}
+            <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
+              {liveLoginEnabled
+                ? "Enter the email approved for this role. Supabase Auth will email a login link, then the app will check the matching profile and role record."
+                : "Enter the email registered for this role. The local prototype issues a one-use testing code on screen."}
+            </p>
             <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
-            <button className="btn b-acc" onClick={requestCode}>Get Login Code</button>
-            {onResetLocalDemoData && !resetConfirmOpen && <button className="btn b-ghost" style={{ marginTop: ".6rem" }} onClick={() => setResetConfirmOpen(true)}>Reset Local Demo Data</button>}
-            {onResetLocalDemoData && resetConfirmOpen && (
+            <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Supabase Login Link" : "Get Login Code"}</button>
+            {onResetLocalDemoData && !liveLoginEnabled && !resetConfirmOpen && <button className="btn b-ghost" style={{ marginTop: ".6rem" }} onClick={() => setResetConfirmOpen(true)}>Reset Local Demo Data</button>}
+            {onResetLocalDemoData && !liveLoginEnabled && resetConfirmOpen && (
               <div className="card" style={{ marginTop: ".8rem", borderColor: T.acc }}>
                 <div className="card-title">Reset Local Demo Data</div>
                 <p style={{ fontSize: ".82rem", color: T.mu, marginTop: ".35rem" }}>
@@ -2274,7 +2304,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
             <button className="btn b-ghost" onClick={() => { setPendingUser(null); setCode(""); setNotice(""); setErr(""); }}>Use Another Email</button>
           </>
         )}
-        {tab === "client" && !pendingUser && (
+        {tab === "client" && !pendingUser && !liveLoginEnabled && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>
             Not registered? <span style={{ color: T.acc, cursor: "pointer" }} onClick={onRegister}>Register</span>
           </p>
@@ -10011,6 +10041,11 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
 export default function App() {
   const pathname = usePathname();
   const routeIntent = routeIntentFromPath(pathname || "/");
+  const [liveRuntimeStatus] = useState(() => getLiveRuntimeStatus());
+  const [liveRuntimeHydrated, setLiveRuntimeHydrated] = useState(false);
+  const [liveRuntimeNotice, setLiveRuntimeNotice] = useState("");
+  const [liveRuntimeError, setLiveRuntimeError] = useState("");
+  const liveRuntimeSyncReady = useRef(false);
   const [session, setSession] = useState(null);
   const [vehicles, setVehicles] = useState(() => load(KEY_VEHICLES, seedVehicles));
   const [orders, setOrders] = useState(() => {
@@ -10089,6 +10124,156 @@ export default function App() {
   const [systemNotice, setSystemNotice] = useState("");
   const accessRecords = buildAccessRecords(clients, drivers, accessOverrides);
 
+  function applyLiveRuntimeSnapshot(snapshot = {}) {
+    const liveVehicles = snapshot.vehicles || [];
+    const liveOrders = normaliseOrderVehicleEvidence(snapshot.orders || [], liveVehicles);
+    setVehicles(liveVehicles);
+    setOrders(liveOrders);
+    setClients(snapshot.clients || []);
+    setDrivers((snapshot.drivers || []).map(normaliseDriverRecord));
+    setSuppliers(snapshot.suppliers || []);
+    setPriceRules((snapshot.priceRules || []).map(normalisePriceRule));
+    setExceptions(snapshot.exceptions || []);
+    setAudit(snapshot.audit || []);
+    setProofs((snapshot.proofs || []).map(proof => normaliseDeliveryProof(proof, liveOrders)));
+    setInvoices((snapshot.invoices || []).map(normaliseInvoice));
+    setBillingNotices(snapshot.billingNotices || []);
+    setOperationalNotices(snapshot.operationalNotices || []);
+    setRunClosures(snapshot.runClosures || []);
+    setMasterDataChanges(snapshot.masterDataChanges || []);
+    setExceptionAlerts(snapshot.exceptionAlerts || []);
+    setDriverAvailability(snapshot.driverAvailability || []);
+    setFinancialReconciliations((snapshot.financialReconciliations || []).map(normaliseFinancialReconciliation));
+    setAiDrafts((snapshot.aiDrafts || []).map(normaliseAiDraft));
+    setDataBreachIncidents((snapshot.dataBreachIncidents || []).map(normaliseDataBreachIncident));
+    setDataUseRecords((snapshot.dataUseRecords || []).map(normaliseDataUseRecord));
+    setPrivacyRequests((snapshot.privacyRequests || []).map(normalisePrivacyRequest));
+  }
+
+  useEffect(() => {
+    if (!liveRuntimeStatus.enabled) {
+      setLiveRuntimeHydrated(true);
+      return;
+    }
+    let cancelled = false;
+
+    async function bootLiveRuntime() {
+      liveRuntimeSyncReady.current = false;
+      setLiveRuntimeError("");
+      setLiveRuntimeNotice("Checking Supabase Auth and approved role records.");
+      try {
+        const liveSession = await resolveLiveRuntimeSession();
+        if (cancelled) return;
+        if (!liveSession) {
+          setSession(null);
+          setLiveRuntimeHydrated(true);
+          setLiveRuntimeNotice("Live Supabase runtime is ready. Sign in with an approved profile and role record.");
+          return;
+        }
+        if (liveSession.blocked) {
+          setSession(null);
+          setLiveRuntimeHydrated(true);
+          setLiveRuntimeError(liveSession.reason);
+          setLiveRuntimeNotice("Supabase Auth succeeded, but Moto & Co access is not yet approved for this account.");
+          return;
+        }
+        setSession(liveSession);
+        const snapshot = await loadLiveRuntimeSnapshot();
+        if (cancelled) return;
+        applyLiveRuntimeSnapshot(snapshot);
+        liveRuntimeSyncReady.current = true;
+        setLiveRuntimeHydrated(true);
+        setLiveRuntimeNotice(`Live Supabase ${liveSession.role} session active. Receiver sign-off remains a no-login POD capture.`);
+      } catch (error) {
+        if (cancelled) return;
+        setLiveRuntimeHydrated(true);
+        setLiveRuntimeError(error?.message || "Supabase live runtime could not be loaded.");
+        setLiveRuntimeNotice("Live Supabase runtime could not complete startup.");
+      }
+    }
+
+    bootLiveRuntime();
+    const unsubscribe = onLiveAuthStateChange(bootLiveRuntime);
+    return () => {
+      cancelled = true;
+      liveRuntimeSyncReady.current = false;
+      unsubscribe?.();
+    };
+  }, [liveRuntimeStatus.enabled]);
+
+  useEffect(() => {
+    if (!liveRuntimeStatus.enabled || !liveRuntimeHydrated || !liveRuntimeSyncReady.current || !session?.role) return;
+    const domains = {
+      clients,
+      suppliers,
+      drivers,
+      vehicles,
+      priceRules,
+      orders,
+      proofs,
+      exceptions,
+      audit,
+      invoices,
+      billingNotices,
+      operationalNotices,
+      runClosures,
+      masterDataChanges,
+      exceptionAlerts,
+      driverAvailability,
+      financialReconciliations,
+      aiDrafts,
+      dataBreachIncidents,
+      dataUseRecords,
+      privacyRequests,
+    };
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      for (const [domainKey, rows] of Object.entries(domains)) {
+        if (cancelled) return;
+        if (!canSyncDomainForRole(domainKey, session.role)) continue;
+        try {
+          await syncLiveRuntimeDomain(domainKey, rows, session);
+        } catch (error) {
+          if (cancelled) return;
+          console.warn(`Live Supabase sync failed for ${domainKey}`, error);
+          setLiveRuntimeError(`Live Supabase sync failed for ${domainKey}: ${error?.message || "unknown error"}`);
+          return;
+        }
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    liveRuntimeStatus.enabled,
+    liveRuntimeHydrated,
+    session?.role,
+    session?.user?.profileId,
+    session?.user?.actorId,
+    clients,
+    suppliers,
+    drivers,
+    vehicles,
+    priceRules,
+    orders,
+    proofs,
+    exceptions,
+    audit,
+    invoices,
+    billingNotices,
+    operationalNotices,
+    runClosures,
+    masterDataChanges,
+    exceptionAlerts,
+    driverAvailability,
+    financialReconciliations,
+    aiDrafts,
+    dataBreachIncidents,
+    dataUseRecords,
+    privacyRequests,
+  ]);
+
   function showWorkflowNotice(message) {
     setSystemNotice(String(message || "A system workflow rule blocked this action."));
   }
@@ -10096,6 +10281,19 @@ export default function App() {
   function resetLocalDemoData() {
     clearLocalDemoState();
     window.location.reload();
+  }
+
+  async function logout() {
+    liveRuntimeSyncReady.current = false;
+    if (liveRuntimeStatus.enabled) {
+      try {
+        await signOutLiveRuntime();
+        setLiveRuntimeNotice("Signed out of Supabase Auth.");
+      } catch (error) {
+        setLiveRuntimeError(error?.message || "Supabase sign-out failed.");
+      }
+    }
+    setSession(null);
   }
 
   function writeAudit(action, detail, actor = session?.role || "system") {
@@ -11126,6 +11324,27 @@ export default function App() {
     const next = [storedProof, ...proofs];
     setProofs(next); save(KEY_PROOFS, next);
     writeAudit("Delivery proof stored", `${storedProof.orderId} receiver ${storedProof.receiverName}; ${storedProof.signaturePath}; group size ${storedProof.deliveryGroupSize || 1}; SOP-DEL-04 sign-off evidence captured`, "driver");
+    if (liveRuntimeStatus.enabled && session?.role) {
+      uploadLiveDeliveryProof(storedProof, session)
+        .then(result => {
+          if (result?.path) {
+            setLiveRuntimeNotice(`POD signature stored in private delivery-proof bucket: ${result.path}`);
+          }
+        })
+        .catch(error => {
+          const message = error?.message || "Supabase Storage rejected the POD signature upload.";
+          setLiveRuntimeError(`POD Storage failed: ${message}`);
+          addException({
+            type: "POD Storage Failure",
+            orderId: storedProof.orderId || storedProof.deliveryId,
+            owner: "Admin",
+            note: `${storedProof.id}: ${message}`,
+            status: "Open",
+            source: "APP-DRV-003 / Supabase delivery-proof bucket",
+            severity: "High",
+          });
+        });
+    }
     if (matchedOrders.length === 0) {
       addException({
         type: "Delivery Completion Failure",
@@ -11529,6 +11748,11 @@ export default function App() {
   return (
     <div className="app">
       <style>{css}</style>
+      {liveRuntimeStatus.enabled && (liveRuntimeNotice || liveRuntimeError || !liveRuntimeHydrated) && (
+        <PolicyNotice title="Live Supabase Runtime" onDismiss={() => { setLiveRuntimeNotice(""); setLiveRuntimeError(""); }}>
+          {liveRuntimeError || liveRuntimeNotice || "Starting live Supabase runtime."}
+        </PolicyNotice>
+      )}
       {systemNotice && (
         <PolicyNotice title="System Workflow Rule" system onDismiss={() => setSystemNotice("")}>
           {systemNotice}
@@ -11539,15 +11763,15 @@ export default function App() {
           <RegisterClient suppliers={suppliers} onDone={addClient} onCancel={() => setShowReg(false)} />
         </div>
       ) : !session ? (
-        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} entryNotice={routeIntent.loginNotice} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
+        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
       ) : session.role === "client" ? (
-        <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={() => setSession(null)} />
+        <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : session.role === "billing" ? (
-        <BillingContactPortal user={session.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={() => setSession(null)} />
+        <BillingContactPortal user={session.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
       ) : session.role === "driver" ? (
-        <DriverPortal user={session.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={() => setSession(null)} />
+        <DriverPortal user={session.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
       ) : (
-        <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={() => setSession(null)} />
+        <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
       )}
     </div>
   );
