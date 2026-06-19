@@ -18,3 +18,5 @@ dist/
 *.pdf
 !docs/**/*.md
 !public/**/*.png
+
+.vercel

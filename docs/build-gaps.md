@@ -46,12 +46,12 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 
 ## Platform Access
 
-- Git is not available on PATH in this local shell.
-- GitHub repository owner/name is not confirmed.
-- GitHub repository has not been created or connected.
-- Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`, but region/data residency, project URL/keys/secrets, Auth/RLS/Storage verification, and migration execution are not confirmed.
-- Vercel account/team, project, and production domain are not confirmed.
-- `npm.cmd run verify:launch` reports Git CLI, Supabase CLI, Vercel CLI, GitHub values, Supabase values, Vercel values, and local Git repository initialisation as open in this shell.
+- Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is still not on PATH in this shell.
+- GitHub repository is confirmed and connected: `DigiVerseTeam/MotoandCoCouriers`.
+- V1 is merged to GitHub `main`; the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
+- Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; the project URL is known, but region/data residency, anon/service keys, Auth/RLS/Storage verification, and migration execution are not confirmed.
+- Vercel account/team, project, and production domain are confirmed: `DigiVerse` / `digi-verse`, project `motoandcocouriers`, production URL `https://motoandcocouriers.vercel.app`.
+- `npm.cmd run verify:launch` remains a local environment report; it will still show values as open unless the matching env vars are exported in the shell running the check.
 
 ## Supabase Production Readiness
 

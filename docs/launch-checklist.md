@@ -81,15 +81,16 @@ This checklist is staged around confirmed source material and known platform dir
 
 ## Vercel
 
-- [ ] Confirm Vercel account/team.
-- [ ] Confirm production domain.
+- [x] Confirm Vercel account/team.
+- [x] Confirm production domain.
 - [x] Confirm preview deployment policy.
 - [x] Add app-side guard blocking preview/local builds from production-labelled Supabase.
 - [x] Add environment variable contract/reporting.
 - [x] Add read-only Vercel readiness report.
 - [x] Add strict production gate coverage for missing Vercel readiness.
-- [ ] Confirm environment variables.
-- [ ] Connect GitHub repository.
+- [ ] Confirm remaining Supabase-backed runtime environment variables.
+- [x] Connect GitHub repository.
+- [x] Deploy production Vercel app shell.
 - [ ] Connect Supabase variables.
 - [ ] Deploy preview.
 - [ ] Promote production after approval.

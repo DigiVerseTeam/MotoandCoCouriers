@@ -16,15 +16,16 @@ Last updated: 2026-06-19
 - Product routes currently load the logistics software shell rather than documentation pages.
 - A public website route exists at `/website`. It uses confirmed brand assets and placeholder-safe content only.
 - Supabase migrations exist under `supabase/migrations`.
-- The local prototype still persists in browser storage; it is not connected to a live Supabase project.
+- The deployed Vercel app still uses the local/mock runtime; it is not connected to a live Supabase-backed runtime until Supabase keys, migrations, Auth/RLS, and Storage checks are complete.
 - Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; newly added MCP tools may require a fresh Codex session before they are callable in-thread.
-- Git is not currently available on PATH in the local shell used by Codex.
-- GitHub connector access can see `DigiVerseTeam/MotoandCoCouriers` with repo permissions, but the local workspace is not yet connected through Git.
+- Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is not currently available on PATH in the local shell used by Codex.
+- GitHub repository `DigiVerseTeam/MotoandCoCouriers` is connected; V1 is merged to `main`, and the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
+- Vercel project `digi-verse/motoandcocouriers` is connected to GitHub and deployed at `https://motoandcocouriers.vercel.app`.
 - Node.js is available.
 - `npm.ps1` is blocked by PowerShell execution policy, but `npm.cmd` works.
 - `next.config.mjs` supports `NEXT_DIST_DIR`; local preflight uses `.next-preflight-build` and draft CI uses `.next-ci` so verification does not depend on a locked or stale default `.next` directory.
 - `npm.cmd run verify:launch` is a read-only launch-readiness report for Git CLI, Supabase CLI, Vercel CLI, required platform values, environment pairing, and local Git repository initialisation.
-- `npm.cmd run verify:production` is the strict production readiness gate and is expected to fail until GitHub, Supabase, Vercel, local Git, and live-tooling blockers are resolved.
+- `npm.cmd run verify:production` is the strict production readiness gate and is expected to fail until local production env values and remaining Supabase live-tooling blockers are resolved.
 - Existing workspace files are business, brand, SOP, capability, and policy documents.
 
 ## App structure
@@ -153,16 +154,17 @@ Confirmed:
 
 - Production-first V1 path is approved by user direction on 2026-06-19.
 - Preview deployments must not connect to production Supabase.
+- Vercel team/account: `DigiVerse` / `digi-verse`.
+- Vercel project: `motoandcocouriers`.
+- Production domain: `https://motoandcocouriers.vercel.app`.
+- Website and app are deployed as one Vercel project for V1.
 
 TBD:
 
-- Vercel team/account.
-- Production domain.
 - Preview domain.
 - Environment variable ownership.
 - Deployment protection requirements.
 - Analytics and monitoring requirements.
-- Whether the website and app are one Vercel project or split projects.
 
 Confirmed deployment rule:
 
@@ -174,7 +176,7 @@ Current environment labels:
 
 - `NEXT_PUBLIC_APP_ENV`: `local`, `preview`, or `production`.
 - `NEXT_PUBLIC_SUPABASE_ENV`: `local`, `preview`, or `production`.
-- Unknown project URL, region, and secret ownership remain open; the guard only prevents the confirmed unsafe pairing.
+- Supabase project URL is known; region, anon/service keys, migration execution, Auth/RLS/Storage verification, and secret ownership remain open.
 - `docs/platform-env-contract.md` records the GitHub, Supabase, and Vercel values required before connection.
 - `npm.cmd run verify:platform` reports the current environment contract without creating projects or connecting external services.
 
@@ -184,7 +186,7 @@ Current environment labels:
 2. Split the large local component into role modules once behavior stabilises.
 3. Connect the confirmed data objects to production Supabase only after project/region/auth decisions are available.
 4. Add public website routes without replacing the software shell.
-5. Deploy to production Vercel only after repository branch/PR handoff, production Supabase, domain, and launch ownership are confirmed.
+5. Complete Supabase production connection, then redeploy and repeat live workflow verification against the Vercel production URL.
 
 ## Non-negotiable documentation rule
 

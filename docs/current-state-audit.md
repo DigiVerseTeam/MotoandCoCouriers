@@ -51,16 +51,16 @@ It is not a claim that production launch is complete. It separates locally execu
 | Legal page | `/legal` lists required legal surfaces as not published and avoids publishing unapproved legal copy; browser verification confirmed 8 required rows with 8 `Not Published` statuses. | Locally built as status surface only |
 | Supabase backend | Draft schema, RLS, storage, audit, retention, pricing, notification, cancellation, billing-notice generation, Policy #6 NDB incident controls, Policy #21 / Policy #7 data-use controls, Policy #3 / Policy #4 / Policy #5 privacy request controls, Policy #24 financial reconciliation controls, Policy #20 AI draft review controls, Policy #22 driver scheduling, Policy #27 WHS hazard controls, CAP-MCL-001 supplier approval gate, CAP-MCL-002 run planning monitor, Policy #8, Policy #15, Policy #16, Policy #18 dispute SLA/remedy/outcome-history, SOP-PUP-02 supplier-stop closeout, SOP-DEL-01 grouped delivery stops, SOP-DEL-04 delivery sign-off proof, SOP-DEL-05, UJ-DRV-001 run-close confirmation, and guardrail migrations exist. HCM-owned driver legal/classification/agreement/conduct/expansion migrations were extracted from the active migration set. | Source-ready draft; live execution blocked |
 | Supabase migration guardrails | `npm.cmd run verify:migrations` statically checks core source-backed migration markers for schema, RLS, audit hash-chain, private POD storage, retention, pricing, supplier-stop closeout, delivery sign-off proof, delivery stop grouping/completion, WHS hazard controls, exceptions, billing, and dispute guardrails. | Locally verified; live execution blocked |
-| Vercel launch | Next.js app is Vercel-ready in structure; environment guard blocks local/preview app from production-labelled Supabase. | Locally prepared; deployment blocked |
-| GitHub launch | Draft GitHub Actions CI exists locally and runs the package gates when a repo is connected; repository is not initialised/connected because Git is not available on PATH and owner/name are unconfirmed. | Prepared locally; connection blocked |
-| Platform environment handoff | `.env.example`, `docs/platform-env-contract.md`, `npm.cmd run verify:platform`, `npm.cmd run verify:launch`, and the failing strict `npm.cmd run verify:production` gate list GitHub, Supabase, and Vercel values plus local CLI/repository readiness required before external connection. | Prepared locally; values open |
+| Vercel launch | Vercel project `digi-verse/motoandcocouriers` is connected to GitHub and deployed at `https://motoandcocouriers.vercel.app`; live smoke test returned HTTP 200 for `/`, `/login`, `/booking`, and `/admin` on 2026-06-19. | Deployed; Supabase-backed runtime still blocked |
+| GitHub launch | V1 is merged to `DigiVerseTeam/MotoandCoCouriers` `main`; the old build is archived on `archive/old-netlify-vite-build-2026-06-19`; draft GitHub Actions CI exists in the repo. | Connected; CI/release evidence pending |
+| Platform environment handoff | `.env.example`, `docs/platform-env-contract.md`, `npm.cmd run verify:platform`, `npm.cmd run verify:launch`, and the failing strict `npm.cmd run verify:production` gate list remaining local env/Supabase values required before full live production. | Partially complete; Supabase values open |
 
 ## Current Verification
 
 - `NEXT_DIST_DIR=.next-preflight-build-assignmentfixture npm.cmd run verify:local` passed on 2026-06-19, covering source-backed requirements, platform environment reporting, launch readiness reporting, Supabase migration guardrails, Next route type generation, TypeScript, and production build.
 - `npm.cmd run typecheck` passed on 2026-06-19.
 - `npm.cmd run verify:requirements` passed on 2026-06-19 with 81 source-backed checks.
-- `npm.cmd run verify:launch` passed locally as a read-only report; Git, Supabase, and Vercel readiness remain open.
+- `npm.cmd run verify:launch` remains a read-only local env report; GitHub and Vercel are connected externally, while Supabase readiness remains open.
 - `npm.cmd run verify:production` failed as expected on 2026-06-19 because production platform and live-tooling blockers remain open.
 - `npm.cmd run verify:platform` passed locally as a report; production values remain open.
 - `npm.cmd run verify:migrations` passed on 2026-06-19 with 37 source-backed checks.
@@ -70,9 +70,8 @@ It is not a claim that production launch is complete. It separates locally execu
 
 ## Blockers That Must Not Be Invented
 
-- GitHub owner, repository name, and local Git availability.
 - Supabase MCP project ref `fhrqfrhqopicekaiibyj` is registered/authenticated, but region, credentials, Auth identity binding, RLS execution, migration execution, and Storage policy testing remain open.
-- Vercel team/account, project, production domain, environment variables, and deployment ownership.
+- Vercel is deployed, but the production app is not yet Supabase-backed because Supabase keys and migrations are incomplete.
 - Notification provider and delivery channels for activation, booking, invoice, overdue, suspension, reinstatement, termination, delivery updates, and Admin alerts.
 - Policy #23 repeated non-payment termination remains blocked until debt recovery escalation and write-off thresholds are confirmed.
 - Public tracking token model and final customer-visible tracking status taxonomy.
@@ -87,7 +86,7 @@ It is not a claim that production launch is complete. It separates locally execu
 
 ## Next Source-Backed Actions
 
-1. When platform answers arrive, update `docs/decision-log.md`, `docs/architecture.md`, and `docs/open-questions.md`, then wire GitHub/Supabase/Vercel.
+1. When Supabase access arrives, run dry-run/live migration checks, set the remaining Vercel env vars, redeploy, and repeat live workflow verification.
 2. When notification answers arrive, replace local-only outbox records with provider-backed send attempts and keep APP-ADM-005 failure routing.
 3. When tracking-token/status answers arrive, add the public tracking experience without weakening authenticated account-scoped tracking.
 4. When legal copy is approved, publish only the approved documents under `/legal`.

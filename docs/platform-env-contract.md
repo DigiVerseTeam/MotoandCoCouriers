@@ -2,9 +2,9 @@
 
 Last updated: 2026-06-19
 
-This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. It is a handoff contract, not evidence that production is live.
+This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub and Vercel production connection evidence is now recorded here; Supabase remains incomplete until credentials, region, migrations, Auth/RLS, and Storage checks are done.
 
-Production-first V1 is now the confirmed platform direction. The first connected deployment can target production once the required production values and live checks are supplied.
+Production-first V1 is now the confirmed platform direction. The first Vercel production deployment is live, but it is not yet a fully live-backed production system because Supabase credentials and migrations are still open.
 
 ## Local Command
 
@@ -44,8 +44,8 @@ It is read-only: it does not create repositories, run migrations, deploy, or
 print secret values.
 
 `scripts/production-readiness.mjs` combines the strict production platform and
-launch readiness checks. It must fail while any required GitHub, Supabase,
-Vercel, local Git, or live-tooling input remains open.
+launch readiness checks. It must fail while any required local environment value,
+Supabase input, or live-tooling input remains open.
 
 ## Local Runtime Labels
 
@@ -60,7 +60,7 @@ These are required before live Auth, RLS, Storage, migration, and Australian dat
 
 | Variable | Status |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Open |
+| `NEXT_PUBLIC_SUPABASE_URL` | Confirmed project URL: `https://fhrqfrhqopicekaiibyj.supabase.co`; set in Vercel production |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Open |
 | `SUPABASE_SERVICE_ROLE_KEY` | Open |
 | `SUPABASE_PROJECT_REF` | Confirmed from Supabase MCP setup: `fhrqfrhqopicekaiibyj` |
@@ -72,19 +72,30 @@ These are required before repository connection and live GitHub Actions evidence
 
 | Variable | Status |
 | --- | --- |
-| `GITHUB_OWNER` | Open |
-| `GITHUB_REPOSITORY` | Open |
+| `GITHUB_OWNER` | Confirmed: `DigiVerseTeam` |
+| `GITHUB_REPOSITORY` | Confirmed: `MotoandCoCouriers` |
 
 ## Vercel Handoff Values
 
-These are required before preview/production deployment.
+These record the connected Vercel production deployment.
 
 | Variable | Status |
 | --- | --- |
-| `VERCEL_TEAM` | Open |
-| `VERCEL_PROJECT` | Open |
-| `VERCEL_PRODUCTION_DOMAIN` | Open |
-| `NEXT_PUBLIC_SITE_URL` | Open |
+| `VERCEL_TEAM` | Confirmed: `DigiVerse` / `digi-verse` |
+| `VERCEL_PROJECT` | Confirmed: `motoandcocouriers` (`prj_PfQzTZZ04DuORDQkIOr5WeD17T5j`) |
+| `VERCEL_PRODUCTION_DOMAIN` | Confirmed: `https://motoandcocouriers.vercel.app` |
+| `NEXT_PUBLIC_SITE_URL` | Confirmed and set in Vercel production: `https://motoandcocouriers.vercel.app` |
+
+## Production Deployment Evidence
+
+| Item | Evidence |
+| --- | --- |
+| GitHub repository | `https://github.com/DigiVerseTeam/MotoandCoCouriers`; V1 merged to `main` on 2026-06-19 |
+| Archived old build | `archive/old-netlify-vite-build-2026-06-19` |
+| Vercel project | `digi-verse/motoandcocouriers` |
+| Vercel deployment | `dpl_87hZW7WC4ve1oBUgfa2fa7RCqw45`, Ready, production |
+| Production URL | `https://motoandcocouriers.vercel.app` |
+| Smoke test | `/`, `/login`, `/booking`, and `/admin` returned HTTP 200 on 2026-06-19 |
 
 ## Not Environment Variables
 

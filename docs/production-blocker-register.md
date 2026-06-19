@@ -6,18 +6,18 @@ This register separates the local software package from production launch blocke
 
 Driver legal classification, driver agreements, driver verification evidence, disciplinary/removal consequences, and driver/courier expansion employment-payment models are HCM requirements, not logistics production blockers. Draft material for those items is preserved in `hcm-extract/` and tracked in `docs/hcm-boundary.md`.
 
-Production-first V1 is confirmed. The blockers below are the evidence and access needed before the first production deployment can be treated as live.
+Production-first V1 is confirmed. GitHub and Vercel are connected and the app has a live production deployment. The blockers below are the evidence and access still needed before that deployment can be treated as a fully live-backed production system.
 
 ## P0 Platform Blockers
 
 | Blocker | Current local evidence | Required answer or access |
 | --- | --- | --- |
-| GitHub repository is not connected from local workspace. | GitHub connector can see `DigiVerseTeam/MotoandCoCouriers` with repo permissions; local Next.js app, docs, Supabase migrations, and seed SQL exist in the workspace. `npm.cmd run verify:launch` reports Git CLI and local Git initialisation as open. | Install/expose local Git, initialise or clone the repo safely, push to a branch such as `codex/v1-logistics-runtime`, and open a draft PR without overwriting the old build on `main`. |
+| GitHub production repository handoff needs CI evidence. | V1 is merged to `DigiVerseTeam/MotoandCoCouriers` `main`; the old Netlify/Vite build is preserved on `archive/old-netlify-vite-build-2026-06-19`; Vercel is connected to the GitHub repository. | Confirm GitHub Actions run evidence and repository branch-protection/release ownership once production credentials are complete. |
 | Production Supabase project is not fully connected. | Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; source-backed draft migrations exist for schema, RLS, Storage, audit, retention, billing, pricing, exceptions, POD, and local guardrails. | Confirm region/data residency, production URL/keys/secrets, Auth settings, migration execution authority, and live tool exposure before running migrations. |
 | Australian Supabase data residency is not proven. | User direction says intended yes; docs keep Digiverse confirmation open. | Digiverse must confirm Supabase region/infrastructure before production data is stored. |
 | Live RLS/Auth binding is untested. | First-pass BOAS Sheet 05 RLS migration exists; local login uses generated testing codes. | Confirm Supabase Auth identity claims/role mapping, run live RLS tests for Client Operational, Client Billing, Driver, Admin, and Receiver no-login boundaries. |
 | Private POD Storage flow is not live. | Migration defines private `delivery-proof` bucket, `deliveries/{delivery_id}/...` path contract, assigned-driver/Admin upload policy, linked-role read policy, SOP-DEL-04 proof sign-off fields/constraints, and retention queueing. | Confirm live Supabase Storage project, upload transport choice, device model/offline behavior, and signed-upload/RPC/browser-upload authority. |
-| Production Vercel project is not connected. | Production build passes locally, app-side guard blocks local/preview app builds from production-labelled Supabase, and `npm.cmd run verify:launch` reports Vercel CLI/deployment values as open. | Confirm Vercel team/account, production project, production domain, environment variables, and deployment ownership. Preview deployments must not point at production Supabase. |
+| Vercel production deployment is live but not Supabase-backed. | Vercel project `digi-verse/motoandcocouriers` is connected to GitHub and deployed at `https://motoandcocouriers.vercel.app`; `/`, `/login`, `/booking`, and `/admin` returned HTTP 200 on 2026-06-19. Production env has app labels, site URL, Supabase project ref, and public Supabase URL. | Add `NEXT_PUBLIC_SUPABASE_ANON_KEY` and required server secrets after Supabase migration/region/Auth/RLS/Storage checks are complete, then redeploy and repeat live workflow verification. Preview deployments must not point at production Supabase. |
 
 ## P0 Integration Blockers
 
@@ -80,4 +80,4 @@ Production-first V1 is confirmed. The blockers below are the evidence and access
 
 Do not convert any blocker above into production behavior until its required answer or access is supplied and recorded in `decision-log.md`. Local evidence can continue to be refined only where the source material already defines the rule.
 
-`npm.cmd run verify:production` is the strict production gate. It is expected to fail while this register still has unresolved GitHub, Supabase, Vercel, local Git, live-tooling, or platform-value blockers.
+`npm.cmd run verify:production` is the strict production gate. It is expected to fail while this register still has unresolved Supabase, live-tooling, or platform-value blockers.

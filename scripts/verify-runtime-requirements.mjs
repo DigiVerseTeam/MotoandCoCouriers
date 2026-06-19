@@ -757,9 +757,9 @@ for (const migration of migrations) exists(migration, `source-backed migration $
 requireText(
   "docs/production-blocker-register.md",
   [
-    "GitHub repository is not connected",
+    "GitHub production repository handoff needs CI evidence",
     "Production Supabase project is not fully connected",
-    "Vercel project is not connected",
+    "Vercel production deployment is live but not Supabase-backed",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
     "Public tracking model is unconfirmed",

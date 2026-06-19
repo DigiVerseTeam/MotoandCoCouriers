@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## Format
 
@@ -263,3 +263,23 @@ Decision: Use Supabase project ref `fhrqfrhqopicekaiibyj` for the production-fir
 Source: User supplied Supabase MCP command on 2026-06-19; local `codex mcp list` verification.
 
 Notes: The Supabase MCP server `supabase` is registered at `https://mcp.supabase.com/mcp?project_ref=fhrqfrhqopicekaiibyj` and authenticated via OAuth. Secrets, region/data-residency confirmation, Auth/RLS/Storage verification, and migration execution remain open.
+
+### 2026-06-19 - GitHub V1 repository handoff
+
+Status: Confirmed.
+
+Decision: Use `DigiVerseTeam/MotoandCoCouriers` as the V1 GitHub repository. Preserve the old build on `archive/old-netlify-vite-build-2026-06-19` and use `main` for the V1 logistics runtime.
+
+Source: User direction on 2026-06-19; local Git push/merge verification.
+
+Notes: V1 was merged to `main` on 2026-06-19. GitHub Actions/release evidence still depends on production credentials and final live checks.
+
+### 2026-06-19 - Vercel production deployment
+
+Status: Confirmed app-shell deployment; Supabase-backed production runtime pending.
+
+Decision: Use Vercel team `DigiVerse` / `digi-verse` and project `motoandcocouriers` for the V1 website and app deployment.
+
+Source: User completed Vercel device login on 2026-06-19; Vercel CLI link/deploy verification.
+
+Notes: Production deployment `dpl_87hZW7WC4ve1oBUgfa2fa7RCqw45` is Ready and aliased to `https://motoandcocouriers.vercel.app`. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase anon/service keys, region confirmation, migration execution, Auth/RLS, and Storage verification remain open before this is a fully live-backed production system.

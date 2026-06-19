@@ -98,12 +98,12 @@ Driver legal classification, agreements, verification evidence, disciplinary/rem
 
 ## Platform
 
-- GitHub repository is confirmed as `DigiVerseTeam/MotoandCoCouriers`; local Git still needs to be installed/exposed before pushing a branch.
+- GitHub repository is confirmed as `DigiVerseTeam/MotoandCoCouriers`; V1 is merged to `main`.
 - Production-first V1 path is confirmed; local/preview builds still must not connect to production Supabase.
 - Production Supabase project ref is `fhrqfrhqopicekaiibyj`; confirm whether Digiverse accepts this as the production V1 project.
 - What Supabase region should be used? This is a Digiverse decision.
-- What Vercel team/account owns deployment?
-- What environment variables are needed?
+- Vercel team/account is confirmed as `DigiVerse` / `digi-verse`; project `motoandcocouriers`; production URL `https://motoandcocouriers.vercel.app`.
+- Supabase anon key, service role key, DB access/migration authority, and region confirmation are still needed.
 - Who owns production secrets?
 
 ## Brand and UI
