@@ -110,7 +110,7 @@ These record the connected Vercel production deployment.
 | RLS coverage | 40 public base tables exist and all 40 have RLS enabled |
 | Production env | Vercel production has app env labels, site URL, Supabase URL, project ref, region, publishable key, and sensitive server key |
 
-Update 2026-06-19: migration `202606190032_live_runtime_records.sql` is now also applied. It creates the RLS-protected `runtime_records` bridge and `production_seed_imports` approval-evidence table. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, private `delivery-proof` bucket, and price rules. It fails, as intended, until an approved production seed import creates active Admin, Driver, Client Operational, and Client Billing role records.
+Update 2026-06-19: migrations through `202606190033_authenticated_table_privileges.sql` are now applied. They create the RLS-protected `runtime_records` bridge, `production_seed_imports` approval-evidence table, and the authenticated/service-role table grants required before RLS is evaluated. `npm.cmd run verify:live` reaches production and confirms the live bridge structure, RLS policies, API table privileges, private `delivery-proof` bucket, price rules, and the first active Admin role for `gerrard@otimi.com.au`. It fails, as intended, until an approved production seed import creates active Driver, Client Operational, and Client Billing role records.
 
 ## Not Environment Variables
 

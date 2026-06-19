@@ -807,6 +807,7 @@ const migrations = [
   "supabase/migrations/202606190026_data_use_policy21_policy7.sql",
   "supabase/migrations/202606190027_privacy_requests_policy3_policy4_policy5.sql",
   "supabase/migrations/202606190032_live_runtime_records.sql",
+  "supabase/migrations/202606190033_authenticated_table_privileges.sql",
 ];
 
 for (const migration of migrations) exists(migration, `source-backed migration ${migration}`);
@@ -815,7 +816,7 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "Approved production master data and Auth role records are missing",
+    "Approved production master data and non-admin Auth role records are missing",
     "Vercel production deployment must be redeployed and smoke-tested after the live bridge commit",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",

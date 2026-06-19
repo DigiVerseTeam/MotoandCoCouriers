@@ -97,6 +97,16 @@ requireText(
 );
 
 requireText(
+  "supabase/migrations/202606190033_authenticated_table_privileges.sql",
+  [
+    "grant select, insert, update, delete on all tables in schema public to authenticated",
+    "grant all privileges on all tables in schema public to service_role",
+    "alter default privileges in schema public",
+  ],
+  "Supabase API table privilege migration"
+);
+
+requireText(
   "supabase/migrations/202606180020_delivery_proof_storage_contract.sql",
   [
     "delivery-proof",
@@ -154,6 +164,26 @@ const runtimePolicyCount = countSql(`
     and tablename = 'runtime_records';
 `, "runtime_records policies");
 if (runtimePolicyCount < 4) failures.push("runtime_records policies: expected select, insert, update, and admin delete policies");
+
+const privilegeRows = queryLinked(`
+  select table_name, grantee, count(distinct privilege_type)::int as grant_count
+  from information_schema.role_table_grants
+  where table_schema = 'public'
+    and table_name in ('profiles', 'access_role_assignments', 'runtime_records', 'production_seed_imports')
+    and grantee in ('authenticated', 'service_role')
+    and privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+  group by table_name, grantee;
+`, "Supabase API table privileges");
+for (const tableName of ["profiles", "access_role_assignments", "runtime_records", "production_seed_imports"]) {
+  for (const grantee of ["authenticated", "service_role"]) {
+    const row = privilegeRows.find((item) => item.table_name === tableName && item.grantee === grantee);
+    if (!row || Number(row.grant_count) < 4) {
+      failures.push(`${tableName}: ${grantee} is missing select/insert/update/delete grants before RLS`);
+    } else {
+      passes.push(`${tableName}: ${grantee} table grants present`);
+    }
+  }
+}
 
 const bucketRows = queryLinked(`
   select id, name, public

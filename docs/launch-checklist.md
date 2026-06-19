@@ -65,19 +65,21 @@ This checklist is staged around confirmed source material and known platform dir
 - [x] Add static Supabase migration guardrail verification.
 - [x] Apply active logistics migrations to production Supabase.
 - [x] Load source-backed Policy #9 pricing seed.
-- [ ] Wire actor workflows to live Supabase data.
-- [ ] Configure Supabase Auth role binding and run live RLS tests.
+- [x] Add live Supabase runtime bridge and API table privileges.
+- [ ] Load approved production master data for customers, suppliers, drivers, vehicles, and role records.
+- [ ] Run live actor journey tests.
+- [ ] Complete Supabase Auth role binding for Driver, Client Operational, and Client Billing.
 - [x] Confirm storage needs for POD assets.
-- [ ] Confirm Row Level Security model.
+- [x] Confirm Row Level Security model for launch roles.
 - [ ] Confirm backup and retention requirements.
 
 ## GitHub
 
-- [ ] Install or expose Git locally.
-- [ ] Confirm repository owner.
-- [ ] Confirm repository name.
-- [ ] Initialise repository.
-- [ ] Commit documentation baseline.
+- [x] Install or expose Git locally.
+- [x] Confirm repository owner.
+- [x] Confirm repository name.
+- [x] Initialise repository.
+- [x] Commit documentation baseline.
 - [ ] Add branch protection or review rules if required.
 - [x] Add CI once app scaffold exists.
 - [x] Add read-only Git/GitHub readiness report.
