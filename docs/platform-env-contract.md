@@ -93,7 +93,7 @@ These record the connected Vercel production deployment.
 | GitHub repository | `https://github.com/DigiVerseTeam/MotoandCoCouriers`; V1 merged to `main` on 2026-06-19 |
 | Archived old build | `archive/old-netlify-vite-build-2026-06-19` |
 | Vercel project | `digi-verse/motoandcocouriers` |
-| Vercel deployment | `dpl_87hZW7WC4ve1oBUgfa2fa7RCqw45`, Ready, production |
+| Vercel deployment | Production alias Ready; GitHub `main` auto-deploy verified on 2026-06-19 |
 | Production URL | `https://motoandcocouriers.vercel.app` |
 | Smoke test | `/`, `/login`, `/booking`, and `/admin` returned HTTP 200 on 2026-06-19 |
 

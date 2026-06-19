@@ -282,4 +282,4 @@ Decision: Use Vercel team `DigiVerse` / `digi-verse` and project `motoandcocouri
 
 Source: User completed Vercel device login on 2026-06-19; Vercel CLI link/deploy verification.
 
-Notes: Production deployment `dpl_87hZW7WC4ve1oBUgfa2fa7RCqw45` is Ready and aliased to `https://motoandcocouriers.vercel.app`. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase anon/service keys, region confirmation, migration execution, Auth/RLS, and Storage verification remain open before this is a fully live-backed production system.
+Notes: The production alias `https://motoandcocouriers.vercel.app` is Ready, and GitHub `main` auto-deploy was verified on 2026-06-19. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase anon/service keys, region confirmation, migration execution, Auth/RLS, and Storage verification remain open before this is a fully live-backed production system.
