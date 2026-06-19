@@ -49,21 +49,21 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 - Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is still not on PATH in this shell.
 - GitHub repository is confirmed and connected: `DigiVerseTeam/MotoandCoCouriers`.
 - V1 is merged to GitHub `main`; the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
-- Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; the project URL is known, but region/data residency, anon/service keys, Auth/RLS/Storage verification, and migration execution are not confirmed.
+- Supabase MCP and CLI are authenticated for project ref `fhrqfrhqopicekaiibyj`; region `ap-southeast-2`, project URL, production keys, migration execution, private POD bucket, RLS-enabled tables, and pricing seed are confirmed.
 - Vercel account/team, project, and production domain are confirmed: `DigiVerse` / `digi-verse`, project `motoandcocouriers`, production URL `https://motoandcocouriers.vercel.app`.
 - `npm.cmd run verify:launch` remains a local environment report; it will still show values as open unless the matching env vars are exported in the shell running the check.
 
 ## Supabase Production Readiness
 
-- A first-pass RLS policy migration exists for the confirmed BOAS Sheet 05 role boundaries, but it has not been executed or tested against a live Supabase project.
+- A first-pass RLS policy migration exists for the confirmed BOAS Sheet 05 role boundaries and has been executed against the live Supabase project. It still needs real Supabase Auth identity binding and actor-by-actor policy tests before it is treated as final.
 - Policy #21 still needs production review alongside live Supabase Auth identity binding before RLS can be treated as final. The local Policy #21 / Policy #7 data-use register now records and blocks source-defined unacceptable use, but production Auth/RLS, Digiverse production access logging, and data-processing/security-schedule evidence remain untested.
 - Policy #6 NDB response cannot become Active until the Privacy Owner (ACT-TECH-002) is named. Local Admin intake and containment evidence exists; legal eligibility decisions and production notification execution remain blocked.
-- Supabase data residency is intended to be Australia, but Digiverse has not confirmed project region or infrastructure.
+- Supabase project metadata confirms region `ap-southeast-2`; any broader Digiverse infrastructure/data-residency statement for legal/privacy copy remains open.
 - TLS, encryption at rest, and production access logging confirmations from Digiverse are still open.
-- A private `delivery-proof` bucket, controlled object path convention, assigned-driver/Admin object insert policy, linked-role object read policy, SOP-DEL-04 sign-off fields/constraints, and automatic Policy #5 retention queueing now exist in local migrations. Live Storage policy testing, client upload wiring, signed-upload/RPC choice, production device model, and offline retry behavior remain open.
-- Append-only audit enforcement, PII audit triggers, and audit hash-chain fields/triggers now exist in local migrations for the confirmed operational tables, but they have not been tested against a live Supabase project.
-- Delivery proof immutability now exists in a local migration, but it has not been tested against a live Supabase project.
-- SOP-DEL-05 delivery completion now exists in a local migration: `delivery_proof` insert system-completes the delivery, marks it billing-ready, updates linked pickup request status, and blocks direct Delivered status writes outside the trigger path. Live Supabase execution remains untested.
+- A private `delivery-proof` bucket, controlled object path convention, assigned-driver/Admin object insert policy, linked-role object read policy, SOP-DEL-04 sign-off fields/constraints, and automatic Policy #5 retention queueing now exist in the live Supabase project. Client upload wiring, signed-upload/RPC choice, production device model, and offline retry behavior remain open.
+- Append-only audit enforcement, PII audit triggers, and audit hash-chain fields/triggers are applied in the live Supabase project. End-to-end app writes still need to be verified after actor workflow data wiring.
+- Delivery proof immutability is applied in the live Supabase project, but the app upload path is not wired yet.
+- SOP-DEL-05 delivery completion exists in live Supabase: `delivery_proof` insert system-completes the delivery, marks it billing-ready, updates linked pickup request status, and blocks direct Delivered status writes outside the trigger path. End-to-end proof upload/completion still needs actor workflow wiring.
 - Invoice, invoice line, invoice approval, invoice dispatch record, invoice payment evidence, billing notice, unmatched billing account exception/correction fields, Policy #24 financial reconciliation records, local Day 8 overdue notice generation, Policy #18 dispute timing/SLA/remedy/outcome-history, run close, account suspension, account termination, exception alert, and exception investigation evidence fields now exist in local migrations. Non-payment account suspension now has a database guardrail requiring a matching Day 8 overdue notice plus Operational and Billing contact notification evidence, conduct suspension requires Admin notice/unremedied-breach evidence in the runtime, reinstatement requires both-contact notification evidence, and account-level suspension/reinstatement/termination billing notices can be recorded without a fake invoice number.
 - Operational notice/outbox records now exist in local migrations for customer-facing account activation, account suspension/reinstatement, booking, schedule, driver outcome, delivery, supplier setup, delivery dispute acknowledgement, and billing-query acknowledgement records.
 - Driver outcome evidence fields for No Pickup, SOP-RUN-04 Bring Forward, and Failed Delivery now exist in local migrations; Policy #8 two-attempt/redelivery-fee review columns and source-backed SOP-DEL-04 failed-delivery categories now exist locally, while broader production reason-code governance and offline retry rules remain unresolved.
@@ -124,7 +124,7 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 - Local Admin retention register is built and browser-verified for confirmed Policy #5 rules: pickup requests retained for 7 years from run date, supplier records retained for supplier relationship + 7 years, master-data change logs retained for 7 years from change date, and receiver/signature proof retained for 7 years from delivery date, with local proof rows normalised to the private `delivery-proof/deliveries/{delivery_id}/signature.png` path convention.
 - Whether POD photos are optional, conditionally required, or excluded from release one remains open.
 - Driver device assumptions for signature capture are not confirmed.
-- Production signature file upload to Supabase Storage is not wired because Supabase credentials are not present. The local migrations now define the private bucket, `deliveries/{delivery_id}/...` path contract, assigned-driver/Admin upload policy, linked-role read policy, and automatic retention queueing.
+- Production signature file upload to Supabase Storage is not wired into the UI yet. The live project now has the private bucket, `deliveries/{delivery_id}/...` path contract, assigned-driver/Admin upload policy, linked-role read policy, and automatic retention queueing.
 - Local delivery completion is proof-driven per SOP-DEL-05, and Admin Billing requires proof-linked Delivered jobs before billing. Live trigger execution, upload transport, and production correction handling for wrong proof/customer selection remain unresolved until Supabase and the exception authority are confirmed.
 - Production destruction/review execution for expired POD records is not wired because the Privacy Owner is unnamed and deletion approval rules remain open.
 
@@ -155,7 +155,7 @@ For production gating, use `production-blocker-register.md` as the stricter acti
 - Legal pages are not publishable yet.
 - Privacy Policy, Collection Notice, Data Retention, and Information Security policies are draft or awaiting owner review.
 - Privacy Owner is unnamed in source policies.
-- Pickup request retention from run date, supplier record retention from relationship end, master-data change-log retention from change date, POD proof retention from delivery date, and Policy #24 financial reconciliation retention from completion are confirmed at 7 years and implemented locally; production enforcement still needs live Supabase migration/storage/RLS testing.
+- Pickup request retention from run date, supplier record retention from relationship end, master-data change-log retention from change date, POD proof retention from delivery date, and Policy #24 financial reconciliation retention from completion are confirmed at 7 years and applied in live Supabase; production app writes still need workflow wiring and verification.
 - Some retention periods remain TBD pending Privacy Owner.
 - Debt recovery escalation path for repeated non-payment is not confirmed.
 - Approved public Booking Terms, Credit Terms, Dangerous Goods Policy, Delivery Disclaimer, and Privacy Policy copy is not confirmed.

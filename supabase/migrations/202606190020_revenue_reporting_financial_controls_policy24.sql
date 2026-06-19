@@ -49,12 +49,7 @@ create table if not exists public.financial_reconciliations (
   source_ref text not null default 'Policy #24 / POL-OPS-024',
   completed_by uuid references public.profiles(id),
   completed_at timestamptz,
-  retained_until date generated always as (
-    case
-      when completed_at is null then null
-      else ((completed_at::date + interval '7 years')::date)
-    end
-  ) stored,
+  retained_until date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint financial_reconciliations_policy24_completed_evidence_check
@@ -86,6 +81,11 @@ begin
   new.period_month := date_trunc('month', new.period_month)::date;
   new.month_end_date := (date_trunc('month', new.period_month)::date + interval '1 month - 1 day')::date;
   new.reconciliation_due_date := public.policy24_add_business_days(new.month_end_date, 5);
+  if new.completed_at is null then
+    new.retained_until := null;
+  else
+    new.retained_until := (new.completed_at::date + interval '7 years')::date;
+  end if;
   new.updated_at := now();
   return new;
 end;

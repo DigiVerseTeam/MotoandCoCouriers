@@ -2,9 +2,9 @@
 
 Last updated: 2026-06-19
 
-This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub and Vercel production connection evidence is now recorded here; Supabase remains incomplete until credentials, region, migrations, Auth/RLS, and Storage checks are done.
+This file records the environment values needed before GitHub, Supabase, and Vercel can be treated as connected. GitHub, Vercel, Supabase project metadata, production keys, migrations, private POD Storage bucket, and initial pricing seed evidence are now recorded here. Production Auth identity binding and actor workflow data wiring remain open.
 
-Production-first V1 is now the confirmed platform direction. The first Vercel production deployment is live, but it is not yet a fully live-backed production system because Supabase credentials and migrations are still open.
+Production-first V1 is now the confirmed platform direction. The Vercel production deployment is live, and the Supabase schema is deployed. The UI runtime is not yet a fully live-backed production system until its actor workflows read/write Supabase instead of local mock state.
 
 ## Local Command
 
@@ -61,10 +61,10 @@ These are required before live Auth, RLS, Storage, migration, and Australian dat
 | Variable | Status |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Confirmed project URL: `https://fhrqfrhqopicekaiibyj.supabase.co`; set in Vercel production |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Open |
-| `SUPABASE_SERVICE_ROLE_KEY` | Open |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Set in Vercel production from Supabase publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Set in Vercel production as a sensitive server secret |
 | `SUPABASE_PROJECT_REF` | Confirmed from Supabase MCP setup: `fhrqfrhqopicekaiibyj` |
-| `SUPABASE_REGION` | Open; Digiverse must confirm region/data residency |
+| `SUPABASE_REGION` | Confirmed from Supabase project metadata: `ap-southeast-2` |
 
 ## GitHub Handoff Values
 
@@ -96,6 +96,18 @@ These record the connected Vercel production deployment.
 | Vercel deployment | Production alias Ready; GitHub `main` auto-deploy verified on 2026-06-19 |
 | Production URL | `https://motoandcocouriers.vercel.app` |
 | Smoke test | `/`, `/login`, `/booking`, and `/admin` returned HTTP 200 on 2026-06-19 |
+
+## Supabase Production Evidence
+
+| Item | Evidence |
+| --- | --- |
+| Project | `motoandcocouriers`, ref `fhrqfrhqopicekaiibyj`, status `ACTIVE_HEALTHY` |
+| Region | `ap-southeast-2` |
+| Migrations | Active logistics migrations `202606180001` through `202606190031` applied on 2026-06-19; HCM migrations remain excluded under `hcm-extract/` |
+| Storage | Private `delivery-proof` bucket exists with `public=false` |
+| Pricing seed | 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows loaded from `supabase/seed/release_one_seed.sql` |
+| RLS coverage | 40 public base tables exist and all 40 have RLS enabled |
+| Production env | Vercel production has app env labels, site URL, Supabase URL, project ref, region, publishable key, and sensitive server key |
 
 ## Not Environment Variables
 

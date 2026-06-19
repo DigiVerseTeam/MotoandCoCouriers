@@ -124,7 +124,7 @@ create table public.delivery_proof (
   signature_path text not null,
   captured_by uuid references public.profiles(id),
   captured_at timestamptz not null default now(),
-  retention_until date generated always as ((captured_at::date + interval '7 years')::date) stored
+  retention_until date not null default ((current_date + interval '7 years')::date)
 );
 
 create table public.price_rules (
@@ -251,6 +251,20 @@ $$;
 create trigger actors_touch_updated_at
 before update on public.actors
 for each row execute function public.touch_updated_at();
+
+create or replace function public.set_delivery_proof_retention_until()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.retention_until := (new.captured_at::date + interval '7 years')::date;
+  return new;
+end;
+$$;
+
+create trigger delivery_proof_set_retention_until
+before insert or update of captured_at on public.delivery_proof
+for each row execute function public.set_delivery_proof_retention_until();
 
 -- Delivery cannot be marked delivered unless a proof record exists.
 create or replace function public.enforce_delivery_proof()

@@ -20,3 +20,4 @@ dist/
 !public/**/*.png
 
 .vercel
+supabase/.temp/

@@ -651,7 +651,7 @@ requireText(
     "Strict launch readiness gate",
     "--target=production",
     "--strict",
-    "expected to fail until GitHub, Supabase, Vercel",
+    "expected to fail until production environment values and live-tooling blockers",
     "Production readiness gate failed",
   ],
   "strict production readiness gate"
@@ -758,8 +758,8 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "Production Supabase project is not fully connected",
-    "Vercel production deployment is live but not Supabase-backed",
+    "Production Supabase workflow wiring is not complete",
+    "Vercel production deployment is live but actor workflows still use local/mock state",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
     "Public tracking model is unconfirmed",

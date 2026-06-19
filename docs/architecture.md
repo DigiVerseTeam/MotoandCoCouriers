@@ -16,7 +16,7 @@ Last updated: 2026-06-19
 - Product routes currently load the logistics software shell rather than documentation pages.
 - A public website route exists at `/website`. It uses confirmed brand assets and placeholder-safe content only.
 - Supabase migrations exist under `supabase/migrations`.
-- The deployed Vercel app still uses the local/mock runtime; it is not connected to a live Supabase-backed runtime until Supabase keys, migrations, Auth/RLS, and Storage checks are complete.
+- The deployed Vercel app still uses the local/mock runtime for actor workflows. Supabase project, keys, migrations, private POD bucket, and pricing seed are connected; production actor workflow data wiring is the remaining runtime step.
 - Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; newly added MCP tools may require a fresh Codex session before they are callable in-thread.
 - Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is not currently available on PATH in the local shell used by Codex.
 - GitHub repository `DigiVerseTeam/MotoandCoCouriers` is connected; V1 is merged to `main`, and the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
@@ -25,7 +25,7 @@ Last updated: 2026-06-19
 - `npm.ps1` is blocked by PowerShell execution policy, but `npm.cmd` works.
 - `next.config.mjs` supports `NEXT_DIST_DIR`; local preflight uses `.next-preflight-build` and draft CI uses `.next-ci` so verification does not depend on a locked or stale default `.next` directory.
 - `npm.cmd run verify:launch` is a read-only launch-readiness report for Git CLI, Supabase CLI, Vercel CLI, required platform values, environment pairing, and local Git repository initialisation.
-- `npm.cmd run verify:production` is the strict production readiness gate and is expected to fail until local production env values and remaining Supabase live-tooling blockers are resolved.
+- `npm.cmd run verify:production` is the strict production readiness gate for environment values and local Git/Supabase/Vercel tooling. It passed with production values supplied on 2026-06-19.
 - Existing workspace files are business, brand, SOP, capability, and policy documents.
 
 ## App structure
@@ -61,7 +61,7 @@ Local draft:
 
 - `.github/workflows/runtime-ci.yml` runs `npm ci`, `npm run verify:requirements`, `npm run verify:platform`, `npm run verify:migrations`, `npm run typecheck`, and `npm run build` with `NEXT_DIST_DIR=.next-ci`; `npm run typecheck` generates Next route metadata before running TypeScript.
 - This workflow has not run in GitHub because local Git availability and branch/PR handoff are not complete.
-- Supabase checks and Vercel preview/deploy jobs are not added until the live project, credentials, and deployment ownership are confirmed.
+- Supabase and Vercel production ownership are confirmed. CI still needs live run evidence and branch-protection/release ownership decisions.
 
 ## Supabase
 
@@ -95,7 +95,7 @@ Confirmed Supabase requirements:
 - POD records are retained for 7 years from delivery date.
 - Delivery proof storage paths use `deliveries/{delivery_id}/...` in the private `delivery-proof` bucket, with assigned-driver/Admin upload and linked-role read policies represented in local migrations. `SOP-DEL-01` grouped delivery stops add a delivery-stop group layer so one proof can complete multiple work items for the same account/address while preserving proof-driven `SOP-DEL-05` completion.
 - Audit log must be append-only, cover all PII actions, and be tamper-evident.
-- `npm.cmd run verify:migrations` statically checks the local draft migrations for required source-backed guardrail markers. Live migration execution and RLS/Storage policy testing remain blocked until the project is connected.
+- `npm.cmd run verify:migrations` statically checks the local migrations for required source-backed guardrail markers. The active logistics migrations are applied to production Supabase; real actor Auth/RLS and Storage upload tests remain open.
 
 Confirmed release-one data areas based on source documents, brand guide, and user confirmations:
 
@@ -176,7 +176,7 @@ Current environment labels:
 
 - `NEXT_PUBLIC_APP_ENV`: `local`, `preview`, or `production`.
 - `NEXT_PUBLIC_SUPABASE_ENV`: `local`, `preview`, or `production`.
-- Supabase project URL is known; region, anon/service keys, migration execution, Auth/RLS/Storage verification, and secret ownership remain open.
+- Supabase project URL, region, production publishable/server keys, and migration execution are confirmed. Auth identity binding, end-to-end RLS/Storage workflow verification, and secret ownership remain open.
 - `docs/platform-env-contract.md` records the GitHub, Supabase, and Vercel values required before connection.
 - `npm.cmd run verify:platform` reports the current environment contract without creating projects or connecting external services.
 
@@ -184,7 +184,7 @@ Current environment labels:
 
 1. Keep the local software runtime as the product baseline.
 2. Split the large local component into role modules once behavior stabilises.
-3. Connect the confirmed data objects to production Supabase only after project/region/auth decisions are available.
+3. Wire the confirmed actor workflows to the live Supabase data objects and Auth identities.
 4. Add public website routes without replacing the software shell.
 5. Complete Supabase production connection, then redeploy and repeat live workflow verification against the Vercel production URL.
 

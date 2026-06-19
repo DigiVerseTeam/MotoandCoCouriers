@@ -58,11 +58,15 @@ This checklist is staged around confirmed source material and known platform dir
 ## Supabase
 
 - [ ] Confirm Supabase project owner.
-- [ ] Confirm region.
+- [x] Confirm region.
 - [ ] Confirm environments.
 - [ ] Confirm auth model.
 - [x] Draft release-one database entities.
 - [x] Add static Supabase migration guardrail verification.
+- [x] Apply active logistics migrations to production Supabase.
+- [x] Load source-backed Policy #9 pricing seed.
+- [ ] Wire actor workflows to live Supabase data.
+- [ ] Configure Supabase Auth role binding and run live RLS tests.
 - [x] Confirm storage needs for POD assets.
 - [ ] Confirm Row Level Security model.
 - [ ] Confirm backup and retention requirements.
@@ -88,9 +92,9 @@ This checklist is staged around confirmed source material and known platform dir
 - [x] Add environment variable contract/reporting.
 - [x] Add read-only Vercel readiness report.
 - [x] Add strict production gate coverage for missing Vercel readiness.
-- [ ] Confirm remaining Supabase-backed runtime environment variables.
+- [x] Confirm remaining Supabase-backed runtime environment variables.
 - [x] Connect GitHub repository.
 - [x] Deploy production Vercel app shell.
-- [ ] Connect Supabase variables.
+- [x] Connect Supabase variables.
 - [ ] Deploy preview.
 - [ ] Promote production after approval.

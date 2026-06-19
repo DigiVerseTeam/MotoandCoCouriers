@@ -262,7 +262,7 @@ Decision: Use Supabase project ref `fhrqfrhqopicekaiibyj` for the production-fir
 
 Source: User supplied Supabase MCP command on 2026-06-19; local `codex mcp list` verification.
 
-Notes: The Supabase MCP server `supabase` is registered at `https://mcp.supabase.com/mcp?project_ref=fhrqfrhqopicekaiibyj` and authenticated via OAuth. Secrets, region/data-residency confirmation, Auth/RLS/Storage verification, and migration execution remain open.
+Notes: The Supabase MCP server `supabase` is registered at `https://mcp.supabase.com/mcp?project_ref=fhrqfrhqopicekaiibyj` and authenticated via OAuth. Supabase CLI access is also authenticated for migration execution. Production Auth/RLS actor tests and workflow data wiring remain open.
 
 ### 2026-06-19 - GitHub V1 repository handoff
 
@@ -282,4 +282,14 @@ Decision: Use Vercel team `DigiVerse` / `digi-verse` and project `motoandcocouri
 
 Source: User completed Vercel device login on 2026-06-19; Vercel CLI link/deploy verification.
 
-Notes: The production alias `https://motoandcocouriers.vercel.app` is Ready, and GitHub `main` auto-deploy was verified on 2026-06-19. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase anon/service keys, region confirmation, migration execution, Auth/RLS, and Storage verification remain open before this is a fully live-backed production system.
+Notes: The production alias `https://motoandcocouriers.vercel.app` is Ready, and GitHub `main` auto-deploy was verified on 2026-06-19. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase production env values are set in Vercel; actor workflow data wiring is still pending before the app is fully live-backed.
+
+### 2026-06-19 - Supabase production migrations and seed
+
+Status: Confirmed schema deployment; actor workflow data wiring pending.
+
+Decision: Apply the active logistics migration set to Supabase project `fhrqfrhqopicekaiibyj` and seed the approved Policy #9 / SOP-MDM-02 starting price rules.
+
+Source: Supabase CLI project metadata, migration push, and post-apply SQL verification on 2026-06-19.
+
+Notes: Project `motoandcocouriers` is `ACTIVE_HEALTHY` in region `ap-southeast-2`. All active logistics migrations through `202606190031` are applied; HCM migrations remain excluded under `hcm-extract/`. Private bucket `delivery-proof` exists with `public=false`. Seed verification found 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows. Public schema verification found 40 public base tables and all 40 with RLS enabled. Production Auth identity binding, actor workflow data wiring, and live actor-by-actor RLS tests remain open.
