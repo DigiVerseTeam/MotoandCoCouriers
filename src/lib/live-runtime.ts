@@ -27,6 +27,7 @@ export const liveRuntimeDomains = {
 };
 
 const allSnapshotKeys = Object.keys(liveRuntimeDomains);
+const LIVE_AUTH_RETURN_PATH_KEY = "motoCoLiveAuthReturnPath";
 
 export function getLiveRuntimeStatus() {
   const status = getBrowserSupabaseEnvironmentStatus();
@@ -45,6 +46,60 @@ function client() {
 
 function normaliseEmail(email = "") {
   return String(email || "").trim().toLowerCase();
+}
+
+export function safeLiveAuthReturnPath(value = "/") {
+  const raw = String(value || "/").trim();
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
+  try {
+    const parsed = new URL(raw, "https://motoandco.local");
+    if (parsed.origin !== "https://motoandco.local") return "/";
+    if (parsed.pathname.startsWith("/auth/callback")) return "/";
+    if (parsed.pathname === "/login") return "/";
+    const allowedPaths = ["/", "/portal", "/booking", "/tracking", "/admin", "/driver"];
+    if (!allowedPaths.includes(parsed.pathname)) return "/";
+    return `${parsed.pathname}${parsed.search || ""}`;
+  } catch {
+    return "/";
+  }
+}
+
+function currentBrowserReturnPath() {
+  if (typeof window === "undefined") return "/";
+  return safeLiveAuthReturnPath(`${window.location.pathname || "/"}${window.location.search || ""}`);
+}
+
+function publicSiteOrigin() {
+  const configured = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
+  const appEnv = String(process.env.NEXT_PUBLIC_APP_ENV || "").trim().toLowerCase();
+  if (appEnv === "production" && configured) return configured;
+  if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
+  return configured;
+}
+
+function liveAuthCallbackUrl(returnPath = "/") {
+  const origin = publicSiteOrigin();
+  if (!origin) return undefined;
+  const next = safeLiveAuthReturnPath(returnPath);
+  return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
+export function readStoredLiveAuthReturnPath(fallback = "/") {
+  if (typeof window === "undefined") return safeLiveAuthReturnPath(fallback);
+  try {
+    return safeLiveAuthReturnPath(window.sessionStorage.getItem(LIVE_AUTH_RETURN_PATH_KEY) || fallback);
+  } catch {
+    return safeLiveAuthReturnPath(fallback);
+  }
+}
+
+function rememberLiveAuthReturnPath(returnPath = "/") {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(LIVE_AUTH_RETURN_PATH_KEY, safeLiveAuthReturnPath(returnPath));
+  } catch {
+    // Session storage is best-effort; the callback URL also carries the return path.
+  }
 }
 
 function runtimeRecordId(row) {
@@ -98,10 +153,12 @@ function appUserFromProfile({ session, profile, accessRows }) {
   };
 }
 
-export async function requestLiveMagicLink(email, roleHint = "client") {
+export async function requestLiveMagicLink(email, roleHint = "client", returnPath = "") {
   const supabase = client();
   if (!supabase) throw new Error("Live sign-in is not configured.");
-  const redirectTo = typeof window !== "undefined" ? window.location.href : undefined;
+  const resolvedReturnPath = safeLiveAuthReturnPath(returnPath || currentBrowserReturnPath());
+  rememberLiveAuthReturnPath(resolvedReturnPath);
+  const redirectTo = liveAuthCallbackUrl(resolvedReturnPath);
   const { error } = await supabase.auth.signInWithOtp({
     email: normaliseEmail(email),
     options: {

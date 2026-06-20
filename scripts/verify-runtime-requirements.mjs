@@ -637,6 +637,9 @@ requireText(
   "src/lib/live-runtime.ts",
   [
     "requestLiveMagicLink",
+    "safeLiveAuthReturnPath",
+    "/auth/callback?next=",
+    "LIVE_AUTH_RETURN_PATH_KEY",
     "resolveLiveRuntimeSession",
     "loadLiveRuntimeSnapshot",
     "canSyncDomainForRole",
@@ -653,6 +656,8 @@ requireText(
     "liveRuntimeStatus",
     "Live System",
     "Send Login Link",
+    "authReturnPath",
+    "readStoredLiveAuthReturnPath",
     "resolveLiveRuntimeSession",
     "loadLiveRuntimeSnapshot",
     "syncLiveRuntimeDomain",
@@ -660,6 +665,15 @@ requireText(
     "POD Storage Failure",
   ],
   "active runtime uses Supabase Auth, RLS bridge, and private POD upload"
+);
+
+requireText(
+  "src/app/auth/callback/page.tsx",
+  [
+    "MotoCoLogisticsApp",
+    "AuthCallbackPage",
+  ],
+  "live sign-in callback route"
 );
 
 requireText(

@@ -11,8 +11,10 @@ import {
   listLiveProvisionedUsers,
   onLiveAuthStateChange,
   provisionLiveUser,
+  readStoredLiveAuthReturnPath,
   requestLiveMagicLink,
   resolveLiveRuntimeSession,
+  safeLiveAuthReturnPath,
   signOutLiveRuntime,
   syncLiveRuntimeDomain,
   updateLiveProvisionedUserStatus,
@@ -2179,7 +2181,7 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", defaultPortalSide = "", portalSideLocked = false, entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
+function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", defaultPortalSide = "", portalSideLocked = false, returnPath = "/", entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
   const initialPortalSide = defaultPortalSide || "";
   const [portalSide, setPortalSide] = useState(initialPortalSide);
   const [tab, setTab] = useState(defaultRoleForPortalSide(initialPortalSide, defaultRole || "client"));
@@ -2255,7 +2257,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     if (liveLoginEnabled) {
       setRequestingLiveLink(true);
       try {
-        await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab));
+        await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab), returnPath);
         setNotice("Secure login link sent. Open the link from that email to continue.");
       } catch (error) {
         setErr("We could not send a login link for this address. Check the email or contact Admin.");
@@ -10367,7 +10369,8 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const pathname = usePathname();
-  const routeIntent = routeIntentFromPath(pathname || "/");
+  const [authReturnPath, setAuthReturnPath] = useState("");
+  const routeIntent = routeIntentFromPath(authReturnPath || pathname || "/");
   const [liveRuntimeStatus] = useState(() => getLiveRuntimeStatus());
   const [liveRuntimeHydrated, setLiveRuntimeHydrated] = useState(false);
   const [liveRuntimeNotice, setLiveRuntimeNotice] = useState("");
@@ -10450,6 +10453,22 @@ export default function App() {
   const [showReg, setShowReg] = useState(false);
   const [systemNotice, setSystemNotice] = useState("");
   const accessRecords = buildAccessRecords(clients, drivers, accessOverrides);
+
+  useEffect(() => {
+    const path = String(pathname || "/");
+    if (!path.startsWith("/auth/callback")) {
+      setAuthReturnPath("");
+      return;
+    }
+    const params = new URLSearchParams(window.location.search || "");
+    setAuthReturnPath(safeLiveAuthReturnPath(params.get("next") || readStoredLiveAuthReturnPath("/")));
+  }, [pathname]);
+
+  useEffect(() => {
+    const path = String(pathname || "/");
+    if (!session || !authReturnPath || !path.startsWith("/auth/callback")) return;
+    window.history.replaceState(null, "", authReturnPath);
+  }, [session, authReturnPath, pathname]);
 
   function applyLiveRuntimeSnapshot(snapshot = {}) {
     const liveVehicles = snapshot.vehicles || [];
@@ -12090,7 +12109,7 @@ export default function App() {
           <RegisterClient suppliers={suppliers} onDone={addClient} onCancel={() => setShowReg(false)} />
         </div>
       ) : !session ? (
-        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} defaultPortalSide={routeIntent.loginPortalSide} portalSideLocked={Boolean(routeIntent.loginPortalSideLocked)} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
+        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} defaultPortalSide={routeIntent.loginPortalSide} portalSideLocked={Boolean(routeIntent.loginPortalSideLocked)} returnPath={authReturnPath || pathname || "/"} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
       ) : session.role === "client" ? (
         <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : session.role === "billing" ? (
