@@ -9,7 +9,7 @@ const checks = [
 let failed = false;
 
 console.log("Moto & Co production readiness gate");
-console.log("This gate is expected to fail until production environment values and live-tooling blockers are resolved.");
+console.log("This gate is expected to fail until GitHub, Supabase, Vercel, and live-tooling blockers are resolved.");
 console.log("");
 
 for (const [label, args] of checks) {

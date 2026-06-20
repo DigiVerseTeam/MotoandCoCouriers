@@ -4,22 +4,6 @@
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { nextAvailableRunDate, resolveActualRunDate } from "@/lib/date-rules";
-import {
-  canSyncDomainForRole,
-  getLiveRuntimeStatus,
-  loadLiveRuntimeSnapshot,
-  listLiveProvisionedUsers,
-  onLiveAuthStateChange,
-  provisionLiveUser,
-  readStoredLiveAuthReturnPath,
-  requestLiveMagicLink,
-  resolveLiveRuntimeSession,
-  safeLiveAuthReturnPath,
-  signOutLiveRuntime,
-  syncLiveRuntimeDomain,
-  updateLiveProvisionedUserStatus,
-  uploadLiveDeliveryProof,
-} from "@/lib/live-runtime";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const T = {
@@ -33,125 +17,6 @@ const T = {
   mu: "rgba(0,0,0,.62)",
   mu2: "rgba(0,0,0,.36)",
 };
-
-const SOP_RUNTIME_SOURCE = {
-  label: "SOP Library v1.1",
-  effective: "June 2026",
-  scope: "Runtime and RACI governance added across release-one SOPs. Admin can review and record operational decisions; Super Admin can audit. Runtime module configuration remains Digiverse-controlled.",
-  documentationGap: "SOP v1.1 filenames are present, but Summary sheets still show Version 1.0.",
-};
-
-const RACI_COMMON = {
-  accountable: "Admin",
-  auditRole: "Super Admin",
-  escalation: "APP-ADM-005",
-  system: "System (APP-ADM-005 / Runtime)",
-};
-
-const RACI_CONTROLS = [
-  { source: "EXC-SOP-05", title: "Overdue Notice Process", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "EXC-SOP-06", title: "Account Suspension & Reinstatement", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-BIL-01", title: "Month-End Billing Review", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-BIL-04", title: "Create & Send Invoice", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-DEL-01", title: "Delivery Stop Grouping", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-DEL-04", title: "Delivery Sign-Off & Proof", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-DEL-05", title: "Delivery Completion", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-EXC-03", title: "Unmatched Billing Account Exception", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-IAM-01", title: "Customer Access Registration", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-IAM-02", title: "Login Code Request & Email Delivery", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-IAM-03", title: "Admin Master Data & User Provisioning", status: "active", accountable: "Super Admin", auditRole: "Super Admin", escalation: "APP-ADM-005", sourceNote: "BOAS v1.9 / SOP-IAM-03" },
-  { source: "SOP-IAM-04", title: "Staff Role Access Management", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-ITM-02", title: "Tyre Bundle Pricing Rules", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-ITM-03", title: "Parcel & Returns Item Capture", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-MDM-01", title: "Supplier Master Data Maintenance", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-MDM-02", title: "Courier Item & Pricing Master Data", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-PUP-02", title: "Confirm Customer Pickup", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-PUP-03", title: "Record No-Pickup Outcome", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-REQ-01", title: "Submit Milk-Run Pickup Request", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-REQ-02", title: "Milk-Run Cut-Off Handling", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-RUN-01", title: "Driver Milk-Run Planning", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-RUN-04", title: "Bring Future Pickup Into Today", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
-  { source: "SOP-CUS-01", title: "Customer Account Setup", status: "blocked", blocker: "RACI cannot be completed until the underlying SOP is unblocked." },
-  { source: "SOP-JDD-01", title: "Driver Application & Onboarding", status: "blocked", blocker: "HCM requirement. RACI cannot be completed in the logistics portal." },
-  { source: "SOP-PRV-01", title: "Privacy Consent Capture", status: "blocked", blocker: "Privacy Owner approval is still required." },
-  { source: "SOP-PRV-02", title: "Data Retention & Destruction", status: "blocked", blocker: "Retention periods and Privacy Owner approval are still required." },
-  { source: "SOP-REL-01", title: "Release & Deployment Control", status: "blocked", blocker: "RACI cannot be completed until the underlying SOP is unblocked." },
-];
-
-const RACI_CONTROL_BY_SOURCE = Object.fromEntries(RACI_CONTROLS.map(control => [control.source, control]));
-
-const RACI_ACTION_RULES = [
-  { source: "SOP-IAM-03", pattern: /provision|pending user|live profile|create pending user|admin user/i },
-  { source: "SOP-IAM-04", pattern: /access role|role access|revoked access|restore access|login blocked/i },
-  { source: "SOP-IAM-02", pattern: /login|magic link|session|code request|sign-in|signed out/i },
-  { source: "SOP-IAM-01", pattern: /registration|collection notice|consent|customer account created/i },
-  { source: "SOP-REQ-02", pattern: /cut-off|schedule adjusted|run date adjusted|next available/i },
-  { source: "SOP-REQ-01", pattern: /pickup request created|order created|new order/i },
-  { source: "SOP-RUN-01", pattern: /dispatch|run planning|driver availability|vehicle assigned|run planner/i },
-  { source: "SOP-RUN-04", pattern: /bring[- ]?forward|brought forward|future pickup/i },
-  { source: "SOP-PUP-03", pattern: /no pickup|supplier pickup standards|whs hazard|goods not ready|wrong items/i },
-  { source: "SOP-PUP-02", pattern: /supplier stop|pickup outcome|picked up|pickup confirmation|dock/i },
-  { source: "SOP-DEL-01", pattern: /grouped delivery|delivery stop/i },
-  { source: "SOP-DEL-04", pattern: /delivery proof|pod|signature|receiver|failed delivery|sign-off/i },
-  { source: "SOP-DEL-05", pattern: /delivery completed|delivered status|billing-ready|run closed/i },
-  { source: "SOP-EXC-03", pattern: /unmatched billing|billing account/i },
-  { source: "SOP-BIL-01", pattern: /billing group|billing review|month-end|financial reconciliation/i },
-  { source: "SOP-BIL-04", pattern: /invoice|payment|billing notice|billing dispute/i },
-  { source: "EXC-SOP-05", pattern: /overdue|day 8|credit control/i },
-  { source: "EXC-SOP-06", pattern: /suspend|suspension|reinstat/i },
-  { source: "SOP-MDM-02", pattern: /pricing rule|pricing review|price rule|price /i },
-  { source: "SOP-MDM-01", pattern: /supplier updated|supplier added|supplier archived|supplier review|supplier master/i },
-  { source: "SOP-ITM-02", pattern: /tyre|tire/i },
-  { source: "SOP-ITM-03", pattern: /parcel|parts|return|weight band/i },
-  { source: "SOP-PRV-02", pattern: /retention|destruction/i },
-  { source: "SOP-PRV-01", pattern: /privacy consent|privacy request|access request|correction request/i },
-  { source: "SOP-REL-01", pattern: /release|deployment/i },
-];
-
-function raciResponsibleForActor(actor = "system") {
-  if (actor === "driver") return "Driver";
-  if (actor === "client") return "Client / Operational Contact";
-  if (actor === "billing" || actor === "client_billing") return "Client / Billing Contact";
-  if (actor === "super_admin") return "Super Admin";
-  if (actor === "admin") return "Admin";
-  return RACI_COMMON.system;
-}
-
-function resolveRaciEvidence(action = "", detail = "", actor = "system") {
-  const text = `${action} ${detail}`;
-  const rule = RACI_ACTION_RULES.find(item => item.pattern.test(text));
-  if (!rule) return null;
-  const control = RACI_CONTROL_BY_SOURCE[rule.source];
-  if (!control) return null;
-  if (control.status === "blocked") {
-    return {
-      source: control.source,
-      title: control.title,
-      status: "blocked",
-      blocker: control.blocker,
-      responsible: "Blocked",
-      accountable: "Blocked",
-      informed: "Admin",
-      escalation: "APP-ADM-005",
-    };
-  }
-  return {
-    source: control.source,
-    title: control.title,
-    status: "active",
-    sourceNote: control.sourceNote || "SOP Library v1.1",
-    responsible: raciResponsibleForActor(actor),
-    accountable: control.accountable || RACI_COMMON.accountable,
-    informed: control.auditRole || RACI_COMMON.auditRole,
-    escalation: control.escalation || RACI_COMMON.escalation,
-  };
-}
-
-function raciAuditLabel(raci) {
-  if (!raci) return "";
-  if (raci.status === "blocked") return `RACI ${raci.source}: blocked - ${raci.blocker}`;
-  return `RACI ${raci.source}: R=${raci.responsible}; A=${raci.accountable}; I=${raci.informed}`;
-}
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -170,17 +35,15 @@ const css = `
   .main{flex:1;padding:1.4rem;max-width:820px;margin:0 auto;width:100%}
   /* LOGIN */
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.4rem;background:${T.bg}}
-  .login-card{background:${T.card};border:1px solid ${T.border};border-radius:8px;padding:2rem 1.8rem;width:100%;max-width:430px}
+  .login-card{background:${T.card};border:1px solid ${T.border};border-radius:8px;padding:2rem 1.8rem;width:100%;max-width:400px}
   .login-logo{text-align:center;margin-bottom:1.8rem}
   .login-logo img{width:142px;height:auto;margin:0 auto .8rem;display:block}
   .login-logo h1{font-size:1.6rem;font-weight:900;letter-spacing:0}
   .login-logo h1 span{color:${T.acc}}
   .login-logo p{font-size:.75rem;color:${T.mu};margin-top:.25rem;letter-spacing:.05em;text-transform:uppercase}
-  .entry-choices{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}
-  .entry-choice{border:1px solid ${T.border};border-radius:6px;background:${T.card};color:${T.tx};padding:.85rem .8rem;min-height:58px;font-size:.9rem;font-weight:900;cursor:pointer;transition:.15s}
-  .entry-choice:hover{border-color:${T.tx}}
-  .entry-choice.active{border-color:${T.acc};box-shadow:0 0 0 3px rgba(225,29,72,.08)}
-  .login-context{border:1px solid ${T.border};border-radius:6px;padding:.65rem .8rem;margin-bottom:1rem;font-size:.78rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:${T.tx};background:rgba(0,0,0,.02);text-align:center}
+  .tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem;background:rgba(0,0,0,.03);border:1px solid ${T.border};border-radius:8px;padding:.25rem}
+  .tab{flex:1 1 86px;padding:.45rem;font-size:.78rem;font-weight:800;line-height:1.15;border:none;background:transparent;color:${T.mu};border-radius:4px;cursor:pointer;transition:.15s}
+  .tab.active{background:${T.card};color:${T.tx};box-shadow:none;border:1px solid ${T.border}}
   /* FORMS */
   .f{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.9rem}
   .f label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${T.mu}}
@@ -272,81 +135,42 @@ function routeIntentFromPath(pathname = "/") {
   if (path.startsWith("/admin")) {
     return {
       loginRole: "admin",
-      loginPortalSide: "courier",
-      loginPortalSideLocked: true,
-      loginNotice: "Courier Business login. Approved Super Admin and Admin users open the operations console.",
+      loginNotice: "Admin operations route. Login as Admin to review exceptions, dispatch, CRM, supplier, pricing, billing, retention, and audit work.",
     };
   }
   if (path.startsWith("/driver")) {
     return {
       loginRole: "driver",
-      loginPortalSide: "courier",
-      loginPortalSideLocked: true,
-      loginNotice: "Courier Business login. Approved Driver users open assigned run work.",
+      loginNotice: "Driver run route. Login as Driver to work assigned pickup, delivery, POD, and run close tasks.",
     };
   }
   if (path.startsWith("/tracking")) {
     return {
       loginRole: "client",
-      loginPortalSide: "customer",
-      loginPortalSideLocked: true,
       clientInitialView: "tracking",
-      loginNotice: "Customer login. Approved operational contacts open account tracking.",
+      loginNotice: "Tracking route. Login as Client Operational Contact to search account-scoped delivery records and POD evidence.",
     };
   }
   if (path.startsWith("/booking")) {
     return {
       loginRole: "client",
-      loginPortalSide: "customer",
-      loginPortalSideLocked: true,
       clientInitialView: "orders",
       startNewPickup: true,
-      loginNotice: "Customer login. Approved operational contacts open booking.",
+      loginNotice: "Booking route. Login as Client Operational Contact to submit pickup requests against approved suppliers. New public/unregistered bookings remain unresolved.",
     };
   }
   if (path.startsWith("/portal")) {
     return {
       loginRole: "client",
-      loginPortalSide: "",
-      loginPortalSideLocked: false,
       clientInitialView: "orders",
-      loginNotice: "",
+      loginNotice: "Client portal route. Login as Client Operational Contact to manage orders, suppliers, tracking, updates, billing evidence, and profile details.",
     };
   }
   return {
     loginRole: "client",
-    loginPortalSide: "",
-    loginPortalSideLocked: false,
     clientInitialView: "orders",
     loginNotice: "",
   };
-}
-
-function defaultRoleForPortalSide(side = "", preferredRole = "client") {
-  if (side === "customer") return ["client", "billing"].includes(preferredRole) ? preferredRole : "client";
-  if (side === "courier") return ["driver", "admin", "super_admin"].includes(preferredRole) ? (preferredRole === "super_admin" ? "admin" : preferredRole) : "admin";
-  return preferredRole || "client";
-}
-
-function portalSideLabel(side = "") {
-  if (side === "customer") return "Customer";
-  if (side === "courier") return "Courier Business";
-  return "";
-}
-
-function sessionRoleLabel(role = "") {
-  if (role === "super_admin") return "Super Admin";
-  if (role === "admin") return "Admin";
-  if (role === "driver") return "Driver";
-  if (role === "billing") return "Billing";
-  if (role === "client") return "Customer";
-  return "User";
-}
-
-function liveRoleHintForPortalSide(side = "", fallbackRole = "client") {
-  if (side === "customer") return "customer";
-  if (side === "courier") return "courier_business";
-  return fallbackRole;
 }
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -442,7 +266,7 @@ const CRM_RELATIONSHIP_STATUSES = ["Active", "Inactive", "At-Risk", "Suspended",
 const CRM_RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
 const CRM_EVENT_TYPES = ["Meeting", "Call", "Email", "Decision", "Issue", "Commitment", "Performance Signal", "Sentiment Signal", "Other"];
 const CRM_HEALTH_IMPACTS = ["Positive", "Neutral", "Negative"];
-const CRM_OBLIGATION_TYPES = ["Contract", "SLA", "Payment Term", "Regulatory Commitment", "Agreed Action", "Other"];
+const CRM_OBLIGATION_TYPES = ["Contract", "Service Commitment", "Payment Term", "Regulatory Commitment", "Agreed Action", "Other"];
 const CRM_OBLIGATION_DIRECTIONS = ["We owe them", "They owe us", "Mutual"];
 const CRM_OBLIGATION_STATUSES = ["Active", "Fulfilled", "Overdue", "Disputed", "Terminated"];
 
@@ -636,9 +460,6 @@ const LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000;
 const LOCAL_OTP_MAX_ATTEMPTS = 3;
 const LOCAL_OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
 const LOCAL_OTP_MAX_REQUESTS = 5;
-const KEY_LIVE_LOGIN_COOLDOWNS = "mc_live_login_cooldowns";
-const LIVE_LOGIN_SUCCESS_COOLDOWN_MS = 5 * 60 * 1000;
-const LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS = 60 * 60 * 1000;
 const AUDIT_GENESIS_HASH = "APP-PRV-004-GENESIS";
 const AUDIT_HASH_ALGORITHM = "local-fnv1a-v1";
 
@@ -769,7 +590,7 @@ function groupDeliveryStops(orders = []) {
 
 function proofStorageLabel(proof) {
   if (proof?.signaturePath) return `delivery-proof/${proof.signaturePath}`;
-  return proof?.storage || "Private proof storage path not recorded locally";
+  return proof?.storage || "Supabase private bucket path not recorded locally";
 }
 
 function normaliseDeliveryProof(proof, orders = []) {
@@ -915,7 +736,7 @@ function financialReconciliationRows(invoices = [], records = [], today = todayB
 }
 
 function auditHashPayload(event) {
-  const payload = [
+  return [
     event.sequence,
     event.id,
     event.at,
@@ -925,18 +746,7 @@ function auditHashPayload(event) {
     event.piiAction ? "pii" : "non-pii",
     event.protectedObject,
     event.previousHash,
-  ];
-  if (event.raciSource) {
-    payload.push(
-      event.raciSource,
-      event.raciStatus,
-      event.raciResponsible,
-      event.raciAccountable,
-      event.raciInformed,
-      event.raciEscalation
-    );
-  }
-  return payload.map(value => String(value ?? "")).join("|");
+  ].map(value => String(value ?? "")).join("|");
 }
 
 function auditEventHash(event) {
@@ -1001,41 +811,6 @@ function localLoginKey(role, email) {
 }
 function localOtpExpiryLabel(expiresAt) {
   return new Date(expiresAt).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
-}
-function liveLoginCooldownKey(portalSide, role, email) {
-  return `${portalSide || "unknown"}:${role || "unknown"}:${String(email || "").trim().toLowerCase()}`;
-}
-function readLiveLoginCooldowns() {
-  return load(KEY_LIVE_LOGIN_COOLDOWNS, {});
-}
-function liveLoginCooldownUntil(portalSide, role, email) {
-  const key = liveLoginCooldownKey(portalSide, role, email);
-  const cooldowns = readLiveLoginCooldowns();
-  const until = Number(cooldowns[key] || 0);
-  if (!until || until <= Date.now()) {
-    if (cooldowns[key]) {
-      delete cooldowns[key];
-      save(KEY_LIVE_LOGIN_COOLDOWNS, cooldowns);
-    }
-    return 0;
-  }
-  return until;
-}
-function rememberLiveLoginCooldown(portalSide, role, email, durationMs) {
-  const cooldowns = readLiveLoginCooldowns();
-  const key = liveLoginCooldownKey(portalSide, role, email);
-  const until = Date.now() + durationMs;
-  cooldowns[key] = until;
-  save(KEY_LIVE_LOGIN_COOLDOWNS, cooldowns);
-  return until;
-}
-function liveLoginWaitLabel(until, now = Date.now()) {
-  const remainingMinutes = Math.max(1, Math.ceil((Number(until || 0) - now) / (60 * 1000)));
-  if (remainingMinutes < 60) return `${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}`;
-  const hours = Math.floor(remainingMinutes / 60);
-  const minutes = remainingMinutes % 60;
-  if (!minutes) return `${hours} hour${hours === 1 ? "" : "s"}`;
-  return `${hours} hour${hours === 1 ? "" : "s"} ${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 function todayBrisbane() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -1154,13 +929,6 @@ function policy18DisputeWindowForInvoice(invoice, receivedDate = todayBrisbane()
 function policy18DisputeWindowForOrder(order, invoices = [], receivedDate = todayBrisbane()) {
   return policy18DisputeWindowForInvoice(policy18InvoiceForOrder(order, invoices), receivedDate);
 }
-function policy18DueDates(receivedAt = isoNow()) {
-  const receivedDate = isoDate(receivedAt);
-  return {
-    ackDueDate: addBusinessDays(receivedDate, 2),
-    resolutionDueDate: addBusinessDays(receivedDate, 10),
-  };
-}
 function normalisePolicy18Dispute(input, defaults = {}) {
   const raw = typeof input === "string" ? { note: input } : (input || {});
   const reason = raw.reason || defaults.reason || "";
@@ -1219,12 +987,11 @@ function policy18RemedyForFinding(exception, findingValue, investigatedAt = isoN
     remedyStatus: "Required",
   };
 }
-function policy18SlaLabel(exception) {
+function policy18StatusLine(exception) {
   if (!isPolicy18Dispute(exception)) return "";
-  const today = todayBrisbane();
-  const ack = exception.acknowledgedAt ? `Acknowledged ${fmtFullDate(isoDate(exception.acknowledgedAt))}` : (exception.ackDueDate ? `Ack due ${fmtFullDate(exception.ackDueDate)}${today > exception.ackDueDate ? " (overdue)" : ""}` : "Ack due not recorded");
-  const resolution = exception.resolutionDueDate ? `Resolution due ${fmtFullDate(exception.resolutionDueDate)}${today > exception.resolutionDueDate ? " (overdue)" : ""}` : "Resolution due not recorded";
-  return `${ack}; ${resolution}`;
+  const received = exception.raisedAt ? `Received ${fmtFullDate(isoDate(exception.raisedAt))}` : "Received date not recorded";
+  const acknowledged = exception.acknowledgedAt ? `Acknowledged ${fmtFullDate(isoDate(exception.acknowledgedAt))}` : "Acknowledgement not recorded";
+  return `${received}; ${acknowledged}; response monitoring outside this portal`;
 }
 function policy18RemedyLine(record) {
   if (!record?.policy18RemedyRequired) return "";
@@ -1512,6 +1279,7 @@ const POLICY16_NO_PICKUP_CATEGORIES = [
   ["improper_packaging", "Improper packaging"],
   ["supplier_refused", "Supplier refused pickup"],
   ["wrong_items", "Wrong items presented"],
+  ["time_constraint", "Time constraint"],
   ["whs_hazard", "WHS hazard at supplier premises"],
 ];
 function noPickupCategoryLabel(category) {
@@ -2083,25 +1851,6 @@ function runDateAdjustmentLabel(reason) {
 }
 function accessKey(role, subjectId, email) { return `${role}:${subjectId}:${String(email || "").toLowerCase()}`; }
 function accessBadgeClass(status) { return status === "Revoked" ? "b-cancelled" : status === "Review Due" ? "b-pending" : "b-done"; }
-const SOP_IAM_03_ROLES = [
-  { value: "client_ops", label: "Client Operational", actorCode: "ACT-CRM-001a" },
-  { value: "client_billing", label: "Client Billing", actorCode: "ACT-CRM-001b" },
-  { value: "driver", label: "Driver", actorCode: "ACT-INT-001" },
-  { value: "admin", label: "Admin", actorCode: "ACT-INT-002" },
-];
-function sopIamRoleLabel(value) {
-  if (value === "super_admin") return "Super Admin";
-  return SOP_IAM_03_ROLES.find(role => role.value === value)?.label || value || "User";
-}
-function sopIamActorCode(value) {
-  if (value === "super_admin") return "ACT-INT-003";
-  return SOP_IAM_03_ROLES.find(role => role.value === value)?.actorCode || "SOP-IAM-03";
-}
-function liveUserStatusBadge(status) {
-  if (status === "active") return "b-done";
-  if (status === "revoked" || status === "inactive") return "b-cancelled";
-  return "b-pending";
-}
 const ACCESS_REVIEW_TYPES = [
   { value: "annual", label: "Annual" },
   { value: "role_change", label: "Role Change" },
@@ -2126,7 +1875,7 @@ function accessReviewOutcome(action) {
   if (action === "restore") return "restore";
   return "retain";
 }
-function isStaffAccess(record) { return ["driver", "admin", "super_admin"].includes(record.role); }
+function isStaffAccess(record) { return ["driver", "admin"].includes(record.role); }
 function accessReviewDue(record) {
   if (!isStaffAccess(record) || record.status === "Revoked") return false;
   if (!record.reviewedAt) return true;
@@ -2178,23 +1927,18 @@ function buildAccessRecords(clients, drivers, overrides = []) {
     status: "Active",
     accessScope: "Assigned run brief, pickup outcomes, delivery outcomes, POD, and run close.",
   }, overrides)));
-  seedAdmins.forEach(admin => {
-    const role = admin.role === "super_admin" ? "super_admin" : "admin";
-    rows.push(withAccessOverride({
-      key: accessKey(role, admin.id, admin.email),
-      role,
-      roleLabel: role === "super_admin" ? "Super Admin" : "Admin",
-      actorCode: role === "super_admin" ? "ACT-INT-003" : "ACT-INT-002",
-      subjectId: admin.id,
-      subjectName: admin.name,
-      accountName: "Moto and Co Couriers",
-      email: admin.email,
-      status: "Active",
-      accessScope: role === "super_admin"
-        ? "SOP-IAM-03 elevated provisioning, Admin creation, operations console, audit, and access review."
-        : "Operations console, CRM, dispatch, exceptions, billing, pricing, retention, audit, and access review.",
-    }, overrides));
-  });
+  seedAdmins.forEach(admin => rows.push(withAccessOverride({
+    key: accessKey("admin", admin.id, admin.email),
+    role: "admin",
+    roleLabel: "Admin",
+    actorCode: "ACT-INT-002",
+    subjectId: admin.id,
+    subjectName: admin.name,
+    accountName: "Moto and Co Couriers",
+    email: admin.email,
+    status: "Active",
+    accessScope: "Operations console, CRM, dispatch, exceptions, billing, pricing, retention, audit, and access review.",
+  }, overrides)));
   return rows.map(row => ({ ...row, reviewDue: accessReviewDue(row) }));
 }
 function accessRecordForLogin(accessRecords, role, user, loginEmail) {
@@ -2349,99 +2093,29 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function isLiveRateLimitError(error) {
-  const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
-  return error?.status === 429 || detail.includes("rate_limit") || detail.includes("rate limit");
-}
-function liveMagicLinkCooldownMessage(cooldownUntil) {
-  return `Email security has temporarily paused new login links for this address. Use the newest email link already received, or wait ${liveLoginWaitLabel(cooldownUntil)} before requesting another one.`;
-}
-function liveMagicLinkErrorMessage(error, cooldownUntil = 0) {
-  const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
-  if (isLiveRateLimitError(error)) return liveMagicLinkCooldownMessage(cooldownUntil || Date.now() + LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS);
-  if (detail.includes("otp_disabled")) {
-    return "This email is not active for portal login yet. Contact Admin to confirm access.";
-  }
-  return "We could not send a login link for this address. Check the email or contact Admin.";
-}
-
-function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", defaultPortalSide = "", portalSideLocked = false, returnPath = "/", entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
-  const initialPortalSide = defaultPortalSide || "";
-  const [portalSide, setPortalSide] = useState(initialPortalSide);
-  const [tab, setTab] = useState(defaultRoleForPortalSide(initialPortalSide, defaultRole || "client"));
+function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", entryNotice = "" }) {
+  const [tab, setTab] = useState(defaultRole || "client");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [err, setErr] = useState("");
   const [pendingUser, setPendingUser] = useState(null);
   const [notice, setNotice] = useState("");
-  const [requestingLiveLink, setRequestingLiveLink] = useState(false);
-  const [liveLoginCooldownNow, setLiveLoginCooldownNow] = useState(Date.now());
-  const [liveLoginCooldownExpiry, setLiveLoginCooldownExpiry] = useState(0);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [requestHistory, setRequestHistory] = useState({});
-  const liveLoginRequestInFlight = useRef(false);
-  const liveLoginEnabled = Boolean(liveRuntimeStatus?.enabled);
-  const liveLoginRoleHint = liveRoleHintForPortalSide(portalSide, tab);
-  const liveLoginCooldownActive = liveLoginEnabled && liveLoginCooldownExpiry > liveLoginCooldownNow;
-  const liveLoginButtonLabel = requestingLiveLink
-    ? "Sending..."
-    : liveLoginEnabled && liveLoginCooldownActive
-      ? `Wait ${liveLoginWaitLabel(liveLoginCooldownExpiry, liveLoginCooldownNow)}`
-      : liveLoginEnabled
-        ? "Send Login Link"
-        : "Get Login Code";
 
   useEffect(() => {
-    const nextSide = defaultPortalSide || "";
-    resetForRole(defaultRoleForPortalSide(nextSide, defaultRole || "client"), nextSide);
-  }, [defaultRole, defaultPortalSide]);
+    resetForRole(defaultRole || "client");
+  }, [defaultRole]);
 
-  useEffect(() => {
-    if (!liveLoginEnabled) {
-      setLiveLoginCooldownExpiry(0);
-      return;
-    }
-    const loginEmail = email.trim().toLowerCase();
-    setLiveLoginCooldownExpiry(liveLoginCooldownUntil(portalSide, liveLoginRoleHint, loginEmail));
-  }, [email, liveLoginEnabled, liveLoginRoleHint, portalSide]);
-
-  useEffect(() => {
-    if (!liveLoginEnabled || !liveLoginCooldownExpiry) return undefined;
-    const timer = window.setInterval(() => setLiveLoginCooldownNow(Date.now()), 30 * 1000);
-    return () => window.clearInterval(timer);
-  }, [liveLoginEnabled, liveLoginCooldownExpiry]);
-
-  function findUserForRole(role, loginEmail) {
-    const entered = String(loginEmail || "").trim().toLowerCase();
-    if (role === "client") {
-      return clients.find(c =>
-        c.email.toLowerCase() === entered ||
-        (c.operationalContact?.email || "").toLowerCase() === entered
-      );
-    }
-    if (role === "billing") return clients.find(c => (c.billingContact?.email || "").toLowerCase() === entered);
-    if (role === "driver") return drivers.find(d => d.email.toLowerCase() === entered);
-    if (role === "admin" || role === "super_admin") {
-      return seedAdmins.find(a => (a.role === "super_admin" ? "super_admin" : "admin") === role && a.email.toLowerCase() === entered);
-    }
-    return null;
+  function findUser() {
+    const entered = email.trim().toLowerCase();
+    if (tab === "client") return clients.find(c => c.email.toLowerCase() === entered);
+    if (tab === "billing") return clients.find(c => (c.billingContact?.email || "").toLowerCase() === entered);
+    if (tab === "driver") return drivers.find(d => d.email.toLowerCase() === entered);
+    return seedAdmins.find(a => a.email.toLowerCase() === entered);
   }
 
-  function resolveLoginTarget(loginEmail) {
-    const roles = portalSide === "customer"
-      ? ["client", "billing"]
-      : portalSide === "courier"
-        ? ["super_admin", "admin", "driver"]
-        : [tab];
-    for (const role of roles) {
-      const user = findUserForRole(role, loginEmail);
-      if (user) return { role, user };
-    }
-    return { role: defaultRoleForPortalSide(portalSide, tab), user: null };
-  }
-
-  function resetForRole(nextRole = tab, nextPortalSide = portalSide) {
-    setPortalSide(nextPortalSide || "");
+  function resetForRole(nextRole = tab) {
     setTab(nextRole);
     setEmail("");
     setCode("");
@@ -2451,55 +2125,16 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setResetConfirmOpen(false);
   }
 
-  function choosePortalSide(nextSide) {
-    resetForRole(defaultRoleForPortalSide(nextSide, defaultRole), nextSide);
-  }
-
   function eligibleRequestTimes(key, now = Date.now()) {
     return (requestHistory[key] || []).filter(at => now - at < LOCAL_OTP_REQUEST_WINDOW_MS);
   }
 
-  async function requestCode() {
+  function requestCode() {
     setErr("");
     setNotice("");
-    if (!portalSide) { setErr("Choose Customer or Courier Business."); return; }
     if (!email.trim()) { setErr("Email required"); return; }
     const loginEmail = email.trim().toLowerCase();
-    if (liveLoginEnabled) {
-      if (liveLoginRequestInFlight.current) return;
-      const cooldownUntil = liveLoginCooldownUntil(portalSide, liveLoginRoleHint, loginEmail);
-      if (cooldownUntil > Date.now()) {
-        setLiveLoginCooldownExpiry(cooldownUntil);
-        setLiveLoginCooldownNow(Date.now());
-        setErr(liveMagicLinkCooldownMessage(cooldownUntil));
-        return;
-      }
-      liveLoginRequestInFlight.current = true;
-      setRequestingLiveLink(true);
-      try {
-        await requestLiveMagicLink(loginEmail, liveLoginRoleHint, returnPath);
-        const nextCooldownUntil = rememberLiveLoginCooldown(portalSide, liveLoginRoleHint, loginEmail, LIVE_LOGIN_SUCCESS_COOLDOWN_MS);
-        setLiveLoginCooldownExpiry(nextCooldownUntil);
-        setLiveLoginCooldownNow(Date.now());
-        setNotice(`Secure login link sent. Open the newest email link to continue. Sending another link is paused for ${liveLoginWaitLabel(nextCooldownUntil)}.`);
-      } catch (error) {
-        if (isLiveRateLimitError(error)) {
-          const nextCooldownUntil = rememberLiveLoginCooldown(portalSide, liveLoginRoleHint, loginEmail, LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS);
-          setLiveLoginCooldownExpiry(nextCooldownUntil);
-          setLiveLoginCooldownNow(Date.now());
-          setErr(liveMagicLinkErrorMessage(error, nextCooldownUntil));
-        } else {
-          setErr(liveMagicLinkErrorMessage(error));
-        }
-      } finally {
-        liveLoginRequestInFlight.current = false;
-        setRequestingLiveLink(false);
-      }
-      return;
-    }
-    const loginTarget = resolveLoginTarget(loginEmail);
-    const loginRole = loginTarget.role;
-    const requestKey = localLoginKey(loginRole, loginEmail);
+    const requestKey = localLoginKey(tab, loginEmail);
     const now = Date.now();
     const recentRequests = eligibleRequestTimes(requestKey, now);
     if (recentRequests.length >= LOCAL_OTP_MAX_REQUESTS) {
@@ -2510,12 +2145,11 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setRequestHistory(prev => ({ ...prev, [requestKey]: [...recentRequests, now] }));
     const issuedCode = localOtpCode();
     const expiresAt = now + LOCAL_OTP_EXPIRY_MS;
-    const found = loginTarget.user;
+    const found = findUser();
     if (!found) {
       setPendingUser({
         loginEmail,
-        requestedRole: loginRole,
-        resolvedRole: loginRole,
+        requestedRole: tab,
         unknownLogin: true,
         issuedCode,
         issuedAt: new Date(now).toISOString(),
@@ -2524,10 +2158,10 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
         codeId: `local-otp-${now}-${Math.random().toString(16).slice(2)}`,
       });
       setCode("");
-      setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Live email delivery is not connected in this local test.`);
+      setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Production Supabase Auth email delivery is not connected.`);
       return;
     }
-    const accessRecord = accessRecordForLogin(accessRecords, loginRole, found, loginEmail);
+    const accessRecord = accessRecordForLogin(accessRecords, tab, found, loginEmail);
     if (accessRecord?.status === "Revoked") {
       setErr("Access for this role is revoked. Contact Admin.");
       onAccessDenied?.(accessRecord);
@@ -2536,7 +2170,6 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setPendingUser({
       ...found,
       loginEmail,
-      resolvedRole: loginRole,
       accessKey: accessRecord?.key,
       issuedCode,
       issuedAt: new Date(now).toISOString(),
@@ -2545,7 +2178,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       codeId: `local-otp-${now}-${Math.random().toString(16).slice(2)}`,
     });
     setCode("");
-    setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Live email delivery is not connected in this local test.`);
+    setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Production Supabase Auth email delivery is not connected.`);
   }
 
   function verifyCode() {
@@ -2584,7 +2217,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       onAccessDenied?.(accessRecord);
       return;
     }
-    onLogin({ role: pendingUser.resolvedRole || tab, user: pendingUser, accessKey: pendingUser.accessKey });
+    onLogin({ role: tab, user: pendingUser, accessKey: pendingUser.accessKey });
     setCode("");
     setPendingUser(null);
     setNotice("");
@@ -2597,40 +2230,23 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
           <img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" />
           <p>Workshop support courier portal</p>
         </div>
-        {portalSideLocked ? (
-          <div className="login-context">{portalSideLabel(portalSide)} Login</div>
-        ) : (
-          <div className="entry-choices" aria-label="Portal type">
-            <button className={`entry-choice${portalSide === "customer" ? " active" : ""}`} onClick={() => choosePortalSide("customer")}>Customer</button>
-            <button className={`entry-choice${portalSide === "courier" ? " active" : ""}`} onClick={() => choosePortalSide("courier")}>Courier Business</button>
-          </div>
-        )}
+        <div className="tabs">
+          {["client", "billing", "driver", "admin"].map(t => (
+            <button key={t} className={`tab${tab === t ? " active" : ""}`} onClick={() => resetForRole(t)}>
+              {t === "billing" ? "Billing" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
         {entryNotice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{entryNotice}</div>}
         {err && <div className="err">{err}</div>}
         {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{notice}</div>}
         {!pendingUser ? (
           <>
-            {liveRuntimeError && <div className="card" style={{ fontSize: ".82rem", color: T.acc, marginBottom: ".8rem", borderColor: T.acc }}>{liveRuntimeError}</div>}
-            {portalSide ? (
-              <>
-                <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
-                  {liveLoginEnabled
-                    ? `Enter your approved ${portalSideLabel(portalSide).toLowerCase()} email.`
-                    : "Enter the registered email. The local prototype issues a one-use testing code on screen."}
-                </p>
-                <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
-                {liveLoginEnabled && liveLoginCooldownActive && (
-                  <p style={{ fontSize: ".78rem", color: T.mu, margin: "-.15rem 0 .7rem" }}>
-                    Use the newest email link already sent. New login links unlock in {liveLoginWaitLabel(liveLoginCooldownExpiry, liveLoginCooldownNow)}.
-                  </p>
-                )}
-                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink || liveLoginCooldownActive}>{liveLoginButtonLabel}</button>
-              </>
-            ) : (
-              <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem", textAlign: "center" }}>Choose Customer or Courier Business.</p>
-            )}
-            {onResetLocalDemoData && !liveLoginEnabled && !resetConfirmOpen && <button className="btn b-ghost" style={{ marginTop: ".6rem" }} onClick={() => setResetConfirmOpen(true)}>Reset Local Demo Data</button>}
-            {onResetLocalDemoData && !liveLoginEnabled && resetConfirmOpen && (
+            <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>Enter the email registered for this role. The local prototype issues a one-use testing code on screen.</p>
+            <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
+            <button className="btn b-acc" onClick={requestCode}>Get Login Code</button>
+            {onResetLocalDemoData && !resetConfirmOpen && <button className="btn b-ghost" style={{ marginTop: ".6rem" }} onClick={() => setResetConfirmOpen(true)}>Reset Local Demo Data</button>}
+            {onResetLocalDemoData && resetConfirmOpen && (
               <div className="card" style={{ marginTop: ".8rem", borderColor: T.acc }}>
                 <div className="card-title">Reset Local Demo Data</div>
                 <p style={{ fontSize: ".82rem", color: T.mu, marginTop: ".35rem" }}>
@@ -2651,7 +2267,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
             <button className="btn b-ghost" onClick={() => { setPendingUser(null); setCode(""); setNotice(""); setErr(""); }}>Use Another Email</button>
           </>
         )}
-        {portalSide === "customer" && !pendingUser && !liveLoginEnabled && (
+        {tab === "client" && !pendingUser && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>
             Not registered? <span style={{ color: T.acc, cursor: "pointer" }} onClick={onRegister}>Register</span>
           </p>
@@ -2747,7 +2363,7 @@ function PendingActivationPortal({ user, suppliers, onLogout }) {
             <span className="badge b-pending">Pending</span>
           </div>
           <div style={{ fontSize: ".84rem", color: T.mu, marginTop: ".5rem" }}>
-            Pickup requests are locked until Admin confirms eligibility and activates courier access.
+            Pickup requests are locked while your account is under Admin review. Review target is 3 business days; log back in to check your status.
           </div>
         </div>
 
@@ -3030,8 +2646,6 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
     if (!supplierSetupComplete) { setErr("Supplier access must be confirmed before pickup requests can be submitted"); return; }
     if (linkedSuppliers.length === 0) { setErr("Admin must approve supplier access before pickup requests can be submitted"); return; }
     if (!conNote || !vendor) { setErr("Con note and supplier required"); return; }
-    if (!requestedDate) { setErr("Requested run date required"); return; }
-    if (requestedDate < todayBrisbane()) { setErr("Requested run date cannot be in the past. Select today or a future run date."); return; }
     const schedule = applyCutoff(requestedDate);
     onNewOrder({ id: uid(), clientId: user.id, clientName: user.name, vendor, conNote, dropAddress: user.address, notes, status: "Pending", requestedDate, actualRunDate: schedule.actualRunDate, cutoffApplied: schedule.cutoffApplied, scheduleAdjusted: schedule.scheduleAdjusted, scheduleAdjustmentReason: schedule.scheduleAdjustmentReason, date: schedule.actualRunDate, submittedAt: isoNow(), driverId: null, price: null, recvName: "", sig: "" });
     setConNote(""); setVendor(""); setNotes(""); setRequestedDate(todayBrisbane()); setNewOrder(false); setErr("");
@@ -3519,7 +3133,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
               <h3>New Delivery Order</h3>
               {err && <div className="err">{err}</div>}
               <div className="f"><label>Con Note Number</label><input value={conNote} onChange={e => setConNote(e.target.value)} placeholder="e.g. LI-4821" /></div>
-              <div className="f"><label>Requested Run Date</label><input type="date" min={todayBrisbane()} value={requestedDate} onChange={e => setRequestedDate(e.target.value)} /></div>
+              <div className="f"><label>Requested Run Date</label><input type="date" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} /></div>
               <div className="f"><label>Supplier</label>
                 <select value={vendor} onChange={e => setVendor(e.target.value)}>
                   <option value="">— Select supplier —</option>
@@ -3559,7 +3173,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
               </div>
               <div className="f"><label>Delivery date in question</label><input type="date" value={billingDisputeDeliveryDate} onChange={e => { setBillingDisputeDeliveryDate(e.target.value); setErr(""); }} /></div>
               <div style={{ fontSize: ".78rem", color: T.mu, marginBottom: ".7rem" }}>
-                {policy18DisputeWindowForInvoice(billingInvoice).timingLabel}. Admin acknowledgement target is 2 business days and resolution target is 10 business days.
+                {policy18DisputeWindowForInvoice(billingInvoice).timingLabel}. Admin response monitoring is outside this portal; this records the query timestamp and investigation evidence only.
               </div>
               <div className="f"><label>What needs investigation?</label><textarea value={billingDisputeNote} onChange={e => setBillingDisputeNote(e.target.value)} placeholder="Describe the invoice line, amount, proof, or account issue for Admin." /></div>
               <button className="btn b-acc" style={{ marginBottom: ".5rem" }} onClick={raiseBillingDispute}>Send to Admin</button>
@@ -3728,6 +3342,12 @@ function BillingContactPortal({ user, orders = [], invoices, billingNotices, ope
             {user.reinstatementRecord && (
               <div style={{ fontSize: ".82rem", color: T.mu, marginTop: ".45rem" }}>
                 Reinstatement evidence: {user.reinstatementRecord.evidence}
+                {user.reinstatementRecord.paymentArrangement && (
+                  <>
+                    <br />
+                    Payment arrangement: {user.reinstatementRecord.paymentArrangement.agreedAmount} due {fmtFullDate(user.reinstatementRecord.paymentArrangement.agreedPaymentDate)}; agreed by {user.reinstatementRecord.paymentArrangement.agreedByNameAndRole}.
+                  </>
+                )}
               </div>
             )}
             {user.terminationRecord && (
@@ -3861,7 +3481,7 @@ function BillingContactPortal({ user, orders = [], invoices, billingNotices, ope
               </div>
               <div className="f"><label>Delivery date in question</label><input type="date" value={billingDisputeDeliveryDate} onChange={e => { setBillingDisputeDeliveryDate(e.target.value); setErr(""); }} /></div>
               <div style={{ fontSize: ".78rem", color: T.mu, marginBottom: ".7rem" }}>
-                {policy18DisputeWindowForInvoice(billingInvoice).timingLabel}. Admin acknowledgement target is 2 business days and resolution target is 10 business days.
+                {policy18DisputeWindowForInvoice(billingInvoice).timingLabel}. Admin response monitoring is outside this portal; this records the query timestamp and investigation evidence only.
               </div>
               <div className="f"><label>What needs investigation?</label><textarea value={billingDisputeNote} onChange={e => setBillingDisputeNote(e.target.value)} placeholder="Describe the invoice line, amount, proof, or account issue for Admin." /></div>
               <button className="btn b-acc" style={{ marginBottom: ".5rem" }} onClick={raiseBillingDispute}>Send to Admin</button>
@@ -4895,7 +4515,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
               </div>
               <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: "1rem" }}>
                 {outcomeDraft.type === "No Pickup"
-                  ? "Capture the per-customer APP-DRV-002 No Pickup record. Policy #15 / SOP-PUP-03 / Policy #16 / Policy #27 blocks billing when goods are not ready, unlabelled or mismatched, improperly packaged, refused by supplier, wrong items are presented, or a supplier-premises WHS hazard prevents safe entry."
+                  ? "Capture the per-customer APP-DRV-002 No Pickup record. Policy #15 / SOP-PUP-03 / Policy #16 / Policy #27 blocks billing when goods are not ready, unlabelled or mismatched, improperly packaged, refused by supplier, wrong items are presented, time constraints prevent collection, or a supplier-premises WHS hazard prevents safe entry."
                   : outcomeDraft.type === "Failed Delivery"
                     ? "Capture the SOP-DEL-04 driver outcome and send the exception to Admin. Goods must not be left at an unconfirmed address or without receiver acceptance. Policy #8: two attempts maximum, Admin review before any redelivery fee."
                     : "SOP-RUN-04 records a future pickup collected early only because this supplier is already on today's planned route. Delivery remains scheduled for the original intended run date."}
@@ -5111,7 +4731,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
 }
 
 // ─── ADMIN PORTAL ─────────────────────────────────────────────────────────────
-function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, clients, drivers, vehicles = [], suppliers, priceRules, exceptions, audit, masterDataChanges, invoices, billingNotices, operationalNotices = [], proofs, exceptionAlerts, driverAvailability, financialReconciliations = [], aiDrafts = [], dataBreachIncidents = [], dataUseRecords = [], privacyRequests = [], accessRecords, runClosures = [], onUpdateOrder, onUpdateOrders, onUpdateClient, onSaveSupplier, onArchiveSupplier, onSavePriceRule, onSaveVehicle, onSaveDriver, onCreateInvoice, onUpdateInvoice, onRecordBillingNotice, onSaveFinancialReconciliation, onCreateAiDraft, onUpdateAiDraft, onSaveDataBreachIncident, onSaveDataUseRecord, onSavePrivacyRequest, onSaveAccessChange, onCreateSupplierReviewException, onCreateSupplierPickupStandardsException, onCreatePricingReviewException, onCreateUnmatchedBillingException, onCreateRunPlanningException, onAcknowledgeException, onUpdateException, onAcknowledgeExceptionAlert, onSaveDriverAvailability, onLogout }) {
+function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, priceRules, exceptions, audit, masterDataChanges, invoices, billingNotices, operationalNotices = [], proofs, exceptionAlerts, driverAvailability, financialReconciliations = [], aiDrafts = [], dataBreachIncidents = [], dataUseRecords = [], privacyRequests = [], accessRecords, runClosures = [], onUpdateOrder, onUpdateOrders, onUpdateClient, onSaveSupplier, onArchiveSupplier, onSavePriceRule, onSaveVehicle, onSaveDriver, onCreateInvoice, onUpdateInvoice, onRecordBillingNotice, onSaveFinancialReconciliation, onCreateAiDraft, onUpdateAiDraft, onSaveDataBreachIncident, onSaveDataUseRecord, onSavePrivacyRequest, onSaveAccessChange, onCreateSupplierReviewException, onCreateSupplierPickupStandardsException, onCreatePricingReviewException, onCreateUnmatchedBillingException, onCreateRunPlanningException, onAcknowledgeException, onUpdateException, onAcknowledgeExceptionAlert, onSaveDriverAvailability, onLogout }) {
   function blankSupplierDraft() {
     return {
       name: "",
@@ -5227,8 +4847,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   const [reinstatementTarget, setReinstatementTarget] = useState(null);
   const [reinstatementEvidence, setReinstatementEvidence] = useState("");
   const [reinstatementConfirmName, setReinstatementConfirmName] = useState("");
-  const [reinstatementNotifyOps, setReinstatementNotifyOps] = useState(true);
-  const [reinstatementNotifyBilling, setReinstatementNotifyBilling] = useState(true);
+  const [reinstatementResolutionType, setReinstatementResolutionType] = useState("payment_confirmed");
+  const [reinstatementArrangementDate, setReinstatementArrangementDate] = useState("");
+  const [reinstatementArrangementAmount, setReinstatementArrangementAmount] = useState("");
+  const [reinstatementArrangementContact, setReinstatementArrangementContact] = useState("");
+  const [reinstatementArrangementEvidence, setReinstatementArrangementEvidence] = useState("");
   const [terminationTarget, setTerminationTarget] = useState(null);
   const [terminationGround, setTerminationGround] = useState("conduct_unremedied");
   const [terminationReason, setTerminationReason] = useState("");
@@ -5241,8 +4864,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   const [paymentEvidence, setPaymentEvidence] = useState("");
   const [invoiceApprovalTarget, setInvoiceApprovalTarget] = useState(null);
   const [invoiceApprovalNote, setInvoiceApprovalNote] = useState("");
-  const [invoiceDispatchTarget, setInvoiceDispatchTarget] = useState(null);
-  const [invoiceDispatchNote, setInvoiceDispatchNote] = useState("");
   const [invoicePreview, setInvoicePreview] = useState(null);
   const [reconciliationTarget, setReconciliationTarget] = useState(null);
   const [reconciliationNote, setReconciliationNote] = useState("");
@@ -5272,19 +4893,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   const [accessAction, setAccessAction] = useState("");
   const [accessReviewType, setAccessReviewType] = useState("annual");
   const [accessReason, setAccessReason] = useState("");
-  const [liveProvisionedUsers, setLiveProvisionedUsers] = useState([]);
-  const [liveProvisioningStatus, setLiveProvisioningStatus] = useState("");
-  const [liveProvisioningBusy, setLiveProvisioningBusy] = useState(false);
-  const [userProvisionDraft, setUserProvisionDraft] = useState({
-    displayName: "",
-    email: "",
-    role: "client_ops",
-    linkId: "",
-    approvalReference: "",
-    reason: "",
-  });
-  const [provisionStatusAction, setProvisionStatusAction] = useState(null);
-  const [provisionStatusReason, setProvisionStatusReason] = useState("");
   const [activationTarget, setActivationTarget] = useState(null);
   const [activationReview, setActivationReview] = useState({
     b2bConfirmed: false,
@@ -5338,22 +4946,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   const activeAccessCount = (accessRecords || []).filter(record => record.status !== "Revoked").length;
   const revokedAccessCount = (accessRecords || []).filter(record => record.status === "Revoked").length;
   const staffReviewDueCount = (accessRecords || []).filter(record => record.reviewDue).length;
-  const activeRaciControls = RACI_CONTROLS.filter(control => control.status === "active");
-  const blockedRaciControls = RACI_CONTROLS.filter(control => control.status === "blocked");
-  const isLiveRuntime = Boolean(liveRuntimeStatus?.enabled);
-  const isSuperAdminSession = currentSession?.role === "super_admin" || currentSession?.user?.accessRole === "super_admin";
-  const assignableProvisionRoles = SOP_IAM_03_ROLES.filter(role => isSuperAdminSession || role.value !== "admin");
-  const selectedProvisionRole = userProvisionDraft.role;
-  const provisionLinkOptions = selectedProvisionRole === "driver"
-    ? (drivers || []).map(driver => ({ id: driver.id, label: driver.name || driver.email || driver.id, actorId: "", driverId: driver.id }))
-    : ["client_ops", "client_billing"].includes(selectedProvisionRole)
-      ? (clients || []).map(client => ({ id: client.id, label: client.name || client.email || client.id, actorId: client.actorId || "", accountId: client.id }))
-      : [];
-  const liveUserRows = (liveProvisionedUsers || []).map(profile => ({
-    ...profile,
-    roleLabel: sopIamRoleLabel(profile.role),
-    accessRows: profile.accessRows || [],
-  }));
   const operationalNoticeRows = (operationalNotices || []).slice().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const operationalNoticeClients = new Set(operationalNoticeRows.map(notice => notice.clientId).filter(Boolean)).size;
   const providerNotConfiguredCount = operationalNoticeRows.filter(notice => notice.externalDeliveryStatus === "provider_not_configured").length;
@@ -5562,113 +5154,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
 
   function showWorkflowNotice(message) {
     setWorkflowNotice(String(message || "A workflow rule blocked this action."));
-  }
-
-  async function refreshLiveProvisionedUsers() {
-    if (!isLiveRuntime) return;
-    setLiveProvisioningStatus("Loading live SOP-IAM-03 users.");
-    try {
-      const payload = await listLiveProvisionedUsers();
-      const assignmentsByProfile = new Map();
-      (payload.accessRoleAssignments || []).forEach(row => {
-        const rows = assignmentsByProfile.get(row.profile_id) || [];
-        rows.push(row);
-        assignmentsByProfile.set(row.profile_id, rows);
-      });
-      setLiveProvisionedUsers((payload.profiles || []).map(profile => ({
-        ...profile,
-        accessRows: assignmentsByProfile.get(profile.id) || [],
-      })));
-      setLiveProvisioningStatus("Live SOP-IAM-03 users loaded.");
-    } catch (error) {
-      setLiveProvisioningStatus(error?.message || "Could not load live provisioned users.");
-    }
-  }
-
-  useEffect(() => {
-    if (view !== "access" || !isLiveRuntime) return;
-    refreshLiveProvisionedUsers();
-  }, [view, isLiveRuntime, currentSession?.user?.profileId]);
-
-  function resetUserProvisionDraft(nextRole = userProvisionDraft.role) {
-    setUserProvisionDraft({
-      displayName: "",
-      email: "",
-      role: nextRole,
-      linkId: "",
-      approvalReference: "",
-      reason: "",
-    });
-  }
-
-  async function submitProvisionUser() {
-    if (!isLiveRuntime) return showWorkflowNotice("SOP-IAM-03 user provisioning requires the live system connection.");
-    const displayName = userProvisionDraft.displayName.trim();
-    const email = userProvisionDraft.email.trim();
-    const role = userProvisionDraft.role;
-    const approvalReference = userProvisionDraft.approvalReference.trim();
-    const reason = userProvisionDraft.reason.trim() || approvalReference;
-    if (!displayName) return showWorkflowNotice("SOP-IAM-03 requires a display name.");
-    if (!email) return showWorkflowNotice("SOP-IAM-03 requires an email address.");
-    if (!approvalReference) return showWorkflowNotice("SOP-IAM-03 requires an approval reference.");
-    if (role === "admin" && !isSuperAdminSession) return showWorkflowNotice("Only Super Admin can create Admin users.");
-    const selectedLink = provisionLinkOptions.find(item => item.id === userProvisionDraft.linkId);
-    if (["client_ops", "client_billing", "driver"].includes(role) && !selectedLink) {
-      return showWorkflowNotice("SOP-IAM-03 requires the login user to be linked to the relevant customer or driver record.");
-    }
-    setLiveProvisioningBusy(true);
-    setLiveProvisioningStatus("Creating pending user through secure provisioning.");
-    try {
-      await provisionLiveUser({
-        displayName,
-        email,
-        role,
-        actorCode: sopIamActorCode(role),
-        actorId: selectedLink?.actorId || "",
-        accountId: selectedLink?.accountId || "",
-        driverId: selectedLink?.driverId || "",
-        approvalReference,
-        reason,
-      });
-      setLiveProvisioningStatus(`${sopIamRoleLabel(role)} user created as Pending. Activate after account and access checks are complete.`);
-      resetUserProvisionDraft(role);
-      await refreshLiveProvisionedUsers();
-    } catch (error) {
-      setLiveProvisioningStatus(error?.message || "SOP-IAM-03 provisioning failed.");
-    } finally {
-      setLiveProvisioningBusy(false);
-    }
-  }
-
-  function openProvisionStatusAction(profile, status) {
-    setProvisionStatusAction({ profile, status });
-    setProvisionStatusReason(status === "active" ? "SOP-IAM-03 activation confirmed" : "SOP-IAM-04 access status review");
-  }
-
-  async function confirmProvisionStatusAction() {
-    const profile = provisionStatusAction?.profile;
-    const status = provisionStatusAction?.status;
-    if (!profile || !status) return;
-    if (!isLiveRuntime) return showWorkflowNotice("Live system connection required.");
-    const reason = provisionStatusReason.trim();
-    if (!reason) return showWorkflowNotice("SOP-IAM-03/SOP-IAM-04 requires a reason or approval reference.");
-    setLiveProvisioningBusy(true);
-    try {
-      await updateLiveProvisionedUserStatus({
-        profileId: profile.id,
-        status,
-        reason,
-        approvalReference: reason,
-      });
-      setLiveProvisioningStatus(`${profile.email || profile.display_name} status updated to ${status}.`);
-      setProvisionStatusAction(null);
-      setProvisionStatusReason("");
-      await refreshLiveProvisionedUsers();
-    } catch (error) {
-      setLiveProvisioningStatus(error?.message || "SOP-IAM-03 status update failed.");
-    } finally {
-      setLiveProvisioningBusy(false);
-    }
   }
 
   function localAiDraftTextForTarget(target) {
@@ -6134,7 +5619,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
         detail: supplierStatus.reason,
       },
     ];
-    return { checks, canActivate: checks.every(check => check.available && check.checked) };
+    return { checks, canActivate: true };
   }
 
   function openCrmRecord(client = null) {
@@ -7013,19 +6498,29 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
     setReinstatementTarget(client);
     setReinstatementEvidence("");
     setReinstatementConfirmName("");
-    setReinstatementNotifyOps(true);
-    setReinstatementNotifyBilling(true);
+    setReinstatementResolutionType("payment_confirmed");
+    setReinstatementArrangementDate("");
+    setReinstatementArrangementAmount("");
+    setReinstatementArrangementContact("");
+    setReinstatementArrangementEvidence("");
   }
 
   function confirmReinstatement() {
     if (!reinstatementTarget) return;
     const evidence = reinstatementEvidence.trim();
+    const arrangementDate = reinstatementArrangementDate.trim();
+    const arrangementAmount = reinstatementArrangementAmount.trim();
+    const arrangementContact = reinstatementArrangementContact.trim();
+    const arrangementEvidence = reinstatementArrangementEvidence.trim();
+    const isPaymentArrangement = reinstatementResolutionType === "payment_arrangement";
     if (reinstatementTarget.status === "Closed" || reinstatementTarget.terminationRecord) {
       return showWorkflowNotice("Policy #23 does not allow a terminated account to be reinstated without Admin and Owner approval plus a new account agreement.");
     }
     if (reinstatementConfirmName.trim() !== reinstatementTarget.name) return showWorkflowNotice("Type the exact account name before reinstating.");
     if (!evidence) return showWorkflowNotice("Payment clearance or reinstatement evidence required.");
-    if (!reinstatementNotifyOps || !reinstatementNotifyBilling) return showWorkflowNotice("Record notification evidence for both Operational and Billing contacts.");
+    if (isPaymentArrangement && (!arrangementDate || !arrangementAmount || !arrangementContact || !arrangementEvidence)) {
+      return showWorkflowNotice("Payment arrangement requires agreed date, amount, contact name/role, and written evidence reference.");
+    }
     const reinstatedAt = isoNow();
     onUpdateClient({
       ...reinstatementTarget,
@@ -7036,9 +6531,17 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
       reinstatementRecord: {
         date: reinstatedAt,
         evidence,
-        notificationSent: reinstatementNotifyOps && reinstatementNotifyBilling,
-        operationalContactNotified: reinstatementNotifyOps,
-        billingContactNotified: reinstatementNotifyBilling,
+        resolutionType: reinstatementResolutionType,
+        paymentArrangement: isPaymentArrangement ? {
+          agreedPaymentDate: arrangementDate,
+          agreedAmount: arrangementAmount,
+          agreedByNameAndRole: arrangementContact,
+          writtenEvidenceRef: arrangementEvidence,
+        } : null,
+        notificationSent: true,
+        notificationMode: "automatic_on_admin_action",
+        operationalContactNotified: true,
+        billingContactNotified: true,
         notifiedAt: reinstatedAt,
         sourceRef: POLICY23_ACCOUNT_STATUS_SOURCE,
       },
@@ -7046,6 +6549,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
     setReinstatementTarget(null);
     setReinstatementEvidence("");
     setReinstatementConfirmName("");
+    setReinstatementResolutionType("payment_confirmed");
+    setReinstatementArrangementDate("");
+    setReinstatementArrangementAmount("");
+    setReinstatementArrangementContact("");
+    setReinstatementArrangementEvidence("");
   }
 
   function openTermination(client) {
@@ -7141,49 +6649,26 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   function confirmInvoiceApproval() {
     if (!invoiceApprovalTarget) return;
     const note = invoiceApprovalNote.trim();
-    if (!note) return showWorkflowNotice("Admin invoice review note required before dispatch approval.");
+    if (!note) return showWorkflowNotice("Admin invoice review note required before confirming the invoice is correct.");
     const approvedAt = isoNow();
     onUpdateInvoice({
       ...invoiceApprovalTarget,
-      status: "Approved",
+      status: "Sent",
       invoiceApprovalStatus: "Approved",
       invoiceApprovedAt: approvedAt,
       invoiceApprovedBy: "admin",
-      invoiceApprovalSource: "SOP-BIL-04 rendered invoice review",
+      invoiceApprovalSource: "SOP-BIL-04 rendered invoice review / DECISIONS-REGISTER Gap 24",
       invoiceApprovalNote: note,
+      sentAt: approvedAt,
+      dispatchChannel: "local_record_only",
+      dispatchRecipient: invoiceApprovalTarget.billingEmail,
+      dispatchExternalStatus: "provider_not_configured",
+      dispatchNote: `Automatic dispatch triggered by Admin invoice correctness confirmation. Review note: ${note}`,
+      dispatchRecordedAt: approvedAt,
+      dispatchRecordedBy: "admin",
     });
     setInvoiceApprovalTarget(null);
     setInvoiceApprovalNote("");
-  }
-
-  function openInvoiceDispatch(invoice) {
-    if (!invoiceIsApproved(invoice)) {
-      showWorkflowNotice("SOP-BIL-04 requires Admin rendered-invoice approval before dispatch can be recorded.");
-      return;
-    }
-    setInvoiceDispatchTarget(invoice);
-    setInvoiceDispatchNote(invoice.dispatchNote || "");
-  }
-
-  function confirmInvoiceDispatch() {
-    if (!invoiceDispatchTarget) return;
-    const note = invoiceDispatchNote.trim();
-    if (!invoiceIsApproved(invoiceDispatchTarget)) return showWorkflowNotice("SOP-BIL-04 approval is required before invoice dispatch.");
-    if (!note) return showWorkflowNotice("Invoice dispatch evidence or note required.");
-    const recordedAt = isoNow();
-    onUpdateInvoice({
-      ...invoiceDispatchTarget,
-      status: ["Draft", "Approved"].includes(invoiceDispatchTarget.status) ? "Sent" : invoiceDispatchTarget.status,
-      sentAt: recordedAt,
-      dispatchChannel: "local_record_only",
-      dispatchRecipient: invoiceDispatchTarget.billingEmail,
-      dispatchExternalStatus: "provider_not_configured",
-      dispatchNote: note,
-      dispatchRecordedAt: recordedAt,
-      dispatchRecordedBy: "admin",
-    });
-    setInvoiceDispatchTarget(null);
-    setInvoiceDispatchNote("");
   }
 
   function confirmPayment() {
@@ -7307,9 +6792,10 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
 
   function confirmActivationReview() {
     if (!activationTarget) return;
-    const state = activationRequirementState(activationTarget, activationReview);
-    if (!state.canActivate) return showWorkflowNotice("Complete every available eligibility confirmation before activation.");
     const reviewedAt = isoNow();
+    const addressStatus = physicalAddressStatus(activationTarget.address);
+    const contactStatus = contactEligibilityStatus(activationTarget);
+    const supplierStatus = supplierEligibilityStatus(activationTarget);
     onUpdateClient({
       ...activationTarget,
       status: "Active",
@@ -7317,16 +6803,16 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
       activatedAt: activationTarget.activatedAt || reviewedAt,
       activationReviewedAt: reviewedAt,
       activationEligibility: {
-        b2bConfirmed: true,
-        serviceAreaConfirmed: true,
-        contactsConfirmed: true,
-        suppliersConfirmed: true,
-        physicalAddressConfirmed: true,
+        b2bConfirmed: Boolean(String(activationTarget.name || "").trim()),
+        serviceAreaConfirmed: addressStatus.ok,
+        contactsConfirmed: contactStatus.ok,
+        suppliersConfirmed: supplierStatus.ok,
+        physicalAddressConfirmed: addressStatus.ok,
         note: activationReview.note.trim(),
         reviewedAt,
-        source: "UJ-CRM-001A / release-one-source-map eligibility review",
+        source: "DECISIONS-REGISTER Gap 5 / UJ-CRM-001A advisory eligibility review",
       },
-      auditDetail: `${activationTarget.name} activated after eligibility review: B2B, SEQ physical address, contacts, approved supplier`,
+      auditDetail: `${activationTarget.name} activated after Admin advisory eligibility review. Checklist reference: B2B ${String(Boolean(String(activationTarget.name || "").trim()))}; address ${addressStatus.reason}; contacts ${contactStatus.reason}; suppliers ${supplierStatus.reason}`,
     });
     setActivationTarget(null);
     setActivationReview({ b2bConfirmed: false, serviceAreaConfirmed: false, contactsConfirmed: false, suppliersConfirmed: false, note: "" });
@@ -7479,20 +6965,27 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
 
   function authoriseSecondFailedDeliveryAttempt(order, exception) {
     if (!order) return;
-    if (failedDeliveryAttemptCount(order) !== 1) return showWorkflowNotice("Policy #8 second attempt can only be authorised after one failed delivery attempt.");
+    if (failedDeliveryAttemptCount(order) !== 1) return showWorkflowNotice("Policy #8 second attempt can only be scheduled after one failed delivery attempt.");
+    const firstAttemptDate = isoDate(order.failedDeliveryAt || order.actualRunDate || order.date || todayBrisbane());
+    const nextRunDate = nextAvailableRunDate(addDays(firstAttemptDate, 1));
     onUpdateOrder({
       ...order,
-      status: "En Route",
+      status: "Pending",
+      actualRunDate: nextRunDate,
+      date: nextRunDate,
+      runId: null,
+      assignedAt: "",
       redeliveryAttemptNumber: 2,
-      secondAttemptAuthorisedAt: isoNow(),
+      secondAttemptScheduledAt: isoNow(),
+      secondAttemptScheduledRunDate: nextRunDate,
       failedDeliveryPolicyRef: "Policy #8",
-      returnToSupplierStatus: "Goods retained with driver after first failed attempt",
+      returnToSupplierStatus: `Goods retained for next scheduled run ${fmtFullDate(nextRunDate)}`,
       redeliveryFeeStatus: "Not Applicable",
     });
     onAcknowledgeException(exception.id, {
       policy: "Policy #8 / APP-DRV-003",
-      outcome: "Second delivery attempt authorised",
-      note: "First failed attempt reviewed. Goods remain with driver; no redelivery fee applies after first attempt.",
+      outcome: "Second delivery attempt scheduled",
+      note: `First failed attempt reviewed. Goods remain with driver; second attempt scheduled for next run ${fmtFullDate(nextRunDate)}. No redelivery fee applies after first attempt.`,
       linkedOrderIds: [order.id],
       linkedProofIds: [],
       investigatedAt: isoNow(),
@@ -7652,18 +7145,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
         {view === "dashboard" && (
           <>
             <h2 style={{ marginBottom: "1rem" }}>Dashboard</h2>
-            <div className="card">
-              <div className="card-head">
-                <div className="card-title">{SOP_RUNTIME_SOURCE.label}</div>
-                <span className="badge b-pending">{SOP_RUNTIME_SOURCE.effective}</span>
-              </div>
-              <div style={{ fontSize: ".84rem", color: T.mu, lineHeight: 1.45 }}>
-                {SOP_RUNTIME_SOURCE.scope}
-              </div>
-              <div style={{ fontSize: ".78rem", color: T.red, marginTop: ".55rem" }}>
-                Documentation gap: {SOP_RUNTIME_SOURCE.documentationGap}
-              </div>
-            </div>
             <div className="stats">
               <div className="stat"><div className="stat-num" style={{ color: T.acc }}>{pending}</div><div className="stat-lbl">Pending</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.teal }}>{enroute}</div><div className="stat-lbl">En Route</div></div>
@@ -8059,7 +7540,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
             <div className="card">
               <div className="card-title" style={{ marginBottom: ".45rem" }}>Local Outbox Rule</div>
               <div style={{ fontSize: ".82rem", color: T.mu }}>
-                Account activation, account suspension/reinstatement, booking, schedule adjustment, driver outcome, delivery, supplier setup, delivery dispute acknowledgement, and billing-query acknowledgement records are kept locally until the production customer notification channel and provider are confirmed. Failed notice rows are routed to APP-ADM-005; provider_not_configured is tracked as a production gap, not a failed delivery.
+                Account suspension/reinstatement, booking, schedule adjustment, driver outcome, delivery, supplier setup, delivery dispute acknowledgement, and billing-query acknowledgement records are kept locally until the production customer notification channel and provider are confirmed. Account activation notices are not created; clients log in to check status. Failed notice rows are routed to APP-ADM-005; provider_not_configured is tracked as a production gap, not a failed delivery.
               </div>
             </div>
             {failedNotificationRows.length > 0 && (
@@ -8210,7 +7691,17 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                     Suspension: {c.suspensionRecord.reason}; notified {c.suspensionRecord.operationalContactNotified ? "Operational" : ""}{c.suspensionRecord.operationalContactNotified && c.suspensionRecord.billingContactNotified ? " + " : ""}{c.suspensionRecord.billingContactNotified ? "Billing" : ""}.
                   </div>
                 )}
-                {c.reinstatementRecord && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>Reinstatement evidence: {c.reinstatementRecord.evidence}</div>}
+                {c.reinstatementRecord && (
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>
+                    Reinstatement evidence: {c.reinstatementRecord.evidence}
+                    {c.reinstatementRecord.paymentArrangement && (
+                      <>
+                        <br />
+                        Payment arrangement: {c.reinstatementRecord.paymentArrangement.agreedAmount} due {fmtFullDate(c.reinstatementRecord.paymentArrangement.agreedPaymentDate)}; agreed by {c.reinstatementRecord.paymentArrangement.agreedByNameAndRole}.
+                      </>
+                    )}
+                  </div>
+                )}
                 {c.terminationRecord && (
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>
                     Termination: {c.terminationRecord.groundLabel || policy23TerminationGroundLabel(c.terminationRecord.ground)}; effective {fmtFullDate(c.terminationRecord.effectiveDate)}; {c.terminationRecord.outstandingInvoiceNote}
@@ -8248,38 +7739,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
               <div className="stat"><div className="stat-num" style={{ color: T.tx }}>{activeAccessCount}</div><div className="stat-lbl">Active</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.red }}>{revokedAccessCount}</div><div className="stat-lbl">Revoked</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.acc }}>{staffReviewDueCount}</div><div className="stat-lbl">Staff Reviews Due</div></div>
-              <div className="stat"><div className="stat-num" style={{ color: T.tx }}>{activeRaciControls.length}</div><div className="stat-lbl">RACI Active</div></div>
-              <div className="stat"><div className="stat-num" style={{ color: blockedRaciControls.length ? T.red : T.tx }}>{blockedRaciControls.length}</div><div className="stat-lbl">RACI Blocked</div></div>
-            </div>
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <div className="card-title">SOP v1.1 RACI Runtime Controls</div>
-                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
-                    Runtime actions are stamped into APP-PRV-004 audit with RACI source, responsible actor, accountable owner, informed role, and APP-ADM-005 escalation.
-                  </div>
-                </div>
-                <span className="badge b-done">Active</span>
-              </div>
-              <div className="grid2" style={{ marginTop: ".75rem" }}>
-                {activeRaciControls.slice(0, 8).map(control => (
-                  <div key={control.source} style={{ border: `1px solid ${T.border}`, borderRadius: 6, padding: ".65rem .75rem" }}>
-                    <div style={{ fontWeight: 800, fontSize: ".82rem" }}>{control.source}</div>
-                    <div style={{ fontSize: ".78rem", color: T.mu }}>{control.title}</div>
-                    <div style={{ fontSize: ".72rem", color: T.mu2, marginTop: ".35rem" }}>A: {control.accountable} · I: {control.auditRole}</div>
-                  </div>
-                ))}
-              </div>
-              {blockedRaciControls.length > 0 && (
-                <div style={{ marginTop: ".8rem", fontSize: ".78rem", color: T.red }}>
-                  Blocked RACI sources: {blockedRaciControls.map(control => `${control.source} (${control.blocker})`).join("; ")}
-                </div>
-              )}
             </div>
             <div className="card">
               <div className="card-title" style={{ marginBottom: ".45rem" }}>Receiver Access Model</div>
               <div className="meta">
-                <span>ACT-INT-004</span>
+                <span>ACT-INT-003</span>
                 <span>No login</span>
                 <span>POD signature only</span>
               </div>
@@ -8287,69 +7751,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 Receiver remains no-login as confirmed. Receiver name and signature are captured only inside the driver POD workflow.
               </div>
             </div>
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <div className="card-title">SOP-IAM-03 User Provisioning</div>
-                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
-                    Server-side provisioning API only. Admin creates Client Ops, Client Billing, and Driver users. Super Admin creates Admin users.
-                  </div>
-                </div>
-                <span className={`badge ${isLiveRuntime ? "b-done" : "b-pending"}`}>{isLiveRuntime ? "Live API" : "Live Required"}</span>
-              </div>
-              <div className="grid2" style={{ marginTop: ".9rem" }}>
-                <div className="f"><label>Display Name *</label><input value={userProvisionDraft.displayName} onChange={e => setUserProvisionDraft(prev => ({ ...prev, displayName: e.target.value }))} placeholder="Approved user name" /></div>
-                <div className="f"><label>Email *</label><input value={userProvisionDraft.email} onChange={e => setUserProvisionDraft(prev => ({ ...prev, email: e.target.value }))} placeholder="user@example.com" /></div>
-                <div className="f"><label>Role</label><select value={userProvisionDraft.role} onChange={e => resetUserProvisionDraft(e.target.value)}>
-                  {assignableProvisionRoles.map(role => <option key={role.value} value={role.value}>{role.label}</option>)}
-                </select></div>
-                {provisionLinkOptions.length > 0 && (
-                  <div className="f"><label>{selectedProvisionRole === "driver" ? "Driver Record" : "Customer / Workshop"}</label><select value={userProvisionDraft.linkId} onChange={e => setUserProvisionDraft(prev => ({ ...prev, linkId: e.target.value }))}>
-                    <option value="">Select record</option>
-                    {provisionLinkOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-                  </select></div>
-                )}
-              </div>
-              <div className="f"><label>Approval Reference *</label><input value={userProvisionDraft.approvalReference} onChange={e => setUserProvisionDraft(prev => ({ ...prev, approvalReference: e.target.value }))} placeholder="Owner approved launch access - 2026-06-19" /></div>
-              <div className="f"><label>Reason / Evidence</label><textarea value={userProvisionDraft.reason} onChange={e => setUserProvisionDraft(prev => ({ ...prev, reason: e.target.value }))} placeholder="Why this user needs this role; defaults to approval reference." /></div>
-              <button className="btn b-teal" onClick={submitProvisionUser} disabled={liveProvisioningBusy || !isLiveRuntime}>
-                {liveProvisioningBusy ? <><span className="spin" />Provisioning...</> : "Create Pending User"}
-              </button>
-              {liveProvisioningStatus && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".55rem" }}>{liveProvisioningStatus}</div>}
-              {!isSuperAdminSession && (
-                <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
-                  Admin users are hidden for this session because SOP-IAM-03 requires Super Admin for Admin provisioning.
-                </div>
-              )}
-            </div>
-            {isLiveRuntime && (
-              <div className="card">
-                <div className="card-head">
-                  <div className="card-title">Live Profiles</div>
-                  <button className="btn b-ghost b-sm" onClick={refreshLiveProvisionedUsers} disabled={liveProvisioningBusy}>Refresh</button>
-                </div>
-                {liveUserRows.length === 0 ? (
-                  <div className="empty">No live profiles returned for this Admin session.</div>
-                ) : liveUserRows.map(profile => (
-                  <div key={profile.id} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".7rem", marginTop: ".7rem" }}>
-                    <div className="card-head" style={{ marginBottom: ".35rem" }}>
-                      <div className="card-title" style={{ fontSize: ".92rem" }}>{profile.display_name || profile.email}</div>
-                      <span className={`badge ${liveUserStatusBadge(profile.status)}`}>{profile.status || "unknown"}</span>
-                    </div>
-                    <div className="meta">
-                      <span>{sopIamRoleLabel(profile.role)}</span>
-                      <span>{profile.email || "Email not stored"}</span>
-                      {profile.account_id && <span>Account {profile.account_id}</span>}
-                      {profile.driver_id && <span>Driver {profile.driver_id}</span>}
-                    </div>
-                    <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginTop: ".55rem" }}>
-                      {profile.status !== "active" && <button className="btn b-acc b-sm" onClick={() => openProvisionStatusAction(profile, "active")} disabled={liveProvisioningBusy}>Activate</button>}
-                      {profile.status !== "revoked" && <button className="btn b-red b-sm" onClick={() => openProvisionStatusAction(profile, "revoked")} disabled={liveProvisioningBusy}>Revoke</button>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
             {(accessRecords || []).map(record => (
               <div className="card" key={record.key}>
                 <div className="card-head">
@@ -9331,9 +8732,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 ))}
                 <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".8rem" }}>
                   <button className="btn b-acc b-sm" onClick={() => setInvoicePreview(invoice)}>Preview Invoice</button>
-                  {invoice.status !== "Paid" && !approved && <button className="btn b-teal b-sm" onClick={() => openInvoiceApproval(invoice)}>Approve For Dispatch</button>}
-                  {canDispatch && approved && <button className="btn b-teal b-sm" onClick={() => openInvoiceDispatch(invoice)}>Record Dispatch</button>}
-                  {canDispatch && !approved && <button className="btn b-ghost b-sm" disabled>Approval Required</button>}
+                  {invoice.status !== "Paid" && (!approved || canDispatch) && <button className="btn b-teal b-sm" onClick={() => openInvoiceApproval(invoice)}>Confirm Invoice Correct</button>}
                   {invoice.status !== "Paid" && <button className="btn b-acc b-sm" disabled={!invoice.dispatchRecordedAt} onClick={() => openPayment(invoice)}>{invoice.dispatchRecordedAt ? "Record Payment Evidence" : "Dispatch Required"}</button>}
                   {invoice.status !== "Paid" && invoice.status !== "Overdue" && <button className="btn b-red b-sm" disabled={!canMarkOverdue} onClick={() => onUpdateInvoice({ ...invoice, status: "Overdue", overdueAt: isoNow() })}>{canMarkOverdue ? "Mark Overdue" : "Dispatch Required"}</button>}
                   {invoice.status === "Overdue" && !notice && <button className="btn b-acc b-sm" disabled={!noticeReady} onClick={() => onRecordBillingNotice(invoice)}>{noticeReady ? "Record Day 8 Notice" : "Notice Not Due"}</button>}
@@ -9379,11 +8778,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <div className="card-head"><div className="card-title">{e.type} — {e.orderId}</div><span className={`badge ${e.status === "Closed" ? "b-done" : "b-cancelled"}`}>{e.status}</span></div>
                 <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".4rem" }}>{e.note}</div>
                 <div className="meta"><span>Owner: {e.owner}</span><span>{new Date(e.createdAt).toLocaleString("en-AU")}</span><span>{linkedSupplier ? `${linkedSupplier.name} supplier record` : linkedPriceRule ? `${linkedPriceRule.label} price rule` : linkedProofs.length ? `${linkedProofs.length} proof record(s)` : "No proof record linked"}</span></div>
-                {e.raciSource && (
-                  <div style={{ fontSize: ".78rem", color: e.raciStatus === "blocked" ? T.red : T.mu, marginTop: ".35rem" }}>
-                    RACI {e.raciSource}: R={e.raciResponsible || "Not recorded"}; A={e.raciAccountable || "Admin"}; I={e.raciInformed || "Super Admin"}; escalation {e.raciEscalation || "APP-ADM-005"}{e.raciBlocker ? `. Blocked: ${e.raciBlocker}` : ""}.
-                  </div>
-                )}
                 {linkedSupplier && e.type === "Supplier Master Data Review" && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>SOP-MDM-01 / CAP-MCL-001 review: {supplierReviewReasons(linkedSupplier).join("; ") || "No current supplier review flags"}</div>}
                 {linkedSupplierPickupRow && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>Policy #15 / Policy #16 / Policy #27 review: {linkedSupplierPickupRow.reasons.join("; ") || "No current pickup standards flags"}</div>}
                 {e.type === "WHS Hazard" && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>Policy #27: Admin must raise the hazard with the supplier and must not require driver return while the hazard remains unresolved.</div>}
@@ -9391,7 +8785,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 {linkedInvoice && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Invoice {linkedInvoice.id}: {linkedInvoice.status}, total ${Number(linkedInvoice.total || 0).toFixed(2)}, {linkedInvoice.lines.length} line(s)</div>}
                 {policy18Dispute && (
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
-                    Policy #18: {e.disputeReasonLabel || policy18ReasonLabel(e.disputeReason)}; delivery date {e.disputedDeliveryDate || "not recorded"}; {e.policy18TimingLabel || "invoice timing not recorded"}. {policy18SlaLabel(e)}. Owner escalation: {e.ownerEscalationStatus || "Not Requested"}.
+                    Policy #18: {e.disputeReasonLabel || policy18ReasonLabel(e.disputeReason)}; delivery date {e.disputedDeliveryDate || "not recorded"}; {e.policy18TimingLabel || "invoice timing not recorded"}. {policy18StatusLine(e)}. Owner escalation: {e.ownerEscalationStatus || "Not Requested"}.
                   </div>
                 )}
                 {linkedOrders.length > 0 && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>Linked work: {linkedOrders.map(order => `${order.id} ${order.status}${order.recvName ? `, received by ${order.recvName}` : ""}`).join("; ")}</div>}
@@ -9423,7 +8817,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                       }}>Accept Cancellation</button>
                     )}
                     {canAuthoriseSecondAttempt && (
-                      <button className="btn b-acc b-sm" onClick={() => authoriseSecondFailedDeliveryAttempt(failedDeliveryOrder, e)}>Authorise Second Attempt</button>
+                      <button className="btn b-acc b-sm" onClick={() => authoriseSecondFailedDeliveryAttempt(failedDeliveryOrder, e)}>Schedule Second Attempt</button>
                     )}
                     {canReviewRedeliveryFee && (
                       <>
@@ -9739,7 +9133,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span className="badge b-done">Delivery date + 7 years</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu }}>
-                Signature files stay in private proof storage and remain linked to immutable delivery proof records.
+                Signature files are represented as Supabase private bucket records locally and stay linked to immutable delivery proof records.
               </div>
             </div>
             {proofRetentionRows.length === 0 && <div className="empty">No POD proof records yet.</div>}
@@ -9775,7 +9169,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <div>
                   <div className="card-title">Tamper-Evident Chain</div>
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
-                    Append-only event history for PII actions. Live enforcement is controlled by the approved access and audit model.
+                    Append-only local event history for PII actions. Production enforcement is represented in Supabase migrations and still needs live project testing.
                   </div>
                 </div>
                 <span className={`badge ${auditIntegrity.valid ? "b-done" : "b-cancelled"}`}>{auditIntegrity.valid ? "Hash Verified" : "Hash Mismatch"}</span>
@@ -9797,15 +9191,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                   </div>
                   <div className="meta"><span>Seq {a.sequence}</span><span>{a.actor}</span><span>{a.protectedObject}</span><span>{a.piiAction ? "PII action" : "Non-PII"}</span></div>
                   <div style={{ fontSize: ".82rem", color: T.mu, marginTop: ".35rem" }}>{a.detail}</div>
-                  {a.raciSource && (
-                    <div className="meta" style={{ marginTop: ".45rem" }}>
-                      <span>RACI {a.raciSource}</span>
-                      <span>R {a.raciResponsible || "Not recorded"}</span>
-                      <span>A {a.raciAccountable || "Not recorded"}</span>
-                      <span>I {a.raciInformed || "Not recorded"}</span>
-                      <span>{a.raciEscalation || "APP-ADM-005"}</span>
-                    </div>
-                  )}
                   <div style={{ fontSize: ".72rem", color: T.mu2, marginTop: ".45rem" }}>{new Date(a.at).toLocaleString("en-AU")}</div>
                   <div className="meta" style={{ marginTop: ".45rem" }}><span>Hash {a.eventHash}</span><span>Previous {a.previousHash}</span><span>{a.hashAlgorithm}</span></div>
                 </div>
@@ -9936,7 +9321,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>Open work {supplierOpenWorkCount(supplierAction.supplier.name)}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Supplier master-data actions require a written Admin reason and create master-data change records. Production supplier review automation still depends on the live authority model.
+                Supplier master-data actions require a written Admin reason and create local master-data change rows. Production supplier review automation still depends on the live Supabase project and authority model.
               </div>
               {supplierAction.action === "archive" && supplierOpenWorkCount(supplierAction.supplier.name) > 0 && (
                 <div className="err">Archive is blocked while open work references this supplier.</div>
@@ -10010,17 +9395,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                   <span>{(activationTarget.vendors || []).length} supplier link(s)</span>
                 </div>
                 <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
-                  Admin must confirm the source-backed activation criteria before courier eligibility is switched on. Exact public geography wording remains separate.
+                  Eligibility checklist is advisory only. Admin activates or rejects based on the review, and the audit trail records the action.
                 </div>
                 {state.checks.map(check => (
-                  <label key={check.key} style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", color: check.available ? T.tx : T.mu, fontSize: ".82rem", lineHeight: 1.4, margin: ".65rem 0" }}>
-                    <input
-                      type="checkbox"
-                      checked={check.available && check.checked}
-                      disabled={!check.available}
-                      onChange={e => setActivationCheck(check.key, e.target.checked)}
-                      style={{ width: "auto", marginTop: ".15rem" }}
-                    />
+                  <div key={check.key} style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", color: check.available ? T.tx : T.mu, fontSize: ".82rem", lineHeight: 1.4, margin: ".65rem 0" }}>
+                    <span className={`badge ${check.available ? "b-done" : "b-pending"}`} style={{ marginTop: ".1rem" }}>{check.available ? "Reference ok" : "Review"}</span>
                     <span>
                       <strong>{check.label}</strong>
                       <br />
@@ -10028,10 +9407,10 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                       <br />
                       <span style={{ color: T.mu2 }}>{check.source}</span>
                     </span>
-                  </label>
+                  </div>
                 ))}
                 <div className="f"><label>Review Note</label><textarea value={activationReview.note} onChange={e => setActivationReview(review => ({ ...review, note: e.target.value }))} placeholder="Eligibility evidence or service-area review note" /></div>
-                <button className="btn b-acc" disabled={!state.canActivate} onClick={confirmActivationReview}>Activate Account</button>
+                <button className="btn b-acc" onClick={confirmActivationReview}>Activate Account</button>
                 <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setActivationTarget(null)}>Cancel</button>
               </div>
             </div>
@@ -10049,7 +9428,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>{accessTarget.status}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Local access register only. Production identity binding and final access policies remain open pending Policy #21 and BOAS Sheet 05 review.
+                Local access register only. Production Supabase Auth identity binding and final RLS policies remain open pending Policy #21 and BOAS Sheet 05 review.
               </div>
               <div className="f"><label>Review Type</label><select value={accessReviewType} onChange={e => setAccessReviewType(e.target.value)}>
                 {ACCESS_REVIEW_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
@@ -10062,27 +9441,6 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 {accessAction === "revoke" ? "Confirm Revoke" : accessAction === "restore" ? "Confirm Restore" : "Confirm Review"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setAccessTarget(null)}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {provisionStatusAction && (
-          <div className="overlay" onClick={() => { setProvisionStatusAction(null); setProvisionStatusReason(""); }}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3>{provisionStatusAction.status === "active" ? "Activate User" : "Revoke User"} - {provisionStatusAction.profile?.display_name || provisionStatusAction.profile?.email}</h3>
-              <div className="meta" style={{ marginBottom: ".7rem" }}>
-                <span>{sopIamRoleLabel(provisionStatusAction.profile?.role)}</span>
-                <span>{provisionStatusAction.profile?.email}</span>
-                <span>Current: {provisionStatusAction.profile?.status}</span>
-              </div>
-              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                SOP-IAM-03/SOP-IAM-04 requires reason or approval evidence before a live user status changes.
-              </div>
-              <div className="f"><label>Reason / Approval Reference *</label><textarea value={provisionStatusReason} onChange={e => setProvisionStatusReason(e.target.value)} placeholder="Activation approval, access review, departure, role change..." /></div>
-              <button className={`btn ${provisionStatusAction.status === "active" ? "b-acc" : "b-red"}`} onClick={confirmProvisionStatusAction} disabled={liveProvisioningBusy}>
-                {liveProvisioningBusy ? <><span className="spin" />Saving...</> : provisionStatusAction.status === "active" ? "Confirm Activate" : "Confirm Revoke"}
-              </button>
-              <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => { setProvisionStatusAction(null); setProvisionStatusReason(""); }}>Cancel</button>
             </div>
           </div>
         )}
@@ -10251,10 +9609,27 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>Billing: {reinstatementTarget.billingContact?.email || "Not recorded"}</span>
                 <span>Operational: {reinstatementTarget.operationalContact?.email || reinstatementTarget.email}</span>
               </div>
-              <div className="f"><label>{reinstatementTarget.suspensionRecord?.type === "material_conduct_breach" ? "Breach Remedy / Reinstatement Evidence" : "Payment Clearance / Reinstatement Evidence"}</label><textarea value={reinstatementEvidence} onChange={e => setReinstatementEvidence(e.target.value)} placeholder="Payment reference, part-payment arrangement, breach remedy, or Admin evidence" /></div>
               <div className="pills" style={{ margin: ".7rem 0" }}>
-                <button className={`pill${reinstatementNotifyOps ? " sel" : ""}`} onClick={() => setReinstatementNotifyOps(v => !v)}>Operational contact notified</button>
-                <button className={`pill${reinstatementNotifyBilling ? " sel" : ""}`} onClick={() => setReinstatementNotifyBilling(v => !v)}>Billing contact notified</button>
+                <button className={`pill${reinstatementResolutionType === "payment_confirmed" ? " sel" : ""}`} onClick={() => setReinstatementResolutionType("payment_confirmed")}>Payment confirmed</button>
+                <button className={`pill${reinstatementResolutionType === "payment_arrangement" ? " sel" : ""}`} onClick={() => setReinstatementResolutionType("payment_arrangement")}>Payment arrangement</button>
+                {reinstatementTarget.suspensionRecord?.type === "material_conduct_breach" && (
+                  <button className={`pill${reinstatementResolutionType === "breach_remedied" ? " sel" : ""}`} onClick={() => setReinstatementResolutionType("breach_remedied")}>Breach remedied</button>
+                )}
+              </div>
+              <div className="f"><label>{reinstatementTarget.suspensionRecord?.type === "material_conduct_breach" ? "Breach Remedy / Reinstatement Evidence" : "Payment Clearance / Reinstatement Evidence"}</label><textarea value={reinstatementEvidence} onChange={e => setReinstatementEvidence(e.target.value)} placeholder="Payment reference, payment arrangement summary, breach remedy, or Admin evidence" /></div>
+              {reinstatementResolutionType === "payment_arrangement" && (
+                <>
+                  <div className="grid-2">
+                    <div className="f"><label>Agreed Payment Date *</label><input type="date" value={reinstatementArrangementDate} onChange={e => setReinstatementArrangementDate(e.target.value)} /></div>
+                    <div className="f"><label>Agreed Amount *</label><input value={reinstatementArrangementAmount} onChange={e => setReinstatementArrangementAmount(e.target.value)} placeholder="$ amount" /></div>
+                  </div>
+                  <div className="f"><label>Contact Who Agreed *</label><input value={reinstatementArrangementContact} onChange={e => setReinstatementArrangementContact(e.target.value)} placeholder="Name and role" /></div>
+                  <div className="f"><label>Written Evidence Reference *</label><input value={reinstatementArrangementEvidence} onChange={e => setReinstatementArrangementEvidence(e.target.value)} placeholder="Email subject, message reference, or written approval ref" /></div>
+                </>
+              )}
+              <div className="pills" style={{ margin: ".7rem 0" }}>
+                <span className="pill sel">Operational contact automatic</span>
+                <span className="pill sel">Billing contact automatic</span>
               </div>
               <div className="f"><label>Type Account Name To Confirm</label><input value={reinstatementConfirmName} onChange={e => setReinstatementConfirmName(e.target.value)} placeholder={reinstatementTarget.name} /></div>
               <button className="btn b-acc" onClick={confirmReinstatement}>Confirm Reinstatement</button>
@@ -10428,7 +9803,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>Total ${Number(invoiceApprovalTarget.total || 0).toFixed(2)}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                SOP-BIL-04 requires Admin review of the rendered invoice before dispatch. Production PDF/email delivery remains unconfirmed; this records local approval evidence only.
+                SOP-BIL-04 requires Admin review of the rendered invoice. Confirming the invoice is correct triggers dispatch automatically. Production PDF/email delivery remains unconfirmed, so this records a local dispatch evidence row.
               </div>
               <div className="meta" style={{ marginBottom: ".7rem" }}>
                 <span>Billing group approved {fmtFullDate(isoDate(invoiceApprovalTarget.billingGroupApprovedAt || invoiceApprovalTarget.createdAt))}</span>
@@ -10439,44 +9814,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <textarea
                   value={invoiceApprovalNote}
                   onChange={e => setInvoiceApprovalNote(e.target.value)}
-                  placeholder="Record rendered invoice review evidence, line check, billing contact check, or reason approval is delayed."
+                  placeholder="Record rendered invoice review evidence, line check, billing contact check, or reason confirmation is delayed."
                 />
               </div>
-              <button className="btn b-acc" onClick={confirmInvoiceApproval}>Approve For Dispatch</button>
+              <button className="btn b-acc" onClick={confirmInvoiceApproval}>Confirm Invoice Correct</button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setInvoiceApprovalTarget(null)}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {invoiceDispatchTarget && (
-          <div className="overlay" onClick={() => setInvoiceDispatchTarget(null)}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3>Record Invoice Dispatch - {invoiceDispatchTarget.id}</h3>
-              <div className="meta" style={{ marginBottom: ".7rem" }}>
-                <span>{invoiceDispatchTarget.clientName}</span>
-                <span>{invoiceDispatchTarget.status}</span>
-                <span>Recipient {invoiceDispatchTarget.billingEmail}</span>
-                <span>Total ${Number(invoiceDispatchTarget.total || 0).toFixed(2)}</span>
-              </div>
-              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Local dispatch record only. Production PDF/email rendering, provider delivery, bounce handling, and external accounting export remain unconfirmed.
-              </div>
-              <div className="meta" style={{ marginBottom: ".7rem" }}>
-                <span>Channel local_record_only</span>
-                <span>External status provider_not_configured</span>
-                <span>Recorded by Admin</span>
-                <span>Approved {fmtFullDate(isoDate(invoiceDispatchTarget.invoiceApprovedAt))}</span>
-              </div>
-              <div className="f">
-                <label>Dispatch Evidence / Note *</label>
-                <textarea
-                  value={invoiceDispatchNote}
-                  onChange={e => setInvoiceDispatchNote(e.target.value)}
-                  placeholder="Record local invoice dispatch evidence, handoff note, or why external send is blocked."
-                />
-              </div>
-              <button className="btn b-acc" onClick={confirmInvoiceDispatch}>Confirm Dispatch Record</button>
-              <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setInvoiceDispatchTarget(null)}>Cancel</button>
             </div>
           </div>
         )}
@@ -10551,7 +9893,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                       <span>{investigationTarget.disputeReasonLabel || policy18ReasonLabel(investigationTarget.disputeReason)}</span>
                       <span>Delivery date {investigationTarget.disputedDeliveryDate || "not recorded"}</span>
                       <span>{investigationTarget.policy18TimingLabel || "Invoice timing not recorded"}</span>
-                      <span>{policy18SlaLabel(investigationTarget)}</span>
+                      <span>{policy18StatusLine(investigationTarget)}</span>
                       <span>Owner escalation {investigationTarget.ownerEscalationStatus || "Not Requested"}</span>
                     </div>
                     <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>
@@ -10662,13 +10004,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 export default function App() {
   const pathname = usePathname();
-  const [authReturnPath, setAuthReturnPath] = useState("");
-  const routeIntent = routeIntentFromPath(authReturnPath || pathname || "/");
-  const [liveRuntimeStatus] = useState(() => getLiveRuntimeStatus());
-  const [liveRuntimeHydrated, setLiveRuntimeHydrated] = useState(false);
-  const [liveRuntimeNotice, setLiveRuntimeNotice] = useState("");
-  const [liveRuntimeError, setLiveRuntimeError] = useState("");
-  const liveRuntimeSyncReady = useRef(false);
+  const routeIntent = routeIntentFromPath(pathname || "/");
   const [session, setSession] = useState(null);
   const [vehicles, setVehicles] = useState(() => load(KEY_VEHICLES, seedVehicles));
   const [orders, setOrders] = useState(() => {
@@ -10747,172 +10083,6 @@ export default function App() {
   const [systemNotice, setSystemNotice] = useState("");
   const accessRecords = buildAccessRecords(clients, drivers, accessOverrides);
 
-  useEffect(() => {
-    const path = String(pathname || "/");
-    if (!path.startsWith("/auth/callback")) {
-      setAuthReturnPath("");
-      return;
-    }
-    const params = new URLSearchParams(window.location.search || "");
-    setAuthReturnPath(safeLiveAuthReturnPath(params.get("next") || readStoredLiveAuthReturnPath("/")));
-  }, [pathname]);
-
-  useEffect(() => {
-    const path = String(pathname || "/");
-    if (!session || !authReturnPath || !path.startsWith("/auth/callback")) return;
-    window.history.replaceState(null, "", authReturnPath);
-  }, [session, authReturnPath, pathname]);
-
-  function applyLiveRuntimeSnapshot(snapshot = {}) {
-    const liveVehicles = snapshot.vehicles || [];
-    const liveOrders = normaliseOrderVehicleEvidence(snapshot.orders || [], liveVehicles);
-    setVehicles(liveVehicles);
-    setOrders(liveOrders);
-    setClients(snapshot.clients || []);
-    setDrivers((snapshot.drivers || []).map(normaliseDriverRecord));
-    setSuppliers(snapshot.suppliers || []);
-    setPriceRules((snapshot.priceRules || []).map(normalisePriceRule));
-    setExceptions(snapshot.exceptions || []);
-    setAudit(snapshot.audit || []);
-    setProofs((snapshot.proofs || []).map(proof => normaliseDeliveryProof(proof, liveOrders)));
-    setInvoices((snapshot.invoices || []).map(normaliseInvoice));
-    setBillingNotices(snapshot.billingNotices || []);
-    setOperationalNotices(snapshot.operationalNotices || []);
-    setRunClosures(snapshot.runClosures || []);
-    setMasterDataChanges(snapshot.masterDataChanges || []);
-    setExceptionAlerts(snapshot.exceptionAlerts || []);
-    setDriverAvailability(snapshot.driverAvailability || []);
-    setFinancialReconciliations((snapshot.financialReconciliations || []).map(normaliseFinancialReconciliation));
-    setAiDrafts((snapshot.aiDrafts || []).map(normaliseAiDraft));
-    setDataBreachIncidents((snapshot.dataBreachIncidents || []).map(normaliseDataBreachIncident));
-    setDataUseRecords((snapshot.dataUseRecords || []).map(normaliseDataUseRecord));
-    setPrivacyRequests((snapshot.privacyRequests || []).map(normalisePrivacyRequest));
-  }
-
-  useEffect(() => {
-    if (!liveRuntimeStatus.enabled) {
-      setLiveRuntimeHydrated(true);
-      return;
-    }
-    let cancelled = false;
-
-    async function bootLiveRuntime() {
-      liveRuntimeSyncReady.current = false;
-      setLiveRuntimeError("");
-      setLiveRuntimeNotice("Checking sign-in and approved access.");
-      try {
-        const liveSession = await resolveLiveRuntimeSession();
-        if (cancelled) return;
-        if (!liveSession) {
-          setSession(null);
-          setLiveRuntimeHydrated(true);
-          setLiveRuntimeNotice("Live system is ready. Sign in with an approved account.");
-          return;
-        }
-        if (liveSession.blocked) {
-          setSession(null);
-          setLiveRuntimeHydrated(true);
-          setLiveRuntimeError(liveSession.reason);
-          setLiveRuntimeNotice("Sign-in succeeded, but Moto & Co access is not yet approved for this account.");
-          return;
-        }
-        setSession(liveSession);
-        const snapshot = await loadLiveRuntimeSnapshot();
-        if (cancelled) return;
-        applyLiveRuntimeSnapshot(snapshot);
-        liveRuntimeSyncReady.current = true;
-        setLiveRuntimeHydrated(true);
-        setLiveRuntimeNotice(`${sessionRoleLabel(liveSession.role)} session active. Receiver sign-off remains a no-login POD capture.`);
-      } catch (error) {
-        if (cancelled) return;
-        setLiveRuntimeHydrated(true);
-        setLiveRuntimeError(error?.message || "The live system could not be loaded.");
-        setLiveRuntimeNotice("The live system could not complete startup.");
-      }
-    }
-
-    bootLiveRuntime();
-    const unsubscribe = onLiveAuthStateChange(bootLiveRuntime);
-    return () => {
-      cancelled = true;
-      liveRuntimeSyncReady.current = false;
-      unsubscribe?.();
-    };
-  }, [liveRuntimeStatus.enabled]);
-
-  useEffect(() => {
-    if (!liveRuntimeStatus.enabled || !liveRuntimeHydrated || !liveRuntimeSyncReady.current || !session?.role) return;
-    const domains = {
-      clients,
-      suppliers,
-      drivers,
-      vehicles,
-      priceRules,
-      orders,
-      proofs,
-      exceptions,
-      audit,
-      invoices,
-      billingNotices,
-      operationalNotices,
-      runClosures,
-      masterDataChanges,
-      exceptionAlerts,
-      driverAvailability,
-      financialReconciliations,
-      aiDrafts,
-      dataBreachIncidents,
-      dataUseRecords,
-      privacyRequests,
-    };
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      for (const [domainKey, rows] of Object.entries(domains)) {
-        if (cancelled) return;
-        if (!canSyncDomainForRole(domainKey, session.role)) continue;
-        try {
-          await syncLiveRuntimeDomain(domainKey, rows, session);
-        } catch (error) {
-          if (cancelled) return;
-          console.warn(`Live data sync failed for ${domainKey}`, error);
-          setLiveRuntimeError(`Live data sync failed for ${domainKey}: ${error?.message || "unknown error"}`);
-          return;
-        }
-      }
-    }, 400);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [
-    liveRuntimeStatus.enabled,
-    liveRuntimeHydrated,
-    session?.role,
-    session?.user?.profileId,
-    session?.user?.actorId,
-    clients,
-    suppliers,
-    drivers,
-    vehicles,
-    priceRules,
-    orders,
-    proofs,
-    exceptions,
-    audit,
-    invoices,
-    billingNotices,
-    operationalNotices,
-    runClosures,
-    masterDataChanges,
-    exceptionAlerts,
-    driverAvailability,
-    financialReconciliations,
-    aiDrafts,
-    dataBreachIncidents,
-    dataUseRecords,
-    privacyRequests,
-  ]);
-
   function showWorkflowNotice(message) {
     setSystemNotice(String(message || "A system workflow rule blocked this action."));
   }
@@ -10922,41 +10092,15 @@ export default function App() {
     window.location.reload();
   }
 
-  async function logout() {
-    liveRuntimeSyncReady.current = false;
-    if (liveRuntimeStatus.enabled) {
-      try {
-        await signOutLiveRuntime();
-        setLiveRuntimeNotice("Signed out.");
-      } catch (error) {
-        setLiveRuntimeError(error?.message || "Sign-out failed.");
-      }
-    }
-    setSession(null);
-  }
-
   function writeAudit(action, detail, actor = session?.role || "system") {
-    const raci = resolveRaciEvidence(action, detail, actor);
-    const raciLabel = raciAuditLabel(raci);
-    const auditDetail = raciLabel && !String(detail || "").includes("RACI ")
-      ? `${detail}; ${raciLabel}`
-      : detail;
     setAudit(prev => {
       const previous = prev[prev.length - 1];
       const event = buildAuditEvent({
         id: `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         action,
-        detail: auditDetail,
+        detail,
         actor,
         at: isoNow(),
-        raciSource: raci?.source || "",
-        raciTitle: raci?.title || "",
-        raciStatus: raci?.status || "",
-        raciResponsible: raci?.responsible || "",
-        raciAccountable: raci?.accountable || "",
-        raciInformed: raci?.informed || "",
-        raciEscalation: raci?.escalation || "",
-        raciBlocker: raci?.blocker || "",
       }, previous);
       const next = [...prev, event];
       save(KEY_AUDIT, next);
@@ -11088,21 +10232,6 @@ export default function App() {
     writeAudit("Day 8 overdue notices generated", `${generated.map(notice => notice.invoiceId).join(", ")}; local records only`, "system");
   }, [invoices, billingNotices, clients]);
 
-  function recordAccountActivationNotice(previous, client) {
-    if (!client?.id) return;
-    if (!previous) return;
-    if ((previous?.status || "Pending") === "Active" || client.status !== "Active") return;
-    createOperationalNotice({
-      clientId: client.id,
-      clientName: client.name,
-      noticeType: "account_activated",
-      subject: `Account activated - ${client.name}`,
-      message: `${client.name} courier access was activated after Admin eligibility review. First-login supplier setup remains required before booking opens.`,
-      eventRef: client.activatedAt || client.activationReviewedAt || "",
-      createdBy: "admin",
-    });
-  }
-
   function recordAccountStatusNotices(previous, client) {
     if (!previous?.id || !client?.id) return;
     const previousStatus = previous.status || "Active";
@@ -11139,13 +10268,18 @@ export default function App() {
       const record = client.reinstatementRecord || {};
       const evidence = record.evidence || "Reinstatement evidence recorded by Admin";
       const recordedAt = record.notifiedAt || record.date || client.reinstatedAt || isoNow();
-      const contactEvidence = `Operational contact notified: ${record.operationalContactNotified ? "yes" : "no"}; Billing contact notified: ${record.billingContactNotified ? "yes" : "no"}.`;
+      const arrangement = record.paymentArrangement
+        ? ` Payment arrangement: ${record.paymentArrangement.agreedAmount} due ${fmtFullDate(record.paymentArrangement.agreedPaymentDate)}; agreed by ${record.paymentArrangement.agreedByNameAndRole}; evidence ${record.paymentArrangement.writtenEvidenceRef}.`
+        : "";
+      const contactEvidence = record.notificationMode === "automatic_on_admin_action"
+        ? "Operational and Billing contacts notified automatically on Admin reinstatement action."
+        : `Operational contact notified: ${record.operationalContactNotified ? "yes" : "no"}; Billing contact notified: ${record.billingContactNotified ? "yes" : "no"}.`;
       createOperationalNotice({
         clientId: client.id,
         clientName: client.name,
         noticeType: "account_reinstated",
         subject: `Account reinstated - ${client.name}`,
-        message: `Courier pickup access was reinstated by Admin. Evidence: ${evidence}. ${contactEvidence} Local record only; production outbound delivery remains unconfigured.`,
+        message: `Courier pickup access was reinstated by Admin. Evidence: ${evidence}.${arrangement} ${contactEvidence} Local record only; production outbound delivery remains unconfigured.`,
         eventRef: recordedAt,
         createdBy: "admin",
       });
@@ -11153,7 +10287,7 @@ export default function App() {
         client,
         noticeType: "reinstatement",
         subject: `Account reinstated - ${client.name}`,
-        note: `Account reinstatement recorded. Evidence: ${evidence}. ${contactEvidence} Local record only; production notification delivery provider and channel are unconfirmed.`,
+        note: `Account reinstatement recorded. Evidence: ${evidence}.${arrangement} ${contactEvidence} Local record only; production notification delivery provider and channel are unconfirmed.`,
         eventRef: recordedAt,
         recordedAt,
       });
@@ -11601,7 +10735,6 @@ export default function App() {
     const next = previous ? clients.map(c => c.id === stored.id ? stored : c) : [stored, ...clients];
     setClients(next); save(KEY_CLIENTS, next);
     if (session?.user?.id === stored.id) setSession({ ...session, user: stored });
-    recordAccountActivationNotice(previous, stored);
     recordAccountStatusNotices(previous, stored);
     if (!previous) {
       writeAudit("Customer account created", auditDetail || `${stored.name} CRM workshop record created`, "admin");
@@ -11688,22 +10821,7 @@ export default function App() {
   }
 
   function addException(e, actor = session?.role || "system") {
-    const raci = resolveRaciEvidence(`${e.type || ""} exception`, e.note || "", actor);
-    const event = {
-      ...e,
-      id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      createdAt: isoNow(),
-      status: e.status || "Open",
-      owner: e.owner || raci?.accountable || "Admin",
-      raciSource: e.raciSource || raci?.source || "",
-      raciTitle: e.raciTitle || raci?.title || "",
-      raciStatus: e.raciStatus || raci?.status || "",
-      raciResponsible: e.raciResponsible || raci?.responsible || "",
-      raciAccountable: e.raciAccountable || raci?.accountable || "",
-      raciInformed: e.raciInformed || raci?.informed || "",
-      raciEscalation: e.raciEscalation || raci?.escalation || "APP-ADM-005",
-      raciBlocker: e.raciBlocker || raci?.blocker || "",
-    };
+    const event = { ...e, id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`, createdAt: isoNow(), status: e.status || "Open" };
     setExceptions(prev => {
       const next = [event, ...prev];
       save(KEY_EXCEPTIONS, next);
@@ -11723,32 +10841,20 @@ export default function App() {
     const missingRows = failedRows.filter(row => !existingKeys.has(row.key));
     if (missingRows.length === 0) return;
     const createdAt = isoNow();
-    const createdExceptions = missingRows.map(row => {
-      const note = `${row.type} failed for ${row.reference}. Status: ${row.status}. Subject: ${row.subject}.`;
-      const raci = resolveRaciEvidence("Notification failure exception", `${row.policyRef || ""} ${note}`, "system");
-      return {
-        id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        type: "Notification Failure",
-        orderId: row.reference,
-        noticeTable: row.noticeTable,
-        noticeId: row.noticeId,
-        notificationFailureKey: row.key,
-        owner: raci?.accountable || "Admin",
-        note,
-        status: "Open",
-        source: row.policyRef,
-        severity: "High",
-        createdAt,
-        raciSource: raci?.source || "",
-        raciTitle: raci?.title || "",
-        raciStatus: raci?.status || "",
-        raciResponsible: raci?.responsible || "",
-        raciAccountable: raci?.accountable || "",
-        raciInformed: raci?.informed || "",
-        raciEscalation: raci?.escalation || "APP-ADM-005",
-        raciBlocker: raci?.blocker || "",
-      };
-    });
+    const createdExceptions = missingRows.map(row => ({
+      id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: "Notification Failure",
+      orderId: row.reference,
+      noticeTable: row.noticeTable,
+      noticeId: row.noticeId,
+      notificationFailureKey: row.key,
+      owner: "Admin",
+      note: `${row.type} failed for ${row.reference}. Status: ${row.status}. Subject: ${row.subject}.`,
+      status: "Open",
+      source: row.policyRef,
+      severity: "High",
+      createdAt,
+    }));
     setExceptions(prev => {
       const prevKeys = new Set(
         prev
@@ -12003,27 +11109,6 @@ export default function App() {
     const next = [storedProof, ...proofs];
     setProofs(next); save(KEY_PROOFS, next);
     writeAudit("Delivery proof stored", `${storedProof.orderId} receiver ${storedProof.receiverName}; ${storedProof.signaturePath}; group size ${storedProof.deliveryGroupSize || 1}; SOP-DEL-04 sign-off evidence captured`, "driver");
-    if (liveRuntimeStatus.enabled && session?.role) {
-      uploadLiveDeliveryProof(storedProof, session)
-        .then(result => {
-          if (result?.path) {
-            setLiveRuntimeNotice(`POD signature stored in private delivery-proof bucket: ${result.path}`);
-          }
-        })
-        .catch(error => {
-            const message = error?.message || "Private proof storage rejected the POD signature upload.";
-            setLiveRuntimeError(`POD storage failed: ${message}`);
-          addException({
-            type: "POD Storage Failure",
-            orderId: storedProof.orderId || storedProof.deliveryId,
-            owner: "Admin",
-            note: `${storedProof.id}: ${message}`,
-            status: "Open",
-            source: "APP-DRV-003 / private delivery-proof storage",
-            severity: "High",
-          });
-        });
-    }
     if (matchedOrders.length === 0) {
       addException({
         type: "Delivery Completion Failure",
@@ -12089,7 +11174,6 @@ export default function App() {
     });
     const linkedInvoice = policy18InvoiceForOrder(order, invoices);
     const window = disputeInput?.window || policy18DisputeWindowForInvoice(linkedInvoice, isoDate(receivedAt));
-    const due = policy18DueDates(receivedAt);
     const timing = window.timingLabel || "Invoice date unavailable - Admin timing review required";
     const description = `${dispute.reasonLabel}; order ${order.id}; con note ${order.conNote || "not recorded"}; delivery date ${dispute.deliveryDate || "not recorded"}; ${timing}. Client note: ${dispute.note}`;
     addException({
@@ -12112,8 +11196,6 @@ export default function App() {
       policy18TimingStatus: window.timingStatus,
       policy18TimingLabel: timing,
       raisedAt: receivedAt,
-      ackDueDate: due.ackDueDate,
-      resolutionDueDate: due.resolutionDueDate,
       ownerEscalationStatus: "Not Requested",
     });
     writeAudit("Client dispute raised", `${order.id}: ${description}`, "client");
@@ -12123,7 +11205,7 @@ export default function App() {
       orderId: order.id,
       noticeType: "dispute_received",
       subject: `Dispute received - ${order.id}`,
-      message: `Your delivery dispute was recorded for Admin investigation under Policy #18. Admin acknowledgement target: ${fmtFullDate(due.ackDueDate)}. Resolution target: ${fmtFullDate(due.resolutionDueDate)}. Note: ${dispute.note}`,
+      message: `Your delivery dispute was recorded for Admin investigation under Policy #18. Response monitoring is outside this portal; the portal records the received timestamp and investigation evidence. Note: ${dispute.note}`,
       eventRef: order.id,
       createdBy: "client",
       policyRef: "Policy #18 / UJ-CRM-001A / notification provider gap",
@@ -12138,7 +11220,6 @@ export default function App() {
       orderId: linkedLine.orderId || "",
     });
     const window = disputeInput?.window || policy18DisputeWindowForInvoice(invoice, isoDate(receivedAt));
-    const due = policy18DueDates(receivedAt);
     const timing = window.timingLabel || "Invoice date unavailable - Admin timing review required";
     const description = `${dispute.reasonLabel}; invoice ${invoice.id}; order ${dispute.orderId || "not selected"}; delivery date ${dispute.deliveryDate || "not recorded"}; ${timing}. Client note: ${dispute.note}`;
     addException({
@@ -12161,8 +11242,6 @@ export default function App() {
       policy18TimingStatus: window.timingStatus,
       policy18TimingLabel: timing,
       raisedAt: receivedAt,
-      ackDueDate: due.ackDueDate,
-      resolutionDueDate: due.resolutionDueDate,
       ownerEscalationStatus: "Not Requested",
     });
     writeAudit("Billing dispute raised", `${invoice.id}: ${description}`, actor);
@@ -12174,7 +11253,7 @@ export default function App() {
       noticeType: "billing_query_received",
       audience,
       subject: `Billing query received - ${invoice.id}`,
-      message: `Your billing query was recorded for Admin investigation under Policy #18. Admin acknowledgement target: ${fmtFullDate(due.ackDueDate)}. Resolution target: ${fmtFullDate(due.resolutionDueDate)}. Note: ${dispute.note}`,
+      message: `Your billing query was recorded for Admin investigation under Policy #18. Response monitoring is outside this portal; the portal records the received timestamp and investigation evidence. Note: ${dispute.note}`,
       eventRef: invoice.id,
       createdBy: actor,
       policyRef: "UJ-CRM-001B / Policy #18 / notification provider gap",
@@ -12263,8 +11342,10 @@ export default function App() {
     const dispatchChanged = invoice.dispatchRecordedAt && invoice.dispatchRecordedAt !== previous?.dispatchRecordedAt;
     const paymentChanged = invoice.status === "Paid" && invoice.paymentEvidence && (previous?.status !== "Paid" || invoice.paymentEvidence !== previous?.paymentEvidence || invoice.paidAt !== previous?.paidAt);
     const policy18Changed = invoice.policy18LastOutcome && invoice.policy18LastOutcomeAt !== previous?.policy18LastOutcomeAt;
-    const detail = approvalChanged
-      ? `${invoice.id} approved for dispatch under SOP-BIL-04: ${invoice.invoiceApprovalNote}`
+    const detail = approvalChanged && dispatchChanged
+      ? `${invoice.id} confirmed correct under SOP-BIL-04 and dispatch triggered automatically for ${invoice.dispatchRecipient || invoice.billingEmail}; external status ${invoice.dispatchExternalStatus || "not recorded"}; note ${invoice.invoiceApprovalNote}`
+      : approvalChanged
+      ? `${invoice.id} confirmed correct under SOP-BIL-04: ${invoice.invoiceApprovalNote}`
       : dispatchChanged
       ? `${invoice.id} dispatch recorded for ${invoice.dispatchRecipient || invoice.billingEmail}; channel ${invoice.dispatchChannel || "local_record_only"}; external status ${invoice.dispatchExternalStatus || "not recorded"}; note ${invoice.dispatchNote}`
       : paymentChanged
@@ -12427,11 +11508,6 @@ export default function App() {
   return (
     <div className="app">
       <style>{css}</style>
-      {liveRuntimeStatus.enabled && (liveRuntimeNotice || liveRuntimeError || !liveRuntimeHydrated) && (
-        <PolicyNotice title="Live System" onDismiss={() => { setLiveRuntimeNotice(""); setLiveRuntimeError(""); }}>
-          {liveRuntimeError || liveRuntimeNotice || "Starting live system."}
-        </PolicyNotice>
-      )}
       {systemNotice && (
         <PolicyNotice title="System Workflow Rule" system onDismiss={() => setSystemNotice("")}>
           {systemNotice}
@@ -12442,15 +11518,15 @@ export default function App() {
           <RegisterClient suppliers={suppliers} onDone={addClient} onCancel={() => setShowReg(false)} />
         </div>
       ) : !session ? (
-        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} defaultPortalSide={routeIntent.loginPortalSide} portalSideLocked={Boolean(routeIntent.loginPortalSideLocked)} returnPath={authReturnPath || pathname || "/"} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
+        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} entryNotice={routeIntent.loginNotice} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
       ) : session.role === "client" ? (
-        <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
+        <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={() => setSession(null)} />
       ) : session.role === "billing" ? (
-        <BillingContactPortal user={session.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
+        <BillingContactPortal user={session.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={() => setSession(null)} />
       ) : session.role === "driver" ? (
-        <DriverPortal user={session.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
+        <DriverPortal user={session.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={() => setSession(null)} />
       ) : (
-        <AdminPortal currentSession={session} liveRuntimeStatus={liveRuntimeStatus} orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
+        <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={() => setSession(null)} />
       )}
     </div>
   );

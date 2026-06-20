@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-06-19
+Last updated: 2026-06-18
 
 ## Format
 
@@ -262,84 +262,24 @@ Decision: Use Supabase project ref `fhrqfrhqopicekaiibyj` for the production-fir
 
 Source: User supplied Supabase MCP command on 2026-06-19; local `codex mcp list` verification.
 
-Notes: The Supabase MCP server `supabase` is registered at `https://mcp.supabase.com/mcp?project_ref=fhrqfrhqopicekaiibyj` and authenticated via OAuth. Supabase CLI access is also authenticated for migration execution. Production Auth/RLS actor tests and workflow data wiring remain open.
+Notes: The Supabase MCP server `supabase` is registered at `https://mcp.supabase.com/mcp?project_ref=fhrqfrhqopicekaiibyj` and authenticated via OAuth. Secrets, region/data-residency confirmation, Auth/RLS/Storage verification, and migration execution remain open.
 
-### 2026-06-19 - GitHub V1 repository handoff
+### 2026-06-21 - Decisions register closes pre-build UJ gaps
+
+Status: Confirmed source; implementation alignment in progress.
+
+Decision: `DECISIONS-REGISTER.html` is the authoritative source for the 24 pre-build user-journey gaps. All 24 gaps are decision-resolved in that register.
+
+Source: User supplied `DECISIONS-REGISTER.html` on 2026-06-21.
+
+Notes: Implemented alignment includes advisory-only activation checklist, no activation notification, `time_constraint` No Pickup category, next-scheduled-run second delivery attempt, structured payment-arrangement reinstatement fields, automatic reinstatement notification record on Admin action, and single-action invoice confirmation/dispatch. Google Maps/equivalent SEQ validation and real outbound email remain integration work because API/provider credentials and send-domain configuration are not present in the repo.
+
+### 2026-06-21 - Hard scope exclusions
 
 Status: Confirmed.
 
-Decision: Use `DigiVerseTeam/MotoandCoCouriers` as the V1 GitHub repository. Preserve the old build on `archive/old-netlify-vite-build-2026-06-19` and use `main` for the V1 logistics runtime.
+Decision: SLA monitoring is not in scope for the logistics software build. HCM requirements are not in scope for the logistics software build.
 
-Source: User direction on 2026-06-19; local Git push/merge verification.
+Source: User direction on 2026-06-21; `docs/hard-scope-requirements.md`; `docs/hcm-boundary.md`.
 
-Notes: V1 was merged to `main` on 2026-06-19. GitHub Actions/release evidence still depends on production credentials and final live checks.
-
-### 2026-06-19 - Vercel production deployment
-
-Status: Confirmed app-shell deployment; Supabase-backed production runtime pending.
-
-Decision: Use Vercel team `DigiVerse` / `digi-verse` and project `motoandcocouriers` for the V1 website and app deployment.
-
-Source: User completed Vercel device login on 2026-06-19; Vercel CLI link/deploy verification.
-
-Notes: The production alias `https://motoandcocouriers.vercel.app` is Ready, and GitHub `main` auto-deploy was verified on 2026-06-19. Live smoke tests for `/`, `/login`, `/booking`, and `/admin` returned HTTP 200. Supabase production env values are set in Vercel; actor workflow data wiring is still pending before the app is fully live-backed.
-
-### 2026-06-19 - Supabase production migrations and seed
-
-Status: Confirmed schema deployment; approved actor seed import pending.
-
-Decision: Apply the active logistics migration set to Supabase project `fhrqfrhqopicekaiibyj` and seed the approved Policy #9 / SOP-MDM-02 starting price rules.
-
-Source: Supabase CLI project metadata, migration push, and post-apply SQL verification on 2026-06-19.
-
-Notes: Project `motoandcocouriers` is `ACTIVE_HEALTHY` in region `ap-southeast-2`. All active logistics migrations through `202606190032` are applied; HCM migrations remain excluded under `hcm-extract/`. Private bucket `delivery-proof` exists with `public=false`. Seed verification found 8 `price_rules` rows and 8 matching pricing `master_data_changes` rows. Public schema verification found 40 public base tables and all 40 with RLS enabled before the live bridge was added; the live verifier now also confirms `runtime_records`, `production_seed_imports`, private POD bucket, RLS policies, and pricing. Approved production master data and active launch role records remain open.
-
-### 2026-06-19 - Live Supabase runtime bridge and approved seed gate
-
-Status: Confirmed implementation; live actor journey tests blocked by missing approved launch data.
-
-Decision: Connect the V1 app shell to Supabase Auth, `profiles`, `access_role_assignments`, RLS-protected `runtime_records`, and private `delivery-proof` Storage, while refusing to seed unapproved customers, suppliers, drivers, vehicles, or users. Production launch master data must be approved and can enter through SOP-IAM-03 app-managed records after Super Admin bootstrap or through an approved private import file recorded in `production_seed_imports`.
-
-Source: User instruction on 2026-06-19 to build Supabase Auth/roles, live data wiring, production seed/master data, POD Storage, and live journey tests without filling unknown gaps.
-
-Notes: The app now sends Supabase login links in production mode, resolves approved role records, hydrates/syncs workflow objects through Supabase, and uploads POD signatures to the private bucket. `scripts/import-production-master-data.mjs` rejects placeholders and requires approval evidence before applying launch records. `npm.cmd run verify:live` reaches production and passes structural checks, then fails on the expected missing Driver, Client Ops, and Client Billing role records until approved launch records are provided.
-
-### 2026-06-19 - BOAS v1.8 SOP-IAM-03 Super Admin provisioning
-
-Status: Production migration applied; first Super Admin bootstrapped on 2026-06-20.
-
-Decision: Use the BOAS v1.8 two-tier access model. `ACT-INT-003` is Super Admin, Receiver is renumbered to `ACT-INT-004`, Super Admin creates/removes Admin users, Admin creates Client Ops, Client Billing, and Driver users, and all login-user provisioning must run server-side with audit evidence. Customer/workshop, supplier, driver, vehicle, and login-user master data must be Admin-manageable rather than hard-coded.
-
-Source: User-provided `super admin boas.zip` files on 2026-06-19: `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`, `SOP-IAM-03-AdminMasterDataUserProvisioning.png`, `UJ-ADM-001-AdminJourney.xlsx`, and `UJ-ADM-001-AdminJourney.json`.
-
-Notes: The first Super Admin is not created inside the app. It requires an approved display name, email address, and approval reference, then `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`. On 2026-06-20 the user explicitly approved upgrading existing Admin `gerrard@otimi.com.au` to first Super Admin.
-
-### 2026-06-19 - BOAS v1.9 source alignment
-
-Status: Confirmed source update; no new runtime surface identified.
-
-Decision: Treat `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` as the current BOAS source. v1.9 confirms migration `202606190034` as the active boundary, confirms canonical `client_ops` with `client_operational` preserved as an alias, confirms the pending-profile RLS block, and required first Super Admin bootstrap values before in-app provisioning could begin. No additional app feature was introduced by the v1.9 diff.
-
-Source: User supplied `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx` on 2026-06-19.
-
-Notes: v1.9 adds `R-IAM-004`, `R-IAM-005`, `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008`, and deployment evidence `MIG-202606190034`. The source says not to run `bootstrap-super-admin.mjs` until display name, email, and approval reference are approved; the 2026-06-20 approval closes that first bootstrap blocker only.
-
-### 2026-06-20 - First Super Admin bootstrap
-
-Status: Confirmed in production.
-
-Decision: Upgrade existing production Admin `gerrard@otimi.com.au` to the first Super Admin for the V1 launch path.
-
-Source: User instruction in Codex chat on 2026-06-20: `gerrard@otimi.com.au can be upgraded to sauper admin`.
-
-Notes: Production Supabase verification confirmed profile role `super_admin`, active access assignment `super_admin` / `ACT-INT-003`, one `master_data_changes` audit row, and one `runtime_records` evidence row using approval reference `User approved gerrard@otimi.com.au Super Admin upgrade in Codex chat - 2026-06-20`. `npm.cmd run verify:live` now fails only on missing approved client/supplier/driver/vehicle master data and missing active Driver, Client Ops, and Client Billing role records.
-
-### 2026-06-20 - Pilot production master data and live actor tests
-
-Status: Confirmed for pilot scope; full launch roster still incomplete.
-
-Decision: Load the user-approved V1 pilot records into production Supabase and use them for live actor boundary/workflow testing before adding the full launch roster.
-
-Source: User supplied the pilot customer, supplier, address, pickup window, driver, vehicle, expiry dates, Client Ops email, Client Billing email, and Driver email in Codex chat on 2026-06-20.
-
-Notes: Pilot import evidence was recorded in `production_seed_imports` with approval reference `Approved V1 pilot test data - user supplied in Codex chat - 2026-06-20`. The pilot set is `Gold Coast Motorcycle Tyres And Mechanical`, `Link International`, driver `Peter Price` / `gcmtm12@gmail.com`, vehicle `957OC8`, Client Ops `gcmtm_parts@outlook.com`, and Client Billing `josephine@otimi.com.au`. Vercel production Supabase env values were repaired and redeployed; the Super Admin provisioning API returned 200 for a valid Supabase bearer session. Live actor testing verified Super Admin provisioning API access, Client Ops booking, Client Billing booking denial, Super Admin/Admin dispatch, Driver assigned-run/pickup/out-for-delivery/POD Storage upload/runtime proof/run close, Client Billing invoice visibility and billing dispute, Client Ops delivery dispute, Admin exception queue, and Receiver/no-login runtime denial. Migration `202606200001_retention_queue_trigger_security.sql` was applied after live testing found retention queue side-effects were blocked by RLS. Fake immutable `delivery_proof` rows were not inserted because real proof evidence is retained for 7 years under Policy #5.
+Notes: The logistics portal may record timestamps, evidence, and operational courier records. It must not own Admin SLA countdowns, breach alerts, escalation timers, or due-date trigger logic. It also must not own driver legal classification, driver agreements, driver legal verification evidence, disciplinary/removal consequences, or employee/contractor payment model decisions.

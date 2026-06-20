@@ -84,16 +84,6 @@ requireMarkers("supabase/migrations/202606180018_role_access_rls.sql", [
   "delivery_proof_objects_read_by_linked_role",
 ], "BOAS Sheet 05 role access RLS draft");
 
-requireMarkers("supabase/migrations/202606190034_super_admin_provisioning.sql", [
-  "SOP-IAM-03 Admin Master Data & User Provisioning",
-  "BOAS v1.8/v1.9",
-  "super_admin",
-  "client_ops",
-  "public.is_super_admin()",
-  "p.status = 'active'",
-  "service_role key must never be exposed to the browser",
-], "SOP-IAM-03 two-tier Admin provisioning");
-
 requireMarkers("supabase/migrations/202606180020_delivery_proof_storage_contract.sql", [
   "delivery-proof",
   "deliveries/{delivery_id}",
@@ -149,7 +139,7 @@ requireMarkers("supabase/migrations/202606190007_policy18_dispute_sla.sql", [
   "owner_escalation_status",
   "policy18_remedy_type",
   "credit note",
-], "Policy #18 dispute SLA/remedy tracking");
+], "Policy #18 legacy dispute metadata/remedy tracking");
 
 requireMarkers("supabase/migrations/202606190008_day8_overdue_notice_generation.sql", [
   "generate_due_day8_overdue_notices",
@@ -193,6 +183,23 @@ requireMarkers("supabase/migrations/202606190013_no_pickup_reason_taxonomy_sop_p
   "wrong_items",
   "APP-DRV-002 no-billing evidence",
 ], "SOP-PUP-03 No Pickup reason taxonomy");
+
+requireMarkers("supabase/migrations/202606210001_decisions_register_scope_alignment.sql", [
+  "time_constraint",
+  "SLA monitoring is out of scope for the logistics portal",
+  "must not calculate Admin SLA due dates",
+  "apply_policy18_dispute_controls",
+  "Legacy compatibility field only",
+], "Decisions register scope alignment");
+
+requireMarkers("supabase/migrations/202606210002_reinstatement_payment_arrangement.sql", [
+  "reinstatement_resolution_type",
+  "payment_arrangement_agreed_date",
+  "payment_arrangement_agreed_amount",
+  "payment_arrangement_contact",
+  "payment_arrangement_evidence_ref",
+  "reinstatement notification is automatic",
+], "Reinstatement payment arrangement alignment");
 
 requireMarkers("supabase/migrations/202606190014_bring_forward_sop_run04.sql", [
   "SOP-RUN-04",
@@ -248,17 +255,6 @@ requireMarkers("supabase/migrations/202606190031_run_close_confirmation_uj_drv00
   "run_close_policy_ref",
   "run_closures_uj_drv001_confirmation_check",
 ], "UJ-DRV-001 run close confirmation");
-
-requireMarkers("supabase/migrations/202606190032_live_runtime_records.sql", [
-  "runtime_records",
-  "record_type in",
-  "production_seed_imports",
-  "public.can_client_operational_account(owner_actor_id)",
-  "public.can_client_billing_account(owner_actor_id)",
-  "driver_profile_id = auth.uid()",
-  "public.is_admin()",
-  "No production customers, suppliers, drivers, or vehicles are seeded",
-], "V1 live runtime records and approved master-data evidence gate");
 
 requireMarkers("supabase/migrations/202606190015_run_planning_monitor_cap_mcl002.sql", [
   "CAP-MCL-002",

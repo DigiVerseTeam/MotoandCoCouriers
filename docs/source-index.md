@@ -18,16 +18,20 @@ This index records what has been identified in the local workspace. It is not a 
 - `policy 23-27.zip`
 - `SOP Library.zip`
 - `SOP libary 2.zip`
-- `SOP_Library_v1.1.zip`
 - `SOP DEL 04.zip`
 - `unified boas and village.zip`
 - `customer journey.zip`
-- `super admin boas.zip`
-- `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`
+- `DECISIONS-REGISTER.html`
 
 ## External source files
 
 - `C:\Users\User\Downloads\The village ERM Complete Requirements v2.0.pdf`
+
+### `DECISIONS-REGISTER.html`
+
+- Reviewed: 2026-06-21.
+- Purpose: authoritative decisions register for 24 pre-build user-journey gaps.
+- Status: all 24 gaps decision-resolved; portal alignment tracked in `decision-register-alignment.md`.
 
 ### `The village ERM Complete Requirements v2.0.pdf`
 
@@ -144,46 +148,6 @@ This index records what has been identified in the local workspace. It is not a 
 - `SOP-PUP-03-RecordNoPickupOutcome.png`
 - `SOP-REL-01-ReleaseDeploymentControl.xlsx`
 
-### `SOP_Library_v1.1.zip`
-
-Confirmed review notes:
-
-- Contains 26 v1.1 SOP workbooks.
-- Compared against `SOP Library.zip`, `SOP libary 2.zip`, `SOP DEL 04.zip`, and `sop 1.2 privacy.zip` on 2026-06-21.
-- The dominant v1.1 change is runtime governance: Runtime and RACI sheets are added across release-one SOPs, and Platform sheets now define runtime edit boundaries.
-- Platform access mapping confirms Admin can review/record operational decisions, Super Admin can audit, Driver/Client roles do not edit runtime configuration, and Digiverse controls runtime module configuration.
-- `SOP-DEL-04-DeliverySignOffProof-v1.1.xlsx` is present as a v1.1 source in this library.
-- Documentation gap: filenames identify v1.1, but workbook Summary sheets still display `Version 1.0`.
-
-Contents:
-
-- `EXC-SOP-05-OverdueNoticeProcess-v1.1.xlsx`
-- `EXC-SOP-06-AccountSuspensionReinstatement-v1.1.xlsx`
-- `SOP-BIL-01-MonthEndBillingReview-v1.1.xlsx`
-- `SOP-BIL-04-CreateSendInvoice-v1.1.xlsx`
-- `SOP-CUS-01-CustomerAccountSetup-v1.1.xlsx`
-- `SOP-DEL-01-DeliveryStopGrouping-v1.1.xlsx`
-- `SOP-DEL-04-DeliverySignOffProof-v1.1.xlsx`
-- `SOP-DEL-05-DeliveryCompletion-v1.1.xlsx`
-- `SOP-EXC-03-UnmatchedBillingAccount-v1.1.xlsx`
-- `SOP-IAM-01-CustomerAccessRegistration-v1.1.xlsx`
-- `SOP-IAM-02-LoginCodeRequest-v1.1.xlsx`
-- `SOP-IAM-04-StaffRoleAccessManagement-v1.1.xlsx`
-- `SOP-ITM-02-TyreBundlePricingRules-v1.1.xlsx`
-- `SOP-ITM-03-ParcelReturnsItemCapture-v1.1.xlsx`
-- `SOP-JDD-01-DriverApplicationOnboarding-v1.1.xlsx`
-- `SOP-MDM-01-SupplierMasterDataMaintenance-v1.1.xlsx`
-- `SOP-MDM-02-CourierItemPricingMasterData-v1.1.xlsx`
-- `SOP-PRV-01-PrivacyConsentCapture-v1.1.xlsx`
-- `SOP-PRV-02-DataRetentionDestruction-v1.1.xlsx`
-- `SOP-PUP-02-ConfirmCustomerPickup-v1.1.xlsx`
-- `SOP-PUP-03-RecordNoPickupOutcome-v1.1.xlsx`
-- `SOP-REL-01-ReleaseDeploymentControl-v1.1.xlsx`
-- `SOP-REQ-01-SubmitPickupRequest-v1.1.xlsx`
-- `SOP-REQ-02-CutOffHandling-v1.1.xlsx`
-- `SOP-RUN-01-DriverMilkRunPlanning-v1.1.xlsx`
-- `SOP-RUN-04-BringForwardPickup-v1.1.xlsx`
-
 ### `unified boas and village.zip`
 
 - `MotoCo_PolicyWriting_Handover.docx`
@@ -200,33 +164,6 @@ Contents:
 - `UJ-CRM-001B-ClientBillingContactJourney.xlsx`
 - `UJ-CRM-001B-ClientBillingContactJourney.json`
 - `MotoCo_Unified_BOAS_Hierarchy_v1.7.xlsx`
-
-### `super admin boas.zip`
-
-- `MotoCo_Unified_BOAS_Hierarchy_v1.8.xlsx`
-- `SOP-IAM-03-AdminMasterDataUserProvisioning.xlsx`
-- `SOP-IAM-03-AdminMasterDataUserProvisioning.png`
-- `UJ-ADM-001-AdminJourney.xlsx`
-- `UJ-ADM-001-AdminJourney.json`
-
-Confirmed extraction notes:
-
-- BOAS v1.8 adds `ACT-INT-003` Super Admin and renumbers Receiver to `ACT-INT-004`.
-- `SOP-IAM-03` confirms Admin master data and user provisioning for customers/workshops, suppliers, drivers, vehicles, and login users.
-- First Super Admin bootstrap requires display name, email address, and approval reference before in-app provisioning can begin. On 2026-06-20, the user approved `gerrard@otimi.com.au` and the production bootstrap evidence was recorded.
-
-### `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`
-
-Location observed: `C:\Users\User\OneDrive\Documents\Moto and Co Couriers\MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`.
-
-Confirmed extraction notes from v1.9 diff against v1.8:
-
-- Sheet 00 records the Codex build-session boundary: migration `202606190034_super_admin_provisioning.sql` is the latest migration boundary; `client_operational` is preserved as an alias for canonical `client_ops`; pending-user RLS blocking was tightened; `bootstrap-super-admin.mjs` was the approved one-time bootstrap path.
-- Sheet 07 adds `R-IAM-004`: pending users must not pass RLS through an active assignment. Control is the `profile.status = active` check in RLS helper logic.
-- Sheet 07 adds `R-IAM-005`: `bootstrap-super-admin.mjs` must not be run without the approved display name, email address, and approval reference.
-- Sheet 10 adds `CFG-MCL-ACCESS-005` through `CFG-MCL-ACCESS-008` for the latest migration boundary, role alias, pending-user RLS block, and Super Admin bootstrap script.
-- Sheet 11 adds deployment evidence `MIG-202606190034`.
-- Sheet 13 records the v1.9 source crosswalk and originally confirmed first Super Admin bootstrap values as outstanding; that blocker is now closed by the 2026-06-20 approval and production bootstrap.
 
 ## Extraction still needed
 

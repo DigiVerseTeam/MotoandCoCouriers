@@ -282,7 +282,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Client registers, supplies contacts and address, acknowledges Collection Notice, then waits for Admin activation.",
         coverage: "partial",
         localEvidence: "Registration form creates a pending customer, blocks PO box delivery addresses, records two contacts, supplier links, consent record, pending activation workspace, hardened local code-login account path, Admin eligibility review, account-level local activation outbox record, and a first-login supplier setup gate before booking opens.",
-        missing: "Production activation delivery, production login delivery, and automated postcode/suburb boundary validation.",
+        missing: "Production activation delivery, production Supabase/Auth delivery, and automated postcode/suburb boundary validation.",
         steps: ["Registration Screen", "Pending Activation Screen", "First Login - Supplier Setup"]
       },
       {
@@ -312,14 +312,14 @@ export const sourceUserJourneys: SourceJourney[] = [
     sourceFile: "customer journey.zip/UJ-CRM-001B-ClientBillingContactJourney.json",
     goal: "Receive the invoice, verify it, pay it, and resolve any problem quickly.",
     success: "Invoice reaches the right email, amount matches expected deliveries, and payment is straightforward.",
-    localFit: "Billing contact data, Admin draft invoice batches, local invoice preview, local invoice dispatch evidence record, client invoice visibility, billing-query escalation, local billing-query acknowledgement, local billing-query status/investigation visibility, Admin overdue account suspension confirmation, and reinstatement evidence capture exist locally. Actual invoice email dispatch, payment reconciliation, and automated billing-contact notices are not built.",
+    localFit: "Billing contact data, Admin draft invoice batches, local invoice preview, automatic local invoice dispatch evidence from Admin invoice-correct confirmation, client invoice visibility, billing-query escalation, local billing-query acknowledgement, local billing-query status/investigation visibility, Admin overdue account suspension confirmation, structured payment-arrangement evidence, and reinstatement evidence capture exist locally. Actual invoice email dispatch, payment reconciliation, and automated billing-contact notices are not built.",
     stages: [
       {
         id: "S1",
         title: "Receive and Review Invoice",
         summary: "Billing Contact receives monthly invoice email, pays by EFT, or disputes invoice by portal/email.",
         coverage: "partial",
-        localEvidence: "Billing contact name and email are stored; Admin can create local draft invoice batches with line items; Admin can record a local invoice dispatch evidence record with recipient, provider-not-configured status, and note; Admin, Client Operational Contact, and Client Billing Contact can open an inline invoice preview with proof references, totals, due date, local dispatch record, notices, and payment evidence; Client can raise a billing query into the Admin exception queue and see a local billing-query acknowledgement record with provider_not_configured plus current query status and Admin investigation outcome.",
+        localEvidence: "Billing contact name and email are stored; Admin can create local draft invoice batches with line items; Admin confirms the rendered invoice is correct and the portal records local dispatch evidence automatically with recipient, provider-not-configured status, and note; Admin, Client Operational Contact, and Client Billing Contact can open an inline invoice preview with proof references, totals, due date, local dispatch record, notices, and payment evidence; Client can raise a billing query into the Admin exception queue and see a local billing-query acknowledgement record with provider_not_configured plus current query status and Admin investigation outcome.",
         missing: "Production PDF/email invoice rendering, actual email dispatch, bounce detection, external accounting export, and EFT reconciliation.",
         steps: ["Invoice Email", "Payment (External - EFT)", "Invoice Dispute"]
       },
@@ -328,7 +328,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         title: "Overdue Notice and Suspension",
         summary: "Day 8 overdue notice is sent, Admin may suspend, and reinstatement follows payment confirmation.",
         coverage: "partial",
-        localEvidence: "Admin can mark invoices overdue, record a local Day 8 overdue notice before non-payment suspension, open overdue account detail from Billing or Clients, confirm suspension by typing the account name, record reason plus Operational and Billing contact notification evidence, block new orders for suspended clients, and reinstate with payment-clearance evidence plus both-contact notification evidence.",
+        localEvidence: "Admin can mark invoices overdue, record a local Day 8 overdue notice before non-payment suspension, open overdue account detail from Billing or Clients, confirm suspension by typing the account name, record reason plus Operational and Billing contact notification evidence, block new orders for suspended clients, and reinstate with payment-clearance evidence or structured payment-arrangement evidence. Reinstatement notification is automatic on the Admin action.",
         missing: "Day 8 automation, actual billing/operational-contact email notices, external payment confirmation source, and production notification delivery.",
         steps: ["Overdue Notice Email", "Suspension Notification Email", "Reinstatement Notification Email"]
       }
@@ -339,9 +339,9 @@ export const sourceUserJourneys: SourceJourney[] = [
     title: "Admin Journey",
     actor: "Admin (ACT-INT-002)",
     sourceFile: "customer journey.zip/UJ-ADM-001-AdminJourney.json",
-    goal: "Keep the business running without code changes: billing approval, master data, exceptions, account activation, and suspension.",
+    goal: "Keep the business running without code changes: invoice correctness confirmation, master data, exceptions, account activation, and suspension.",
     success: "Invoices go to the right person, supplier and pricing changes are controlled, and every exception is resolved before the next run.",
-    localFit: "Admin can log in with a hardened local testing code, activate accounts, manage suppliers with structured review/archive/reactivation reasons and monitoring, manage structured price rules with change reasons, Owner approval references, and pricing governance monitoring, review the local operational update outbox, acknowledge exceptions, review delivered billing groups, create draft invoice batches, record local invoice dispatch evidence, mark local invoice status, confirm account suspension after Day 8 notice evidence, and reinstate with evidence. Production Auth delivery, actual invoice dispatch, production notification delivery, automated overdue notices, and dual-control production execution remain gaps.",
+    localFit: "Admin can log in with a hardened local testing code, activate accounts with an advisory eligibility checklist, manage suppliers with structured review/archive/reactivation reasons and monitoring, manage structured price rules with change reasons, Owner approval references, and pricing governance monitoring, review the local operational update outbox, acknowledge exceptions, review delivered billing groups, create draft invoice batches, confirm invoices are correct and automatically record local dispatch evidence, mark local invoice status, confirm account suspension after Day 8 notice evidence, and reinstate with payment or payment-arrangement evidence. Production Auth delivery, actual invoice dispatch, production notification delivery, automated overdue notices, and dual-control production execution remain gaps.",
     stages: [
       {
         id: "S1",
@@ -349,7 +349,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin authenticates with the same OTP mechanism as Driver, with no static password.",
         coverage: "partial",
         localEvidence: "The active local shell has role email and generated one-use code entry for Admin with local expiry, verification-attempt limits, request throttling, and generic request behavior for unknown emails.",
-        missing: "Production login delivery, admin-role validation from real identity claims, final production rate-limit/expiry policy values, email failure exception handling, used-code deletion in the live identity store, and real identity session.",
+        missing: "Supabase Auth delivery, admin-role validation from real identity claims, final production rate-limit/expiry policy values, email failure exception handling, used-code deletion in the real Auth store, and real identity session.",
         steps: ["Admin Login"]
       },
       {
@@ -363,11 +363,11 @@ export const sourceUserJourneys: SourceJourney[] = [
       },
       {
         id: "S3",
-        title: "Billing - Month-End Review and Approval",
-        summary: "Admin reviews compiled billing groups and approves invoices.",
+        title: "Billing - Month-End Review and Confirmation",
+        summary: "Admin reviews compiled billing groups and confirms invoices are correct.",
         coverage: "partial",
-        localEvidence: "Admin billing review groups delivered unbilled jobs by client, creates local draft invoice batches, stores invoice lines, records local dispatch evidence before setting Sent, exposes those batches to the client billing view, and opens a local invoice preview from the invoice batch.",
-        missing: "Production invoice approval semantics, actual invoice dispatch, PDF/email invoice output, bounce handling, unmatched account checks, and external accounting export.",
+        localEvidence: "Admin billing review groups delivered unbilled jobs by client, creates local draft invoice batches, stores invoice lines, confirms the invoice is correct, records local dispatch evidence automatically, exposes those batches to the client billing view, and opens a local invoice preview from the invoice batch.",
+        missing: "Production dispatch provider, PDF/email invoice output, bounce handling, unmatched account checks, and external accounting export.",
         steps: ["Billing Review Screen", "Invoice Preview"]
       },
       {
@@ -385,7 +385,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin adds, updates, or deactivates suppliers without developer involvement.",
         coverage: "working",
         localEvidence: "Admin page can add and edit suppliers with dock address, dock contact role, pickup window, packaging notes, status, last review, required change reason, structured review/archive/reactivation evidence modals, local master-data change rows, incomplete/stale supplier monitoring, exception queue routing, and open-work archive guard.",
-        missing: "Production master-data change rows and live supplier monitoring execution.",
+        missing: "Production Supabase master_data_changes rows and live Supabase supplier monitoring execution.",
         steps: ["Supplier List Screen", "Supplier Edit / Add Screen"]
       },
       {
@@ -394,7 +394,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin proposes pricing changes and Owner approval is required before application.",
         coverage: "partial",
         localEvidence: "Admin page edits structured price_rules rows with service variant, item type, tyre count, weight band, rate mode, effective dates, required change reason, Owner approval reference, structured archive/reactivation evidence modals, local change-log ID, master-data audit rows, and a pricing governance monitor that can route incomplete or unlogged rows to Admin exceptions.",
-        missing: "Production dual-control approval workflow, live monitoring execution, and production authority decision.",
+        missing: "Production dual-control approval workflow, live Supabase monitoring execution, and production authority decision.",
         steps: ["Pricing Rules Screen", "Pricing Change Proposal", "Pricing Change - Apply"]
       }
     ]
@@ -414,7 +414,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Driver authenticates by email one-time code, with rate limit and generic responses.",
         coverage: "partial",
         localEvidence: "The active local shell has role email and generated one-use code entry for Driver with local expiry, verification-attempt limits, request throttling, and generic request behavior for unknown emails.",
-        missing: "Production login delivery, final production rate-limit/expiry policy values, inactive driver handling, email failure exception, used-code deletion in the live identity store, and real identity session.",
+        missing: "Supabase Auth delivery, final production rate-limit/expiry policy values, inactive driver handling, email failure exception, used-code deletion in the real Auth store, and real identity session.",
         steps: ["Login Screen", "Code Entry Screen"]
       },
       {
@@ -440,7 +440,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         title: "Delivery",
         summary: "Driver records Delivered or Failed Delivery, including receiver name and signature for Delivered.",
         coverage: "partial",
-        localEvidence: "Driver delivery phase lists picked-up stops, starts delivery, records Failed Delivery through a structured reason/handling-note modal, routes the outcome to Admin exceptions, blocks Delivered until receiver name and signature exist, and now has a private delivery-proof storage/retention contract.",
+        localEvidence: "Driver delivery phase lists picked-up stops, starts delivery, records Failed Delivery through a structured reason/handling-note modal, routes the outcome to Admin exceptions, blocks Delivered until receiver name and signature exist, and now has a Supabase private delivery-proof storage/retention migration contract.",
         missing: "Production failed-delivery reason codes, refusal paths, redelivery/retained-goods policy, live upload wiring/testing, upload retry/offline handling, and wrong address state.",
         steps: ["Delivery Stop List", "Delivery Stop Screen", "Receiver Name Capture", "Signature Capture", "Failed Delivery Screen"]
       },

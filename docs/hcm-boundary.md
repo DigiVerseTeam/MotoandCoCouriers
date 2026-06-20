@@ -1,8 +1,8 @@
 # HCM Boundary
 
-Last updated: 2026-06-19
+Last updated: 2026-06-21
 
-This note records the corrected product boundary after review with the user.
+This note records the corrected product boundary after review with the user. This is a hard scope requirement for the logistics portal build.
 
 The Moto and Co Couriers logistics app does not own driver legal classification, driver agreements, driver legal verification evidence, disciplinary/removal consequences, or driver/courier expansion employment/payment models. Those items are HCM requirements and have been extracted for a future HCM system.
 

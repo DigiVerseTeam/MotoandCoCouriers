@@ -1,6 +1,6 @@
 # Release One Source Map
 
-Last updated: 2026-06-21
+Last updated: 2026-06-19
 
 This file records implementation rules extracted from source material. It is not legal copy and must not be published as customer-facing terms.
 
@@ -23,35 +23,6 @@ Confirmed journey actors:
 Implementation note:
 
 - Current local build only partially covers these journeys. See `customer-journey-comparison.md` for stage-by-stage coverage.
-
-## SOP Library v1.1 Runtime Governance Update
-
-Source:
-
-- `SOP_Library_v1.1.zip`
-
-Confirmed review findings:
-
-- The v1.1 library adds Runtime and RACI sheets across the release-one SOP set.
-- The principal Platform-sheet change is runtime access mapping, not a new customer/driver/admin journey sequence.
-- Admin can review and record operational decisions in the relevant portal workflows.
-- Super Admin can audit Admin operational decisions and administer elevated access under SOP-IAM-03.
-- Driver, Client Operational, and Client Billing roles do not edit runtime configuration.
-- Digiverse/Technology Partner retains configuration authority for runtime modules, scheduled checks, and system components.
-- SOP-DEL-04 is included as a v1.1 SOP source and remains the basis for delivery sign-off, receiver name, signature, failed-delivery categories, and POD evidence.
-
-Production runtime update:
-
-- Admin dashboard displays `SOP Library v1.1` as the current runtime governance source.
-- Browser crash handling has been added so client-side exceptions show a recovery screen instead of leaving production blank.
-- Live runtime record ID generation now falls back safely if browser `crypto.randomUUID` is unavailable.
-- RACI is implemented as runtime evidence, not as a static journey page: APP-PRV-004 audit events are stamped with RACI source, responsible actor, accountable owner, informed role, and APP-ADM-005 escalation where the action maps to a v1.1 SOP.
-- APP-ADM-005 exception records now carry RACI routing evidence where a source match exists, so Admin sees the accountable owner and Super Admin audit role while investigating.
-- Admin Access now exposes active and blocked RACI controls. Blocked v1.1 sources remain visible as blocked rather than treated as implemented.
-
-Source gap:
-
-- v1.1 filenames and archive identify the package as v1.1, but workbook Summary sheets still display `Version 1.0`. Treat as documentation mismatch until the SOP files are corrected.
 
 ## AI Use Governance
 
@@ -168,7 +139,7 @@ Confirmed rules:
 - APP-ADM-004 generates a $10 flat redelivery fee only after the second failed attempt.
 - Admin must review the failed-delivery records before applying the fee.
 - Admin may waive the fee in exceptional circumstances and must record the waiver reason.
-- Local runtime now records failed-delivery attempt count/evidence, exposes Admin second-attempt authorisation after attempt one, exposes Admin fee approve/waive review after attempt two, includes approved Policy #8 fees on the next draft invoice, and records APP-PRV-004 audit evidence.
+- Local runtime now records failed-delivery attempt count/evidence, schedules the second attempt for the next available run after attempt one, exposes Admin fee approve/waive review after attempt two, includes approved Policy #8 fees on the next draft invoice, and records APP-PRV-004 audit evidence.
 
 Implementation gaps:
 
@@ -288,7 +259,7 @@ Local runtime state:
 
 - Driver pickup confirmation now captures Policy #16 evidence: ready by 10:00am, labelled, packaged, grace minutes, and compliance note.
 - Driver `No Pickup` now requires a SOP-PUP-03 / Policy #16 category, reason, grace minutes, and optional handling note.
-- Local No Pickup categories cover goods not ready after the 10-minute grace period, unlabelled or con-note mismatch, improper packaging, supplier refused pickup, and wrong items presented.
+- Local No Pickup categories cover goods not ready after the 10-minute grace period, unlabelled or con-note mismatch, improper packaging, supplier refused pickup, wrong items presented, time constraint, and WHS hazard at supplier premises.
 - Local `No Pickup` evidence records no billable pickup line and routes an APP-ADM-005 exception.
 - Admin Suppliers now includes a Pickup Standards Monitor with No Pickup rate, packaging/label refusal count, APP-ADM-005 queueing, and Policy #16 investigation context.
 - Supabase draft migrations add Policy #16 pickup standards fields and SOP-PUP-03 category constraints to `pickup_requests`.
@@ -333,7 +304,7 @@ Supabase draft state:
 
 Open gaps:
 
-- SOP-PUP-02 Step 7 refers to remaining customers being recorded as `No Pickup` for `Time constraint`, but SOP-PUP-03's confirmed No Pickup reason taxonomy does not include a `Time constraint` category. The local build does not add that category until the source conflict is resolved.
+- The decisions register confirms `time_constraint` as a valid No Pickup reason. The runtime and superseding Supabase draft migration include that category.
 - Production route optimisation, offline handling, and live Supabase execution/testing remain unconfirmed.
 
 ## Bring Future Pickup Into Today
@@ -415,8 +386,8 @@ Sources:
 Confirmed rules:
 
 - Invoice generation starts from an approved billing group.
-- Admin reviews the rendered invoice before dispatch.
-- The system dispatches the invoice to the Billing Contact.
+- Admin confirms the rendered invoice is correct.
+- The system dispatches the invoice to the Billing Contact from that same confirmation action.
 - `invoice_id` is written back to billed jobs.
 - Payment monitoring starts after invoice dispatch.
 - During billing compilation, the system flags jobs where `account_id` is null, unknown, inactive, or has multiple possible matches.
@@ -429,14 +400,14 @@ Local runtime state:
 
 - Admin Billing now excludes unmatched billing account candidates from draft invoice groups.
 - Draft invoice creation records the approved billing group evidence.
-- Admin Billing now requires rendered invoice approval with an Admin review note before dispatch can be recorded.
+- Admin Billing now requires rendered invoice correctness confirmation with an Admin review note; dispatch is recorded automatically from that confirmation action.
 - Payment evidence and overdue monitoring are blocked locally until dispatch evidence exists.
 - Admin Billing shows an Unmatched Billing Account Queue with reason, supplier, con note, run date, delivery address, proof link, and candidate account names.
 - The local system scan queues APP-ADM-005 `Unmatched Billing Account` exceptions for current billing candidates that fail the account match.
 - Admin can correct the account match only to an active client account and must record an investigation note before the work returns to billing eligibility.
 - Closing the account-match correction writes local order state, exception investigation evidence, and APP-PRV-004 audit evidence.
 - Supabase draft migration `202606190009_unmatched_billing_account_exceptions.sql` adds billing-account match state, exception queueing, and an Admin-only correction function that refuses already-invoiced retro-modification.
-- Supabase draft migration `202606190010_invoice_approval_gate_sop_bil04.sql` adds invoice approval evidence fields, an Admin-only approval function, and guardrails requiring approval before dispatch/payment-monitoring states.
+- Supabase draft migration `202606190010_invoice_approval_gate_sop_bil04.sql` adds invoice approval evidence fields, an Admin-only approval function, and guardrails requiring approval before dispatch/payment-monitoring states. The active runtime uses the decisions-register single confirmation/dispatch action.
 
 Open gaps:
 
@@ -656,11 +627,11 @@ Local runtime state:
 
 - Client Operational delivery disputes now require dispute type, delivery date in question, and description before creating the Admin exception.
 - Client Operational and Client Billing incorrect-charge disputes require an invoice line/order reference, delivery date in question, and description before creating the Admin exception.
-- Local dispute exceptions carry Policy #18 reason, delivery date, linked invoice/order, invoice timing, 14-day/30-day timing label, 2-business-day acknowledgement target, 10-business-day resolution target, and Owner escalation state.
-- Admin APP-ADM-005 queue can record acknowledgement without closing the dispute, escalate a dispute to Owner, and investigate/close with linked invoice, work item, POD proof, pickup/pricing, Policy #18 SLA context, and a controlled Policy #18 finding.
+- Local dispute exceptions carry Policy #18 reason, delivery date, linked invoice/order, invoice timing, 14-day/30-day timing label, received/acknowledged timestamps, and Owner escalation state. Admin SLA monitoring is outside the logistics portal.
+- Admin APP-ADM-005 queue can record acknowledgement without closing the dispute, escalate a dispute to Owner, and investigate/close with linked invoice, work item, POD proof, pickup/pricing, Policy #18 timing context, and a controlled Policy #18 finding.
 - Closing a Policy #18 investigation now records the outcome back against linked local work items and invoices, including outcome, note, finding, timing, acknowledgement, Owner escalation state, remedy requirement, remedy note, and investigation timestamp.
 - Confirmed local delivery-error findings create a no-cost remedy requirement. Confirmed local billing-error findings create a credit-note or corrected-invoice obligation due 5 business days from confirmation, without claiming the external accounting artifact was issued.
-- Supabase draft migration adds Policy #18 dispute reason, delivery date, invoice timing, acknowledgement/resolution target, Owner escalation fields, remedy fields, and linked work/invoice outcome-history fields and guardrails.
+- Supabase draft migrations add Policy #18 dispute reason, delivery date, invoice timing, received/acknowledged timestamp, Owner escalation fields, remedy fields, linked work/invoice outcome-history fields, and a superseding trigger that does not calculate Admin SLA due dates.
 
 Open gaps:
 
@@ -735,6 +706,8 @@ Confirmed rules:
 - Admin notifies both Operational Contact and Billing Contact.
 - Non-payment suspension requires linked overdue-notice evidence before account suspension can be recorded.
 - Conduct suspension requires Admin notice evidence and evidence that the breach was not remedied.
+- Payment arrangement reinstatement requires agreed payment date, agreed amount, agreeing contact name/role, and written evidence reference.
+- Reinstatement notification is automatic on the Admin reinstatement action.
 - Voluntary account termination requires client closure-request evidence.
 - Conduct termination requires a prior conduct suspension record, Owner consultation evidence, written termination notice evidence, reason, and effective date.
 - Repeated non-payment termination is blocked because the debt recovery escalation path and write-off thresholds are not confirmed.
@@ -748,6 +721,7 @@ Local runtime state:
 - Admin still has fallback visibility for overdue invoices that do not yet have a Day 8 notice record.
 - Non-payment suspension remains blocked until a linked Day 8 overdue notice exists and both Operational and Billing contact notification evidence is recorded.
 - Conduct suspension is a controlled Admin workflow with required notice and unremedied-breach evidence.
+- Reinstatement captures payment clearance or structured payment-arrangement evidence; the local record marks Operational and Billing contact notification as automatic on the Admin action.
 - Account termination is now a controlled Admin workflow for voluntary closure and conduct-breach termination, with exact account-name confirmation, Owner consultation evidence, written notice evidence, local operational/billing account notices, and a permanent `Closed` account state.
 - Repeated non-payment termination is visible but blocked in the runtime until the Policy #23 debt recovery gap is resolved.
 - Supabase draft migration `202606190008_day8_overdue_notice_generation.sql` adds billing-notice generation fields and a callable local evidence generator. It does not send external notifications.

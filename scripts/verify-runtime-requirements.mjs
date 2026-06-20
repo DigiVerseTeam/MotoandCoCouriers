@@ -181,7 +181,7 @@ requireText(
     "LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000",
     "LOCAL_OTP_MAX_ATTEMPTS = 3",
     "LOCAL_OTP_MAX_REQUESTS = 5",
-    "Live email delivery is not connected in this local test",
+    "Production Supabase Auth email delivery is not connected",
     "accessRecord?.status === \"Revoked\"",
     "LOCAL_DEMO_STORAGE_KEYS",
     "clearLocalDemoState",
@@ -559,9 +559,9 @@ requireText(
     "Admin investigation note required before correcting an unmatched billing account",
     "billingAccountMatchStatus: \"resolved\"",
     "Billing account match corrected",
-    "Approve Invoice For Dispatch",
-    "Admin invoice review note required before dispatch approval",
-    "SOP-BIL-04 approval is required before invoice dispatch",
+    "Confirm Invoice Correct",
+    "Admin invoice review note required before confirming the invoice is correct.",
+    "Automatic dispatch triggered by Admin invoice correctness confirmation",
     "Payment monitoring starts after invoice dispatch",
     "Day 8 overdue notice",
     "Record notification evidence for both Operational and Billing contacts",
@@ -604,8 +604,8 @@ requireText(
     "Delivery Dispute",
     "Billing Dispute",
     "Policy #18",
-    "ackDueDate",
-    "resolutionDueDate",
+    "policy18StatusLine",
+    "response monitoring outside this portal",
     "ownerEscalationStatus",
     "credit note or corrected invoice",
     "policy18BillingLineDate",
@@ -615,10 +615,36 @@ requireText(
   "Policy #18 dispute workflow"
 );
 
+forbidText(
+  "src/components/moto-co-logistics.tsx",
+  [
+    "ackDueDate",
+    "resolutionDueDate",
+    "Admin acknowledgement target",
+    "resolution target",
+    "policy18SlaLabel",
+  ],
+  "SLA monitoring excluded from active runtime"
+);
+
+requireText(
+  "src/components/moto-co-logistics.tsx",
+  [
+    "time_constraint",
+    "Eligibility checklist is advisory only",
+    "Confirm Invoice Correct",
+    "Automatic dispatch triggered by Admin invoice correctness confirmation",
+    "Payment arrangement requires agreed date, amount, contact name/role, and written evidence reference.",
+    "Operational and Billing contacts notified automatically on Admin reinstatement action.",
+    "second attempt scheduled for next run",
+  ],
+  "decisions register runtime alignment"
+);
+
 requireText(
   "src/lib/environment-guard.ts",
   [
-    "local and preview app builds must not connect to production live data",
+    "local and preview app builds must not connect to production Supabase",
   ],
   "preview-to-production Supabase guard"
 );
@@ -634,70 +660,14 @@ requireText(
 );
 
 requireText(
-  "src/lib/live-runtime.ts",
-  [
-    "requestLiveMagicLink",
-    "safeLiveAuthReturnPath",
-    "/auth/callback?next=",
-    "LIVE_AUTH_RETURN_PATH_KEY",
-    "PRODUCTION_SITE_ORIGIN",
-    "productionLiveRuntime",
-    "if (productionLiveRuntime) return PRODUCTION_SITE_ORIGIN",
-    "resolveLiveRuntimeSession",
-    "loadLiveRuntimeSnapshot",
-    "canSyncDomainForRole",
-    "syncLiveRuntimeDomain",
-    "uploadLiveDeliveryProof",
-    "delivery-proof",
-  ],
-  "Supabase Auth, role, live-data, and POD Storage bridge"
-);
-
-requireText(
-  "src/components/moto-co-logistics.tsx",
-  [
-    "liveRuntimeStatus",
-    "Live System",
-    "Send Login Link",
-    "authReturnPath",
-    "readStoredLiveAuthReturnPath",
-    "resolveLiveRuntimeSession",
-    "loadLiveRuntimeSnapshot",
-    "syncLiveRuntimeDomain",
-    "uploadLiveDeliveryProof",
-    "POD Storage Failure",
-  ],
-  "active runtime uses Supabase Auth, RLS bridge, and private POD upload"
-);
-
-requireText(
-  "src/app/auth/callback/page.tsx",
-  [
-    "MotoCoLogisticsApp",
-    "AuthCallbackPage",
-  ],
-  "live sign-in callback route"
-);
-
-requireText(
   "package.json",
   [
     "\"typecheck\": \"next typegen && tsc --noEmit\"",
     "\"verify:launch\": \"node scripts/check-launch-readiness.mjs\"",
     "\"verify:local\": \"node scripts/local-preflight.mjs\"",
-    "\"verify:live\": \"node scripts/verify-live-rls.mjs\"",
     "\"verify:production\": \"node scripts/production-readiness.mjs\"",
   ],
   "clean local verification scripts"
-);
-
-requireText(
-  "next.config.mjs",
-  [
-    "allowedDevOrigins",
-    "127.0.0.1",
-  ],
-  "local browser dev origin remains interactive"
 );
 
 requireText(
@@ -707,7 +677,7 @@ requireText(
     "Strict launch readiness gate",
     "--target=production",
     "--strict",
-    "expected to fail until production environment values and live-tooling blockers",
+    "expected to fail until GitHub, Supabase, Vercel",
     "Production readiness gate failed",
   ],
   "strict production readiness gate"
@@ -724,45 +694,6 @@ requireText(
     "This check is read-only",
   ],
   "launch readiness checker"
-);
-
-requireText(
-  "scripts/import-production-master-data.mjs",
-  [
-    "production_seed_imports",
-    "ensureAuthProfile",
-    "ensureAccessRole",
-    "actor_supplier_links",
-    "fleet_vehicles",
-    "runtime_records",
-    "Dry run only",
-  ],
-  "approved production master-data import gate"
-);
-
-requireText(
-  "scripts/bootstrap-super-admin.mjs",
-  [
-    "Super Admin bootstrap failed",
-    "role: \"super_admin\"",
-    "application_role: \"super_admin\"",
-    "ACT-INT-003",
-    "approvalReference",
-    "SOP-IAM-03 approved Super Admin bootstrap",
-  ],
-  "SOP-IAM-03 Super Admin bootstrap script"
-);
-
-requireText(
-  "scripts/verify-live-rls.mjs",
-  [
-    "delivery-proof bucket",
-    "approved production master-data record",
-    "const requiredRoles = [\"super_admin\", \"admin\", \"driver\", \"client_ops\", \"client_billing\"]",
-    "`active access role ${role}`",
-    "receiver no-login boundary",
-  ],
-  "live Supabase RLS and actor-boundary verifier"
 );
 
 requireText(
@@ -806,7 +737,6 @@ requireText(
     "Policy #21 / Policy #7 data use",
     "Policy #3/#4/#5 privacy request controls",
     "BOAS Sheet 05 role access RLS draft",
-    "SOP-IAM-03",
   ],
   "Supabase migration verifier"
 );
@@ -846,9 +776,8 @@ const migrations = [
   "supabase/migrations/202606190024_ai_use_policy20.sql",
   "supabase/migrations/202606190026_data_use_policy21_policy7.sql",
   "supabase/migrations/202606190027_privacy_requests_policy3_policy4_policy5.sql",
-  "supabase/migrations/202606190032_live_runtime_records.sql",
-  "supabase/migrations/202606190033_authenticated_table_privileges.sql",
-  "supabase/migrations/202606190034_super_admin_provisioning.sql",
+  "supabase/migrations/202606210001_decisions_register_scope_alignment.sql",
+  "supabase/migrations/202606210002_reinstatement_payment_arrangement.sql",
 ];
 
 for (const migration of migrations) exists(migration, `source-backed migration ${migration}`);
@@ -856,9 +785,9 @@ for (const migration of migrations) exists(migration, `source-backed migration $
 requireText(
   "docs/production-blocker-register.md",
   [
-    "GitHub production repository handoff needs CI evidence",
-    "Full approved production master-data roster is incomplete",
-    "Vercel production deployment must be smoke-tested after each production change",
+    "GitHub repository is not connected",
+    "Production Supabase project is not fully connected",
+    "Vercel project is not connected",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
     "Public tracking model is unconfirmed",
@@ -874,9 +803,6 @@ requireText(
     "provider_not_configured",
     "Zoho Books integration is not confirmed",
     "Privacy Owner is unnamed",
-    "SOP-IAM-03",
-    "R-IAM-004",
-    "R-IAM-005",
     "Public secure tracking-token model is not confirmed",
     "Production invoice PDF/email rendering",
   ],
@@ -884,16 +810,29 @@ requireText(
 );
 
 requireText(
-  "docs/source-index.md",
+  "docs/hard-scope-requirements.md",
   [
-    "MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx",
-    "R-IAM-004",
-    "R-IAM-005",
-    "CFG-MCL-ACCESS-005",
-    "MIG-202606190034",
-    "bootstrap-super-admin.mjs",
+    "SLA Monitoring Is Out Of Scope",
+    "HCM Requirements Are Out Of Scope",
+    "Database triggers that calculate Admin acknowledgement or resolution due dates",
+    "Driver legal classification",
+    "Logistics-facing driver identity",
+    "records timestamps",
   ],
-  "BOAS v1.9 source update is recorded"
+  "hard scope requirements"
+);
+
+requireText(
+  "docs/decision-register-alignment.md",
+  [
+    "All 24 pre-build user-journey gaps are decision-resolved",
+    "SLA monitoring is outside the logistics portal",
+    "HCM requirements are outside the logistics portal",
+    "No Pickup time constraint",
+    "Invoice dispatch trigger",
+    "minimum two active Admin users",
+  ],
+  "decisions register alignment"
 );
 
 requireText(
