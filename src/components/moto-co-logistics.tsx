@@ -41,6 +41,118 @@ const SOP_RUNTIME_SOURCE = {
   documentationGap: "SOP v1.1 filenames are present, but Summary sheets still show Version 1.0.",
 };
 
+const RACI_COMMON = {
+  accountable: "Admin",
+  auditRole: "Super Admin",
+  escalation: "APP-ADM-005",
+  system: "System (APP-ADM-005 / Runtime)",
+};
+
+const RACI_CONTROLS = [
+  { source: "EXC-SOP-05", title: "Overdue Notice Process", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "EXC-SOP-06", title: "Account Suspension & Reinstatement", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-BIL-01", title: "Month-End Billing Review", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-BIL-04", title: "Create & Send Invoice", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-DEL-01", title: "Delivery Stop Grouping", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-DEL-04", title: "Delivery Sign-Off & Proof", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-DEL-05", title: "Delivery Completion", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-EXC-03", title: "Unmatched Billing Account Exception", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-IAM-01", title: "Customer Access Registration", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-IAM-02", title: "Login Code Request & Email Delivery", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-IAM-03", title: "Admin Master Data & User Provisioning", status: "active", accountable: "Super Admin", auditRole: "Super Admin", escalation: "APP-ADM-005", sourceNote: "BOAS v1.9 / SOP-IAM-03" },
+  { source: "SOP-IAM-04", title: "Staff Role Access Management", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-ITM-02", title: "Tyre Bundle Pricing Rules", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-ITM-03", title: "Parcel & Returns Item Capture", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-MDM-01", title: "Supplier Master Data Maintenance", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-MDM-02", title: "Courier Item & Pricing Master Data", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-PUP-02", title: "Confirm Customer Pickup", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-PUP-03", title: "Record No-Pickup Outcome", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-REQ-01", title: "Submit Milk-Run Pickup Request", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-REQ-02", title: "Milk-Run Cut-Off Handling", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-RUN-01", title: "Driver Milk-Run Planning", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-RUN-04", title: "Bring Future Pickup Into Today", status: "active", accountable: "Admin", auditRole: "Super Admin", escalation: "APP-ADM-005" },
+  { source: "SOP-CUS-01", title: "Customer Account Setup", status: "blocked", blocker: "RACI cannot be completed until the underlying SOP is unblocked." },
+  { source: "SOP-JDD-01", title: "Driver Application & Onboarding", status: "blocked", blocker: "HCM requirement. RACI cannot be completed in the logistics portal." },
+  { source: "SOP-PRV-01", title: "Privacy Consent Capture", status: "blocked", blocker: "Privacy Owner approval is still required." },
+  { source: "SOP-PRV-02", title: "Data Retention & Destruction", status: "blocked", blocker: "Retention periods and Privacy Owner approval are still required." },
+  { source: "SOP-REL-01", title: "Release & Deployment Control", status: "blocked", blocker: "RACI cannot be completed until the underlying SOP is unblocked." },
+];
+
+const RACI_CONTROL_BY_SOURCE = Object.fromEntries(RACI_CONTROLS.map(control => [control.source, control]));
+
+const RACI_ACTION_RULES = [
+  { source: "SOP-IAM-03", pattern: /provision|pending user|live profile|create pending user|admin user/i },
+  { source: "SOP-IAM-04", pattern: /access role|role access|revoked access|restore access|login blocked/i },
+  { source: "SOP-IAM-02", pattern: /login|magic link|session|code request|sign-in|signed out/i },
+  { source: "SOP-IAM-01", pattern: /registration|collection notice|consent|customer account created/i },
+  { source: "SOP-REQ-02", pattern: /cut-off|schedule adjusted|run date adjusted|next available/i },
+  { source: "SOP-REQ-01", pattern: /pickup request created|order created|new order/i },
+  { source: "SOP-RUN-01", pattern: /dispatch|run planning|driver availability|vehicle assigned|run planner/i },
+  { source: "SOP-RUN-04", pattern: /bring[- ]?forward|brought forward|future pickup/i },
+  { source: "SOP-PUP-03", pattern: /no pickup|supplier pickup standards|whs hazard|goods not ready|wrong items/i },
+  { source: "SOP-PUP-02", pattern: /supplier stop|pickup outcome|picked up|pickup confirmation|dock/i },
+  { source: "SOP-DEL-01", pattern: /grouped delivery|delivery stop/i },
+  { source: "SOP-DEL-04", pattern: /delivery proof|pod|signature|receiver|failed delivery|sign-off/i },
+  { source: "SOP-DEL-05", pattern: /delivery completed|delivered status|billing-ready|run closed/i },
+  { source: "SOP-EXC-03", pattern: /unmatched billing|billing account/i },
+  { source: "SOP-BIL-01", pattern: /billing group|billing review|month-end|financial reconciliation/i },
+  { source: "SOP-BIL-04", pattern: /invoice|payment|billing notice|billing dispute/i },
+  { source: "EXC-SOP-05", pattern: /overdue|day 8|credit control/i },
+  { source: "EXC-SOP-06", pattern: /suspend|suspension|reinstat/i },
+  { source: "SOP-MDM-02", pattern: /pricing rule|pricing review|price rule|price /i },
+  { source: "SOP-MDM-01", pattern: /supplier updated|supplier added|supplier archived|supplier review|supplier master/i },
+  { source: "SOP-ITM-02", pattern: /tyre|tire/i },
+  { source: "SOP-ITM-03", pattern: /parcel|parts|return|weight band/i },
+  { source: "SOP-PRV-02", pattern: /retention|destruction/i },
+  { source: "SOP-PRV-01", pattern: /privacy consent|privacy request|access request|correction request/i },
+  { source: "SOP-REL-01", pattern: /release|deployment/i },
+];
+
+function raciResponsibleForActor(actor = "system") {
+  if (actor === "driver") return "Driver";
+  if (actor === "client") return "Client / Operational Contact";
+  if (actor === "billing" || actor === "client_billing") return "Client / Billing Contact";
+  if (actor === "super_admin") return "Super Admin";
+  if (actor === "admin") return "Admin";
+  return RACI_COMMON.system;
+}
+
+function resolveRaciEvidence(action = "", detail = "", actor = "system") {
+  const text = `${action} ${detail}`;
+  const rule = RACI_ACTION_RULES.find(item => item.pattern.test(text));
+  if (!rule) return null;
+  const control = RACI_CONTROL_BY_SOURCE[rule.source];
+  if (!control) return null;
+  if (control.status === "blocked") {
+    return {
+      source: control.source,
+      title: control.title,
+      status: "blocked",
+      blocker: control.blocker,
+      responsible: "Blocked",
+      accountable: "Blocked",
+      informed: "Admin",
+      escalation: "APP-ADM-005",
+    };
+  }
+  return {
+    source: control.source,
+    title: control.title,
+    status: "active",
+    sourceNote: control.sourceNote || "SOP Library v1.1",
+    responsible: raciResponsibleForActor(actor),
+    accountable: control.accountable || RACI_COMMON.accountable,
+    informed: control.auditRole || RACI_COMMON.auditRole,
+    escalation: control.escalation || RACI_COMMON.escalation,
+  };
+}
+
+function raciAuditLabel(raci) {
+  if (!raci) return "";
+  if (raci.status === "blocked") return `RACI ${raci.source}: blocked - ${raci.blocker}`;
+  return `RACI ${raci.source}: R=${raci.responsible}; A=${raci.accountable}; I=${raci.informed}`;
+}
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
@@ -800,7 +912,7 @@ function financialReconciliationRows(invoices = [], records = [], today = todayB
 }
 
 function auditHashPayload(event) {
-  return [
+  const payload = [
     event.sequence,
     event.id,
     event.at,
@@ -810,7 +922,18 @@ function auditHashPayload(event) {
     event.piiAction ? "pii" : "non-pii",
     event.protectedObject,
     event.previousHash,
-  ].map(value => String(value ?? "")).join("|");
+  ];
+  if (event.raciSource) {
+    payload.push(
+      event.raciSource,
+      event.raciStatus,
+      event.raciResponsible,
+      event.raciAccountable,
+      event.raciInformed,
+      event.raciEscalation
+    );
+  }
+  return payload.map(value => String(value ?? "")).join("|");
 }
 
 function auditEventHash(event) {
@@ -5118,6 +5241,8 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   const activeAccessCount = (accessRecords || []).filter(record => record.status !== "Revoked").length;
   const revokedAccessCount = (accessRecords || []).filter(record => record.status === "Revoked").length;
   const staffReviewDueCount = (accessRecords || []).filter(record => record.reviewDue).length;
+  const activeRaciControls = RACI_CONTROLS.filter(control => control.status === "active");
+  const blockedRaciControls = RACI_CONTROLS.filter(control => control.status === "blocked");
   const isLiveRuntime = Boolean(liveRuntimeStatus?.enabled);
   const isSuperAdminSession = currentSession?.role === "super_admin" || currentSession?.user?.accessRole === "super_admin";
   const assignableProvisionRoles = SOP_IAM_03_ROLES.filter(role => isSuperAdminSession || role.value !== "admin");
@@ -8026,6 +8151,33 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
               <div className="stat"><div className="stat-num" style={{ color: T.tx }}>{activeAccessCount}</div><div className="stat-lbl">Active</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.red }}>{revokedAccessCount}</div><div className="stat-lbl">Revoked</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.acc }}>{staffReviewDueCount}</div><div className="stat-lbl">Staff Reviews Due</div></div>
+              <div className="stat"><div className="stat-num" style={{ color: T.tx }}>{activeRaciControls.length}</div><div className="stat-lbl">RACI Active</div></div>
+              <div className="stat"><div className="stat-num" style={{ color: blockedRaciControls.length ? T.red : T.tx }}>{blockedRaciControls.length}</div><div className="stat-lbl">RACI Blocked</div></div>
+            </div>
+            <div className="card">
+              <div className="card-head">
+                <div>
+                  <div className="card-title">SOP v1.1 RACI Runtime Controls</div>
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
+                    Runtime actions are stamped into APP-PRV-004 audit with RACI source, responsible actor, accountable owner, informed role, and APP-ADM-005 escalation.
+                  </div>
+                </div>
+                <span className="badge b-done">Active</span>
+              </div>
+              <div className="grid2" style={{ marginTop: ".75rem" }}>
+                {activeRaciControls.slice(0, 8).map(control => (
+                  <div key={control.source} style={{ border: `1px solid ${T.border}`, borderRadius: 6, padding: ".65rem .75rem" }}>
+                    <div style={{ fontWeight: 800, fontSize: ".82rem" }}>{control.source}</div>
+                    <div style={{ fontSize: ".78rem", color: T.mu }}>{control.title}</div>
+                    <div style={{ fontSize: ".72rem", color: T.mu2, marginTop: ".35rem" }}>A: {control.accountable} · I: {control.auditRole}</div>
+                  </div>
+                ))}
+              </div>
+              {blockedRaciControls.length > 0 && (
+                <div style={{ marginTop: ".8rem", fontSize: ".78rem", color: T.red }}>
+                  Blocked RACI sources: {blockedRaciControls.map(control => `${control.source} (${control.blocker})`).join("; ")}
+                </div>
+              )}
             </div>
             <div className="card">
               <div className="card-title" style={{ marginBottom: ".45rem" }}>Receiver Access Model</div>
@@ -9130,6 +9282,11 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <div className="card-head"><div className="card-title">{e.type} — {e.orderId}</div><span className={`badge ${e.status === "Closed" ? "b-done" : "b-cancelled"}`}>{e.status}</span></div>
                 <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".4rem" }}>{e.note}</div>
                 <div className="meta"><span>Owner: {e.owner}</span><span>{new Date(e.createdAt).toLocaleString("en-AU")}</span><span>{linkedSupplier ? `${linkedSupplier.name} supplier record` : linkedPriceRule ? `${linkedPriceRule.label} price rule` : linkedProofs.length ? `${linkedProofs.length} proof record(s)` : "No proof record linked"}</span></div>
+                {e.raciSource && (
+                  <div style={{ fontSize: ".78rem", color: e.raciStatus === "blocked" ? T.red : T.mu, marginTop: ".35rem" }}>
+                    RACI {e.raciSource}: R={e.raciResponsible || "Not recorded"}; A={e.raciAccountable || "Admin"}; I={e.raciInformed || "Super Admin"}; escalation {e.raciEscalation || "APP-ADM-005"}{e.raciBlocker ? `. Blocked: ${e.raciBlocker}` : ""}.
+                  </div>
+                )}
                 {linkedSupplier && e.type === "Supplier Master Data Review" && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>SOP-MDM-01 / CAP-MCL-001 review: {supplierReviewReasons(linkedSupplier).join("; ") || "No current supplier review flags"}</div>}
                 {linkedSupplierPickupRow && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>Policy #15 / Policy #16 / Policy #27 review: {linkedSupplierPickupRow.reasons.join("; ") || "No current pickup standards flags"}</div>}
                 {e.type === "WHS Hazard" && <div style={{ fontSize: ".78rem", color: T.acc, marginTop: ".35rem" }}>Policy #27: Admin must raise the hazard with the supplier and must not require driver return while the hazard remains unresolved.</div>}
@@ -9543,6 +9700,15 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                   </div>
                   <div className="meta"><span>Seq {a.sequence}</span><span>{a.actor}</span><span>{a.protectedObject}</span><span>{a.piiAction ? "PII action" : "Non-PII"}</span></div>
                   <div style={{ fontSize: ".82rem", color: T.mu, marginTop: ".35rem" }}>{a.detail}</div>
+                  {a.raciSource && (
+                    <div className="meta" style={{ marginTop: ".45rem" }}>
+                      <span>RACI {a.raciSource}</span>
+                      <span>R {a.raciResponsible || "Not recorded"}</span>
+                      <span>A {a.raciAccountable || "Not recorded"}</span>
+                      <span>I {a.raciInformed || "Not recorded"}</span>
+                      <span>{a.raciEscalation || "APP-ADM-005"}</span>
+                    </div>
+                  )}
                   <div style={{ fontSize: ".72rem", color: T.mu2, marginTop: ".45rem" }}>{new Date(a.at).toLocaleString("en-AU")}</div>
                   <div className="meta" style={{ marginTop: ".45rem" }}><span>Hash {a.eventHash}</span><span>Previous {a.previousHash}</span><span>{a.hashAlgorithm}</span></div>
                 </div>
@@ -10673,14 +10839,27 @@ export default function App() {
   }
 
   function writeAudit(action, detail, actor = session?.role || "system") {
+    const raci = resolveRaciEvidence(action, detail, actor);
+    const raciLabel = raciAuditLabel(raci);
+    const auditDetail = raciLabel && !String(detail || "").includes("RACI ")
+      ? `${detail}; ${raciLabel}`
+      : detail;
     setAudit(prev => {
       const previous = prev[prev.length - 1];
       const event = buildAuditEvent({
         id: `audit-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         action,
-        detail,
+        detail: auditDetail,
         actor,
         at: isoNow(),
+        raciSource: raci?.source || "",
+        raciTitle: raci?.title || "",
+        raciStatus: raci?.status || "",
+        raciResponsible: raci?.responsible || "",
+        raciAccountable: raci?.accountable || "",
+        raciInformed: raci?.informed || "",
+        raciEscalation: raci?.escalation || "",
+        raciBlocker: raci?.blocker || "",
       }, previous);
       const next = [...prev, event];
       save(KEY_AUDIT, next);
@@ -11412,7 +11591,22 @@ export default function App() {
   }
 
   function addException(e, actor = session?.role || "system") {
-    const event = { ...e, id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`, createdAt: isoNow(), status: e.status || "Open" };
+    const raci = resolveRaciEvidence(`${e.type || ""} exception`, e.note || "", actor);
+    const event = {
+      ...e,
+      id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      createdAt: isoNow(),
+      status: e.status || "Open",
+      owner: e.owner || raci?.accountable || "Admin",
+      raciSource: e.raciSource || raci?.source || "",
+      raciTitle: e.raciTitle || raci?.title || "",
+      raciStatus: e.raciStatus || raci?.status || "",
+      raciResponsible: e.raciResponsible || raci?.responsible || "",
+      raciAccountable: e.raciAccountable || raci?.accountable || "",
+      raciInformed: e.raciInformed || raci?.informed || "",
+      raciEscalation: e.raciEscalation || raci?.escalation || "APP-ADM-005",
+      raciBlocker: e.raciBlocker || raci?.blocker || "",
+    };
     setExceptions(prev => {
       const next = [event, ...prev];
       save(KEY_EXCEPTIONS, next);
@@ -11432,20 +11626,32 @@ export default function App() {
     const missingRows = failedRows.filter(row => !existingKeys.has(row.key));
     if (missingRows.length === 0) return;
     const createdAt = isoNow();
-    const createdExceptions = missingRows.map(row => ({
-      id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      type: "Notification Failure",
-      orderId: row.reference,
-      noticeTable: row.noticeTable,
-      noticeId: row.noticeId,
-      notificationFailureKey: row.key,
-      owner: "Admin",
-      note: `${row.type} failed for ${row.reference}. Status: ${row.status}. Subject: ${row.subject}.`,
-      status: "Open",
-      source: row.policyRef,
-      severity: "High",
-      createdAt,
-    }));
+    const createdExceptions = missingRows.map(row => {
+      const note = `${row.type} failed for ${row.reference}. Status: ${row.status}. Subject: ${row.subject}.`;
+      const raci = resolveRaciEvidence("Notification failure exception", `${row.policyRef || ""} ${note}`, "system");
+      return {
+        id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        type: "Notification Failure",
+        orderId: row.reference,
+        noticeTable: row.noticeTable,
+        noticeId: row.noticeId,
+        notificationFailureKey: row.key,
+        owner: raci?.accountable || "Admin",
+        note,
+        status: "Open",
+        source: row.policyRef,
+        severity: "High",
+        createdAt,
+        raciSource: raci?.source || "",
+        raciTitle: raci?.title || "",
+        raciStatus: raci?.status || "",
+        raciResponsible: raci?.responsible || "",
+        raciAccountable: raci?.accountable || "",
+        raciInformed: raci?.informed || "",
+        raciEscalation: raci?.escalation || "APP-ADM-005",
+        raciBlocker: raci?.blocker || "",
+      };
+    });
     setExceptions(prev => {
       const prevKeys = new Set(
         prev

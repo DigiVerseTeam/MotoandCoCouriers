@@ -45,6 +45,9 @@ Production runtime update:
 - Admin dashboard displays `SOP Library v1.1` as the current runtime governance source.
 - Browser crash handling has been added so client-side exceptions show a recovery screen instead of leaving production blank.
 - Live runtime record ID generation now falls back safely if browser `crypto.randomUUID` is unavailable.
+- RACI is implemented as runtime evidence, not as a static journey page: APP-PRV-004 audit events are stamped with RACI source, responsible actor, accountable owner, informed role, and APP-ADM-005 escalation where the action maps to a v1.1 SOP.
+- APP-ADM-005 exception records now carry RACI routing evidence where a source match exists, so Admin sees the accountable owner and Super Admin audit role while investigating.
+- Admin Access now exposes active and blocked RACI controls. Blocked v1.1 sources remain visible as blocked rather than treated as implemented.
 
 Source gap:
 
