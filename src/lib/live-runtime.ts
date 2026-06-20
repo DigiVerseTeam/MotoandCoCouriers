@@ -70,15 +70,6 @@ function currentBrowserReturnPath() {
   return safeLiveAuthReturnPath(`${window.location.pathname || "/"}${window.location.search || ""}`);
 }
 
-function isLocalBrowserOrigin(origin = "") {
-  try {
-    const host = new URL(origin).hostname;
-    return host === "localhost" || host === "127.0.0.1" || host === "::1";
-  } catch {
-    return false;
-  }
-}
-
 function publicSiteOrigin() {
   const configured = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
   const appEnv = String(process.env.NEXT_PUBLIC_APP_ENV || "").trim().toLowerCase();
@@ -87,9 +78,7 @@ function publicSiteOrigin() {
   const productionLiveRuntime = appEnv === "production" || supabaseEnv === "production";
 
   if (configured) return configured;
-  if (productionLiveRuntime && (!browserOrigin || isLocalBrowserOrigin(browserOrigin))) {
-    return PRODUCTION_SITE_ORIGIN;
-  }
+  if (productionLiveRuntime) return PRODUCTION_SITE_ORIGIN;
   return browserOrigin || configured;
 }
 
