@@ -426,3 +426,57 @@ tr:last-child td {
     font-size: 46px;
   }
 }
+body {
+  margin: 0;
+}
+
+.runtime-fallback {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #ffffff;
+  color: #000000;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.runtime-fallback section {
+  width: min(430px, 100%);
+  border: 1px solid #b9b9c3;
+  border-radius: 8px;
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.runtime-fallback img {
+  width: 140px;
+  height: auto;
+  margin-bottom: 28px;
+}
+
+.runtime-fallback h1 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.runtime-fallback p {
+  margin: 0 0 20px;
+  color: rgba(0, 0, 0, .68);
+  line-height: 1.45;
+}
+
+.runtime-fallback button {
+  border: 0;
+  border-radius: 6px;
+  padding: 12px 20px;
+  background: #e11d48;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.runtime-fallback small {
+  display: block;
+  margin-top: 14px;
+  color: rgba(0, 0, 0, .5);
+}

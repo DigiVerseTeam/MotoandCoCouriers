@@ -119,7 +119,11 @@ function rememberLiveAuthReturnPath(returnPath = "/") {
 }
 
 function runtimeRecordId(row) {
-  return String(row?.id || row?.localId || row?.invoiceNumber || row?.orderId || row?.email || crypto.randomUUID());
+  const browserCrypto = typeof crypto !== "undefined" ? crypto : null;
+  const generatedId = browserCrypto?.randomUUID
+    ? browserCrypto.randomUUID()
+    : `runtime-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return String(row?.id || row?.localId || row?.invoiceNumber || row?.orderId || row?.email || generatedId);
 }
 
 function profileDisplayName(profile, email) {

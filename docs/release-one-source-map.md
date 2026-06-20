@@ -1,6 +1,6 @@
 # Release One Source Map
 
-Last updated: 2026-06-19
+Last updated: 2026-06-21
 
 This file records implementation rules extracted from source material. It is not legal copy and must not be published as customer-facing terms.
 
@@ -23,6 +23,32 @@ Confirmed journey actors:
 Implementation note:
 
 - Current local build only partially covers these journeys. See `customer-journey-comparison.md` for stage-by-stage coverage.
+
+## SOP Library v1.1 Runtime Governance Update
+
+Source:
+
+- `SOP_Library_v1.1.zip`
+
+Confirmed review findings:
+
+- The v1.1 library adds Runtime and RACI sheets across the release-one SOP set.
+- The principal Platform-sheet change is runtime access mapping, not a new customer/driver/admin journey sequence.
+- Admin can review and record operational decisions in the relevant portal workflows.
+- Super Admin can audit Admin operational decisions and administer elevated access under SOP-IAM-03.
+- Driver, Client Operational, and Client Billing roles do not edit runtime configuration.
+- Digiverse/Technology Partner retains configuration authority for runtime modules, scheduled checks, and system components.
+- SOP-DEL-04 is included as a v1.1 SOP source and remains the basis for delivery sign-off, receiver name, signature, failed-delivery categories, and POD evidence.
+
+Production runtime update:
+
+- Admin dashboard displays `SOP Library v1.1` as the current runtime governance source.
+- Browser crash handling has been added so client-side exceptions show a recovery screen instead of leaving production blank.
+- Live runtime record ID generation now falls back safely if browser `crypto.randomUUID` is unavailable.
+
+Source gap:
+
+- v1.1 filenames and archive identify the package as v1.1, but workbook Summary sheets still display `Version 1.0`. Treat as documentation mismatch until the SOP files are corrected.
 
 ## AI Use Governance
 

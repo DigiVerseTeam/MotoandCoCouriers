@@ -34,6 +34,13 @@ const T = {
   mu2: "rgba(0,0,0,.36)",
 };
 
+const SOP_RUNTIME_SOURCE = {
+  label: "SOP Library v1.1",
+  effective: "June 2026",
+  scope: "Runtime and RACI governance added across release-one SOPs. Admin can review and record operational decisions; Super Admin can audit. Runtime module configuration remains Digiverse-controlled.",
+  documentationGap: "SOP v1.1 filenames are present, but Summary sheets still show Version 1.0.",
+};
+
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
@@ -7423,6 +7430,18 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
         {view === "dashboard" && (
           <>
             <h2 style={{ marginBottom: "1rem" }}>Dashboard</h2>
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">{SOP_RUNTIME_SOURCE.label}</div>
+                <span className="badge b-pending">{SOP_RUNTIME_SOURCE.effective}</span>
+              </div>
+              <div style={{ fontSize: ".84rem", color: T.mu, lineHeight: 1.45 }}>
+                {SOP_RUNTIME_SOURCE.scope}
+              </div>
+              <div style={{ fontSize: ".78rem", color: T.red, marginTop: ".55rem" }}>
+                Documentation gap: {SOP_RUNTIME_SOURCE.documentationGap}
+              </div>
+            </div>
             <div className="stats">
               <div className="stat"><div className="stat-num" style={{ color: T.acc }}>{pending}</div><div className="stat-lbl">Pending</div></div>
               <div className="stat"><div className="stat-num" style={{ color: T.teal }}>{enroute}</div><div className="stat-lbl">En Route</div></div>
