@@ -2181,6 +2181,17 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
+function liveMagicLinkErrorMessage(error) {
+  const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
+  if (error?.status === 429 || detail.includes("rate_limit") || detail.includes("rate limit")) {
+    return "Too many login links have been requested. Wait a few minutes, then request a fresh link.";
+  }
+  if (detail.includes("otp_disabled")) {
+    return "This email is not active for portal login yet. Contact Admin to confirm access.";
+  }
+  return "We could not send a login link for this address. Check the email or contact Admin.";
+}
+
 function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", defaultPortalSide = "", portalSideLocked = false, returnPath = "/", entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
   const initialPortalSide = defaultPortalSide || "";
   const [portalSide, setPortalSide] = useState(initialPortalSide);
@@ -2260,7 +2271,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
         await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab), returnPath);
         setNotice("Secure login link sent. Open the link from that email to continue.");
       } catch (error) {
-        setErr("We could not send a login link for this address. Check the email or contact Admin.");
+        setErr(liveMagicLinkErrorMessage(error));
       } finally {
         setRequestingLiveLink(false);
       }
