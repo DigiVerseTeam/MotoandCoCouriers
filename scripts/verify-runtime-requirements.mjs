@@ -178,16 +178,13 @@ requireText(
   [
     "function routeIntentFromPath",
     "function Login",
-    "LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000",
-    "LOCAL_OTP_MAX_ATTEMPTS = 3",
-    "LOCAL_OTP_MAX_REQUESTS = 5",
-    "Production Supabase Auth email delivery is not connected",
-    "accessRecord?.status === \"Revoked\"",
-    "LOCAL_DEMO_STORAGE_KEYS",
-    "clearLocalDemoState",
-    "Reset Local Demo Data",
-    "Confirm Reset",
-    "Keep Demo Data",
+    "Customer Login",
+    "Courier Business Login",
+    "Send Login Link",
+    "requestLiveMagicLink",
+    "resolveLiveRuntimeSession",
+    "workspaceSessionForLiveData",
+    "Live login is not configured for this deployment. Contact Admin.",
     "showWorkflowNotice",
     "ACCESS_REVIEW_TYPES",
     "role_change",
@@ -639,6 +636,42 @@ requireText(
     "second attempt scheduled for next run",
   ],
   "decisions register runtime alignment"
+);
+
+requireText(
+  "src/components/moto-co-logistics.tsx",
+  [
+    "requestLiveMagicLink",
+    "resolveLiveRuntimeSession",
+    "loadLiveRuntimeSnapshot",
+    "Customer Login",
+    "Courier Business Login",
+    "Send Login Link",
+  ],
+  "production login uses live email-link entry flow"
+);
+
+forbidText(
+  "src/components/moto-co-logistics.tsx",
+  [
+    "Local testing code",
+    "Production Supabase Auth email delivery is not connected",
+    "Get Login Code",
+    "Reset Local Demo Data",
+    "[\"client\", \"billing\", \"driver\", \"admin\"]",
+  ],
+  "legacy local-code login removed from active portal"
+);
+
+requireText(
+  "src/lib/live-runtime.ts",
+  [
+    "exchangeCodeForSession",
+    "actor_code",
+    "requestLiveMagicLink",
+    "resolveLiveRuntimeSession",
+  ],
+  "live Supabase auth callback and role mapping"
 );
 
 requireText(

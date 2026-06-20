@@ -98,6 +98,31 @@ export function readStoredLiveAuthReturnPath(fallback = "/") {
   }
 }
 
+export async function completeLiveAuthRedirect() {
+  if (typeof window === "undefined") return "";
+  const supabase = client();
+  if (!supabase) return "";
+
+  const url = new URL(window.location.href);
+  const next = safeLiveAuthReturnPath(url.searchParams.get("next") || readStoredLiveAuthReturnPath("/"));
+  const code = url.searchParams.get("code");
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw error;
+    window.history.replaceState({}, "", next);
+    return next;
+  }
+
+  const hasAuthHash = /access_token|refresh_token|error/.test(window.location.hash || "");
+  if (!hasAuthHash && url.pathname.startsWith("/auth/callback")) {
+    window.history.replaceState({}, "", next);
+    return next;
+  }
+
+  return "";
+}
+
 function rememberLiveAuthReturnPath(returnPath = "/") {
   if (typeof window === "undefined") return;
   try {
@@ -140,12 +165,15 @@ function appUserFromProfile({ session, profile, accessRows }) {
   const email = normaliseEmail(session?.user?.email);
   const role = localRoleFromAccess(profile, accessRows);
   const assignment = (accessRows || []).find((row) => row.status === "active") || {};
+  const actorCode = assignment.actor_code || "";
+  const localId = actorCode || profile?.account_id || profile?.driver_id || profile?.actor_id || profile?.id || session?.user?.id;
   return {
     role,
     user: {
-      id: profile?.actor_id || profile?.id || session?.user?.id,
+      id: localId,
       profileId: profile?.id || session?.user?.id,
       actorId: profile?.actor_id || assignment.actor_id || "",
+      actorCode,
       contactId: assignment.contact_id || "",
       accountId: profile?.account_id || "",
       driverId: profile?.driver_id || "",
