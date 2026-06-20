@@ -636,6 +636,9 @@ const LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000;
 const LOCAL_OTP_MAX_ATTEMPTS = 3;
 const LOCAL_OTP_REQUEST_WINDOW_MS = 10 * 60 * 1000;
 const LOCAL_OTP_MAX_REQUESTS = 5;
+const KEY_LIVE_LOGIN_COOLDOWNS = "mc_live_login_cooldowns";
+const LIVE_LOGIN_SUCCESS_COOLDOWN_MS = 5 * 60 * 1000;
+const LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS = 60 * 60 * 1000;
 const AUDIT_GENESIS_HASH = "APP-PRV-004-GENESIS";
 const AUDIT_HASH_ALGORITHM = "local-fnv1a-v1";
 
@@ -998,6 +1001,41 @@ function localLoginKey(role, email) {
 }
 function localOtpExpiryLabel(expiresAt) {
   return new Date(expiresAt).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
+}
+function liveLoginCooldownKey(portalSide, role, email) {
+  return `${portalSide || "unknown"}:${role || "unknown"}:${String(email || "").trim().toLowerCase()}`;
+}
+function readLiveLoginCooldowns() {
+  return load(KEY_LIVE_LOGIN_COOLDOWNS, {});
+}
+function liveLoginCooldownUntil(portalSide, role, email) {
+  const key = liveLoginCooldownKey(portalSide, role, email);
+  const cooldowns = readLiveLoginCooldowns();
+  const until = Number(cooldowns[key] || 0);
+  if (!until || until <= Date.now()) {
+    if (cooldowns[key]) {
+      delete cooldowns[key];
+      save(KEY_LIVE_LOGIN_COOLDOWNS, cooldowns);
+    }
+    return 0;
+  }
+  return until;
+}
+function rememberLiveLoginCooldown(portalSide, role, email, durationMs) {
+  const cooldowns = readLiveLoginCooldowns();
+  const key = liveLoginCooldownKey(portalSide, role, email);
+  const until = Date.now() + durationMs;
+  cooldowns[key] = until;
+  save(KEY_LIVE_LOGIN_COOLDOWNS, cooldowns);
+  return until;
+}
+function liveLoginWaitLabel(until, now = Date.now()) {
+  const remainingMinutes = Math.max(1, Math.ceil((Number(until || 0) - now) / (60 * 1000)));
+  if (remainingMinutes < 60) return `${remainingMinutes} minute${remainingMinutes === 1 ? "" : "s"}`;
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = remainingMinutes % 60;
+  if (!minutes) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  return `${hours} hour${hours === 1 ? "" : "s"} ${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 function todayBrisbane() {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -2311,11 +2349,16 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function liveMagicLinkErrorMessage(error) {
+function isLiveRateLimitError(error) {
   const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
-  if (error?.status === 429 || detail.includes("rate_limit") || detail.includes("rate limit")) {
-    return "Too many login links have been requested. Wait a few minutes, then request a fresh link.";
-  }
+  return error?.status === 429 || detail.includes("rate_limit") || detail.includes("rate limit");
+}
+function liveMagicLinkCooldownMessage(cooldownUntil) {
+  return `Too many login links were requested for this email. Email security has paused new links. Use the newest email link already received, or wait ${liveLoginWaitLabel(cooldownUntil)} before requesting another one.`;
+}
+function liveMagicLinkErrorMessage(error, cooldownUntil = 0) {
+  const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
+  if (isLiveRateLimitError(error)) return liveMagicLinkCooldownMessage(cooldownUntil || Date.now() + LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS);
   if (detail.includes("otp_disabled")) {
     return "This email is not active for portal login yet. Contact Admin to confirm access.";
   }
@@ -2332,14 +2375,40 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
   const [pendingUser, setPendingUser] = useState(null);
   const [notice, setNotice] = useState("");
   const [requestingLiveLink, setRequestingLiveLink] = useState(false);
+  const [liveLoginCooldownNow, setLiveLoginCooldownNow] = useState(Date.now());
+  const [liveLoginCooldownExpiry, setLiveLoginCooldownExpiry] = useState(0);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [requestHistory, setRequestHistory] = useState({});
   const liveLoginEnabled = Boolean(liveRuntimeStatus?.enabled);
+  const liveLoginRoleHint = liveRoleHintForPortalSide(portalSide, tab);
+  const liveLoginCooldownActive = liveLoginEnabled && liveLoginCooldownExpiry > liveLoginCooldownNow;
+  const liveLoginButtonLabel = requestingLiveLink
+    ? "Sending..."
+    : liveLoginEnabled && liveLoginCooldownActive
+      ? `Wait ${liveLoginWaitLabel(liveLoginCooldownExpiry, liveLoginCooldownNow)}`
+      : liveLoginEnabled
+        ? "Send Login Link"
+        : "Get Login Code";
 
   useEffect(() => {
     const nextSide = defaultPortalSide || "";
     resetForRole(defaultRoleForPortalSide(nextSide, defaultRole || "client"), nextSide);
   }, [defaultRole, defaultPortalSide]);
+
+  useEffect(() => {
+    if (!liveLoginEnabled) {
+      setLiveLoginCooldownExpiry(0);
+      return;
+    }
+    const loginEmail = email.trim().toLowerCase();
+    setLiveLoginCooldownExpiry(liveLoginCooldownUntil(portalSide, liveLoginRoleHint, loginEmail));
+  }, [email, liveLoginEnabled, liveLoginRoleHint, portalSide]);
+
+  useEffect(() => {
+    if (!liveLoginEnabled || !liveLoginCooldownExpiry) return undefined;
+    const timer = window.setInterval(() => setLiveLoginCooldownNow(Date.now()), 30 * 1000);
+    return () => window.clearInterval(timer);
+  }, [liveLoginEnabled, liveLoginCooldownExpiry]);
 
   function findUserForRole(role, loginEmail) {
     const entered = String(loginEmail || "").trim().toLowerCase();
@@ -2396,12 +2465,29 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     if (!email.trim()) { setErr("Email required"); return; }
     const loginEmail = email.trim().toLowerCase();
     if (liveLoginEnabled) {
+      const cooldownUntil = liveLoginCooldownUntil(portalSide, liveLoginRoleHint, loginEmail);
+      if (cooldownUntil > Date.now()) {
+        setLiveLoginCooldownExpiry(cooldownUntil);
+        setLiveLoginCooldownNow(Date.now());
+        setErr(liveMagicLinkCooldownMessage(cooldownUntil));
+        return;
+      }
       setRequestingLiveLink(true);
       try {
-        await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab), returnPath);
-        setNotice("Secure login link sent. Open the link from that email to continue.");
+        await requestLiveMagicLink(loginEmail, liveLoginRoleHint, returnPath);
+        const nextCooldownUntil = rememberLiveLoginCooldown(portalSide, liveLoginRoleHint, loginEmail, LIVE_LOGIN_SUCCESS_COOLDOWN_MS);
+        setLiveLoginCooldownExpiry(nextCooldownUntil);
+        setLiveLoginCooldownNow(Date.now());
+        setNotice(`Secure login link sent. Open the newest email link to continue. Sending another link is paused for ${liveLoginWaitLabel(nextCooldownUntil)}.`);
       } catch (error) {
-        setErr(liveMagicLinkErrorMessage(error));
+        if (isLiveRateLimitError(error)) {
+          const nextCooldownUntil = rememberLiveLoginCooldown(portalSide, liveLoginRoleHint, loginEmail, LIVE_LOGIN_RATE_LIMIT_COOLDOWN_MS);
+          setLiveLoginCooldownExpiry(nextCooldownUntil);
+          setLiveLoginCooldownNow(Date.now());
+          setErr(liveMagicLinkErrorMessage(error, nextCooldownUntil));
+        } else {
+          setErr(liveMagicLinkErrorMessage(error));
+        }
       } finally {
         setRequestingLiveLink(false);
       }
@@ -2529,7 +2615,12 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
                     : "Enter the registered email. The local prototype issues a one-use testing code on screen."}
                 </p>
                 <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
-                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Login Link" : "Get Login Code"}</button>
+                {liveLoginEnabled && liveLoginCooldownActive && (
+                  <p style={{ fontSize: ".78rem", color: T.mu, margin: "-.15rem 0 .7rem" }}>
+                    Use the newest email link already sent. New login links unlock in {liveLoginWaitLabel(liveLoginCooldownExpiry, liveLoginCooldownNow)}.
+                  </p>
+                )}
+                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink || liveLoginCooldownActive}>{liveLoginButtonLabel}</button>
               </>
             ) : (
               <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem", textAlign: "center" }}>Choose Customer or Courier Business.</p>
