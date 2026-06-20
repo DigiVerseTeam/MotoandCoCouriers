@@ -181,7 +181,7 @@ requireText(
     "LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000",
     "LOCAL_OTP_MAX_ATTEMPTS = 3",
     "LOCAL_OTP_MAX_REQUESTS = 5",
-    "Production Supabase Auth email delivery is not connected",
+    "Live email delivery is not connected in this local test",
     "accessRecord?.status === \"Revoked\"",
     "LOCAL_DEMO_STORAGE_KEYS",
     "clearLocalDemoState",
@@ -618,7 +618,7 @@ requireText(
 requireText(
   "src/lib/environment-guard.ts",
   [
-    "local and preview app builds must not connect to production Supabase",
+    "local and preview app builds must not connect to production live data",
   ],
   "preview-to-production Supabase guard"
 );
@@ -651,8 +651,8 @@ requireText(
   "src/components/moto-co-logistics.tsx",
   [
     "liveRuntimeStatus",
-    "Live Supabase Runtime",
-    "Send Supabase Login Link",
+    "Live System",
+    "Send Login Link",
     "resolveLiveRuntimeSession",
     "loadLiveRuntimeSnapshot",
     "syncLiveRuntimeDomain",

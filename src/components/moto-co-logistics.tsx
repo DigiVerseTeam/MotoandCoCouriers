@@ -213,6 +213,15 @@ function portalSideLabel(side = "") {
   return "";
 }
 
+function sessionRoleLabel(role = "") {
+  if (role === "super_admin") return "Super Admin";
+  if (role === "admin") return "Admin";
+  if (role === "driver") return "Driver";
+  if (role === "billing") return "Billing";
+  if (role === "client") return "Customer";
+  return "User";
+}
+
 function liveRoleHintForPortalSide(side = "", fallbackRole = "client") {
   if (side === "customer") return "customer";
   if (side === "courier") return "courier_business";
@@ -636,7 +645,7 @@ function groupDeliveryStops(orders = []) {
 
 function proofStorageLabel(proof) {
   if (proof?.signaturePath) return `delivery-proof/${proof.signaturePath}`;
-  return proof?.storage || "Supabase private bucket path not recorded locally";
+  return proof?.storage || "Private proof storage path not recorded locally";
 }
 
 function normaliseDeliveryProof(proof, orders = []) {
@@ -2247,9 +2256,9 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       setRequestingLiveLink(true);
       try {
         await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab));
-        setNotice("Supabase login link sent. Open the link from that email, then return here and the app will resolve your approved role record.");
+        setNotice("Secure login link sent. Open the link from that email to continue.");
       } catch (error) {
-        setErr(error?.message || "Supabase Auth could not send a login link for this address.");
+        setErr("We could not send a login link for this address. Check the email or contact Admin.");
       } finally {
         setRequestingLiveLink(false);
       }
@@ -2282,7 +2291,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
         codeId: `local-otp-${now}-${Math.random().toString(16).slice(2)}`,
       });
       setCode("");
-      setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Production Supabase Auth email delivery is not connected.`);
+      setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Live email delivery is not connected in this local test.`);
       return;
     }
     const accessRecord = accessRecordForLogin(accessRecords, loginRole, found, loginEmail);
@@ -2303,7 +2312,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       codeId: `local-otp-${now}-${Math.random().toString(16).slice(2)}`,
     });
     setCode("");
-    setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Production Supabase Auth email delivery is not connected.`);
+    setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Live email delivery is not connected in this local test.`);
   }
 
   function verifyCode() {
@@ -2377,7 +2386,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
                     : "Enter the registered email. The local prototype issues a one-use testing code on screen."}
                 </p>
                 <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
-                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Supabase Login Link" : "Get Login Code"}</button>
+                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Login Link" : "Get Login Code"}</button>
               </>
             ) : (
               <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem", textAlign: "center" }}>Choose Customer or Courier Business.</p>
@@ -5351,7 +5360,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
   }
 
   async function submitProvisionUser() {
-    if (!isLiveRuntime) return showWorkflowNotice("SOP-IAM-03 user provisioning requires live Supabase runtime.");
+    if (!isLiveRuntime) return showWorkflowNotice("SOP-IAM-03 user provisioning requires the live system connection.");
     const displayName = userProvisionDraft.displayName.trim();
     const email = userProvisionDraft.email.trim();
     const role = userProvisionDraft.role;
@@ -5366,7 +5375,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
       return showWorkflowNotice("SOP-IAM-03 requires the login user to be linked to the relevant customer or driver record.");
     }
     setLiveProvisioningBusy(true);
-    setLiveProvisioningStatus("Creating pending user through server-side provisioning API.");
+    setLiveProvisioningStatus("Creating pending user through secure provisioning.");
     try {
       await provisionLiveUser({
         displayName,
@@ -5379,7 +5388,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
         approvalReference,
         reason,
       });
-      setLiveProvisioningStatus(`${sopIamRoleLabel(role)} user created as Pending. Activate after account/profile/role checks are complete.`);
+      setLiveProvisioningStatus(`${sopIamRoleLabel(role)} user created as Pending. Activate after account and access checks are complete.`);
       resetUserProvisionDraft(role);
       await refreshLiveProvisionedUsers();
     } catch (error) {
@@ -5398,7 +5407,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
     const profile = provisionStatusAction?.profile;
     const status = provisionStatusAction?.status;
     if (!profile || !status) return;
-    if (!isLiveRuntime) return showWorkflowNotice("Live Supabase runtime required.");
+    if (!isLiveRuntime) return showWorkflowNotice("Live system connection required.");
     const reason = provisionStatusReason.trim();
     if (!reason) return showWorkflowNotice("SOP-IAM-03/SOP-IAM-04 requires a reason or approval reference.");
     setLiveProvisioningBusy(true);
@@ -9444,7 +9453,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span className="badge b-done">Delivery date + 7 years</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu }}>
-                Signature files are represented as Supabase private bucket records locally and stay linked to immutable delivery proof records.
+                Signature files stay in private proof storage and remain linked to immutable delivery proof records.
               </div>
             </div>
             {proofRetentionRows.length === 0 && <div className="empty">No POD proof records yet.</div>}
@@ -9480,7 +9489,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <div>
                   <div className="card-title">Tamper-Evident Chain</div>
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>
-                    Append-only local event history for PII actions. Production enforcement is represented in Supabase migrations and still needs live project testing.
+                    Append-only event history for PII actions. Live enforcement is controlled by the approved access and audit model.
                   </div>
                 </div>
                 <span className={`badge ${auditIntegrity.valid ? "b-done" : "b-cancelled"}`}>{auditIntegrity.valid ? "Hash Verified" : "Hash Mismatch"}</span>
@@ -9632,7 +9641,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>Open work {supplierOpenWorkCount(supplierAction.supplier.name)}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Supplier master-data actions require a written Admin reason and create local master-data change rows. Production supplier review automation still depends on the live Supabase project and authority model.
+                Supplier master-data actions require a written Admin reason and create master-data change records. Production supplier review automation still depends on the live authority model.
               </div>
               {supplierAction.action === "archive" && supplierOpenWorkCount(supplierAction.supplier.name) > 0 && (
                 <div className="err">Archive is blocked while open work references this supplier.</div>
@@ -9745,7 +9754,7 @@ function AdminPortal({ currentSession = null, liveRuntimeStatus = null, orders, 
                 <span>{accessTarget.status}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Local access register only. Production Supabase Auth identity binding and final RLS policies remain open pending Policy #21 and BOAS Sheet 05 review.
+                Local access register only. Production identity binding and final access policies remain open pending Policy #21 and BOAS Sheet 05 review.
               </div>
               <div className="f"><label>Review Type</label><select value={accessReviewType} onChange={e => setAccessReviewType(e.target.value)}>
                 {ACCESS_REVIEW_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
@@ -10478,21 +10487,21 @@ export default function App() {
     async function bootLiveRuntime() {
       liveRuntimeSyncReady.current = false;
       setLiveRuntimeError("");
-      setLiveRuntimeNotice("Checking Supabase Auth and approved role records.");
+      setLiveRuntimeNotice("Checking sign-in and approved access.");
       try {
         const liveSession = await resolveLiveRuntimeSession();
         if (cancelled) return;
         if (!liveSession) {
           setSession(null);
           setLiveRuntimeHydrated(true);
-          setLiveRuntimeNotice("Live Supabase runtime is ready. Sign in with an approved profile and role record.");
+          setLiveRuntimeNotice("Live system is ready. Sign in with an approved account.");
           return;
         }
         if (liveSession.blocked) {
           setSession(null);
           setLiveRuntimeHydrated(true);
           setLiveRuntimeError(liveSession.reason);
-          setLiveRuntimeNotice("Supabase Auth succeeded, but Moto & Co access is not yet approved for this account.");
+          setLiveRuntimeNotice("Sign-in succeeded, but Moto & Co access is not yet approved for this account.");
           return;
         }
         setSession(liveSession);
@@ -10501,12 +10510,12 @@ export default function App() {
         applyLiveRuntimeSnapshot(snapshot);
         liveRuntimeSyncReady.current = true;
         setLiveRuntimeHydrated(true);
-        setLiveRuntimeNotice(`Live Supabase ${liveSession.role} session active. Receiver sign-off remains a no-login POD capture.`);
+        setLiveRuntimeNotice(`${sessionRoleLabel(liveSession.role)} session active. Receiver sign-off remains a no-login POD capture.`);
       } catch (error) {
         if (cancelled) return;
         setLiveRuntimeHydrated(true);
-        setLiveRuntimeError(error?.message || "Supabase live runtime could not be loaded.");
-        setLiveRuntimeNotice("Live Supabase runtime could not complete startup.");
+        setLiveRuntimeError(error?.message || "The live system could not be loaded.");
+        setLiveRuntimeNotice("The live system could not complete startup.");
       }
     }
 
@@ -10553,8 +10562,8 @@ export default function App() {
           await syncLiveRuntimeDomain(domainKey, rows, session);
         } catch (error) {
           if (cancelled) return;
-          console.warn(`Live Supabase sync failed for ${domainKey}`, error);
-          setLiveRuntimeError(`Live Supabase sync failed for ${domainKey}: ${error?.message || "unknown error"}`);
+          console.warn(`Live data sync failed for ${domainKey}`, error);
+          setLiveRuntimeError(`Live data sync failed for ${domainKey}: ${error?.message || "unknown error"}`);
           return;
         }
       }
@@ -10606,9 +10615,9 @@ export default function App() {
     if (liveRuntimeStatus.enabled) {
       try {
         await signOutLiveRuntime();
-        setLiveRuntimeNotice("Signed out of Supabase Auth.");
+        setLiveRuntimeNotice("Signed out.");
       } catch (error) {
-        setLiveRuntimeError(error?.message || "Supabase sign-out failed.");
+        setLiveRuntimeError(error?.message || "Sign-out failed.");
       }
     }
     setSession(null);
@@ -11650,15 +11659,15 @@ export default function App() {
           }
         })
         .catch(error => {
-          const message = error?.message || "Supabase Storage rejected the POD signature upload.";
-          setLiveRuntimeError(`POD Storage failed: ${message}`);
+            const message = error?.message || "Private proof storage rejected the POD signature upload.";
+            setLiveRuntimeError(`POD storage failed: ${message}`);
           addException({
             type: "POD Storage Failure",
             orderId: storedProof.orderId || storedProof.deliveryId,
             owner: "Admin",
             note: `${storedProof.id}: ${message}`,
             status: "Open",
-            source: "APP-DRV-003 / Supabase delivery-proof bucket",
+            source: "APP-DRV-003 / private delivery-proof storage",
             severity: "High",
           });
         });
@@ -12067,8 +12076,8 @@ export default function App() {
     <div className="app">
       <style>{css}</style>
       {liveRuntimeStatus.enabled && (liveRuntimeNotice || liveRuntimeError || !liveRuntimeHydrated) && (
-        <PolicyNotice title="Live Supabase Runtime" onDismiss={() => { setLiveRuntimeNotice(""); setLiveRuntimeError(""); }}>
-          {liveRuntimeError || liveRuntimeNotice || "Starting live Supabase runtime."}
+        <PolicyNotice title="Live System" onDismiss={() => { setLiveRuntimeNotice(""); setLiveRuntimeError(""); }}>
+          {liveRuntimeError || liveRuntimeNotice || "Starting live system."}
         </PolicyNotice>
       )}
       {systemNotice && (

@@ -58,7 +58,7 @@ export const softwareActors: SoftwareActor[] = [
     id: "APP-ADM-001",
     name: "Identity, account and order intake gate",
     surface: "Customer",
-    accountableFor: "Supabase Auth/RLS, registration, role gate, pickup request validation, 12:30pm cut-off, work item creation, and suspended-account insert blocks.",
+    accountableFor: "Approved sign-in, access controls, registration, role gate, pickup request validation, 12:30pm cut-off, work item creation, and suspended-account insert blocks.",
     mustNotDo: "Must not silently accept incomplete requests, bypass courier eligibility, or expose one customer's records to another customer.",
     source: "BOAS v1.7 Sheets 02, 03, 06; UJ-CRM-001A; SOP-IAM-01/02; SOP-REQ-01/02",
     status: "part_built"
@@ -176,7 +176,7 @@ export const processAccountabilities: ProcessAccountability[] = [
     input: "Business details, operational contact, billing contact, email, delivery address",
     output: "Customer access profile created",
     dataObject: "Access User; Customer Account",
-    control: "Supabase Auth/RLS and courier eligibility flag",
+    control: "Approved sign-in, access controls, and courier eligibility flag",
     status: "part_built",
     source: "BOAS Sheet 03 IAM-01; SOP-IAM-01; SOP-CUS-01"
   },

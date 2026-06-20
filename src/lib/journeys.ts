@@ -282,7 +282,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Client registers, supplies contacts and address, acknowledges Collection Notice, then waits for Admin activation.",
         coverage: "partial",
         localEvidence: "Registration form creates a pending customer, blocks PO box delivery addresses, records two contacts, supplier links, consent record, pending activation workspace, hardened local code-login account path, Admin eligibility review, account-level local activation outbox record, and a first-login supplier setup gate before booking opens.",
-        missing: "Production activation delivery, production Supabase/Auth delivery, and automated postcode/suburb boundary validation.",
+        missing: "Production activation delivery, production login delivery, and automated postcode/suburb boundary validation.",
         steps: ["Registration Screen", "Pending Activation Screen", "First Login - Supplier Setup"]
       },
       {
@@ -349,7 +349,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin authenticates with the same OTP mechanism as Driver, with no static password.",
         coverage: "partial",
         localEvidence: "The active local shell has role email and generated one-use code entry for Admin with local expiry, verification-attempt limits, request throttling, and generic request behavior for unknown emails.",
-        missing: "Supabase Auth delivery, admin-role validation from real identity claims, final production rate-limit/expiry policy values, email failure exception handling, used-code deletion in the real Auth store, and real identity session.",
+        missing: "Production login delivery, admin-role validation from real identity claims, final production rate-limit/expiry policy values, email failure exception handling, used-code deletion in the live identity store, and real identity session.",
         steps: ["Admin Login"]
       },
       {
@@ -385,7 +385,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin adds, updates, or deactivates suppliers without developer involvement.",
         coverage: "working",
         localEvidence: "Admin page can add and edit suppliers with dock address, dock contact role, pickup window, packaging notes, status, last review, required change reason, structured review/archive/reactivation evidence modals, local master-data change rows, incomplete/stale supplier monitoring, exception queue routing, and open-work archive guard.",
-        missing: "Production Supabase master_data_changes rows and live Supabase supplier monitoring execution.",
+        missing: "Production master-data change rows and live supplier monitoring execution.",
         steps: ["Supplier List Screen", "Supplier Edit / Add Screen"]
       },
       {
@@ -394,7 +394,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Admin proposes pricing changes and Owner approval is required before application.",
         coverage: "partial",
         localEvidence: "Admin page edits structured price_rules rows with service variant, item type, tyre count, weight band, rate mode, effective dates, required change reason, Owner approval reference, structured archive/reactivation evidence modals, local change-log ID, master-data audit rows, and a pricing governance monitor that can route incomplete or unlogged rows to Admin exceptions.",
-        missing: "Production dual-control approval workflow, live Supabase monitoring execution, and production authority decision.",
+        missing: "Production dual-control approval workflow, live monitoring execution, and production authority decision.",
         steps: ["Pricing Rules Screen", "Pricing Change Proposal", "Pricing Change - Apply"]
       }
     ]
@@ -414,7 +414,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         summary: "Driver authenticates by email one-time code, with rate limit and generic responses.",
         coverage: "partial",
         localEvidence: "The active local shell has role email and generated one-use code entry for Driver with local expiry, verification-attempt limits, request throttling, and generic request behavior for unknown emails.",
-        missing: "Supabase Auth delivery, final production rate-limit/expiry policy values, inactive driver handling, email failure exception, used-code deletion in the real Auth store, and real identity session.",
+        missing: "Production login delivery, final production rate-limit/expiry policy values, inactive driver handling, email failure exception, used-code deletion in the live identity store, and real identity session.",
         steps: ["Login Screen", "Code Entry Screen"]
       },
       {
@@ -440,7 +440,7 @@ export const sourceUserJourneys: SourceJourney[] = [
         title: "Delivery",
         summary: "Driver records Delivered or Failed Delivery, including receiver name and signature for Delivered.",
         coverage: "partial",
-        localEvidence: "Driver delivery phase lists picked-up stops, starts delivery, records Failed Delivery through a structured reason/handling-note modal, routes the outcome to Admin exceptions, blocks Delivered until receiver name and signature exist, and now has a Supabase private delivery-proof storage/retention migration contract.",
+        localEvidence: "Driver delivery phase lists picked-up stops, starts delivery, records Failed Delivery through a structured reason/handling-note modal, routes the outcome to Admin exceptions, blocks Delivered until receiver name and signature exist, and now has a private delivery-proof storage/retention contract.",
         missing: "Production failed-delivery reason codes, refusal paths, redelivery/retained-goods policy, live upload wiring/testing, upload retry/offline handling, and wrong address state.",
         steps: ["Delivery Stop List", "Delivery Stop Screen", "Receiver Name Capture", "Signature Capture", "Failed Delivery Screen"]
       },

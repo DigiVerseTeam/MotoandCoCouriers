@@ -34,7 +34,7 @@ export function getLiveRuntimeStatus() {
     ...status,
     enabled: status.ok,
     label: status.ok
-      ? `Supabase ${status.supabaseEnv}`
+      ? `Live ${status.supabaseEnv} system`
       : "Local runtime",
   };
 }
@@ -52,7 +52,7 @@ function runtimeRecordId(row) {
 }
 
 function profileDisplayName(profile, email) {
-  return profile?.display_name || email || "Supabase User";
+  return profile?.display_name || email || "Signed-in user";
 }
 
 function localRoleFromAccess(profile, accessRows = []) {
@@ -100,7 +100,7 @@ function appUserFromProfile({ session, profile, accessRows }) {
 
 export async function requestLiveMagicLink(email, roleHint = "client") {
   const supabase = client();
-  if (!supabase) throw new Error("Supabase is not configured for this runtime.");
+  if (!supabase) throw new Error("Live sign-in is not configured.");
   const redirectTo = typeof window !== "undefined" ? window.location.href : undefined;
   const { error } = await supabase.auth.signInWithOtp({
     email: normaliseEmail(email),
@@ -144,7 +144,7 @@ export async function resolveLiveRuntimeSession() {
   if (!profile) {
     return {
       blocked: true,
-      reason: "Supabase Auth session exists, but no Moto & Co profile/role record has been approved for this user.",
+      reason: "Sign-in succeeded, but this email is not approved for Moto & Co access.",
       email: authUser.email,
     };
   }
@@ -166,7 +166,7 @@ export async function resolveLiveRuntimeSession() {
   if (!appSession.role) {
     return {
       blocked: true,
-      reason: "Supabase profile exists, but no active launch role is assigned.",
+      reason: "Sign-in succeeded, but no active Moto & Co access role is assigned.",
       email: authUser.email,
     };
   }
@@ -252,9 +252,9 @@ export function canSyncDomainForRole(domainKey, role) {
 
 async function liveAccessToken() {
   const supabase = client();
-  if (!supabase) throw new Error("Supabase is not configured for this runtime.");
+  if (!supabase) throw new Error("Live system connection is not configured.");
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data?.session?.access_token) throw new Error("A live Supabase Admin session is required.");
+  if (error || !data?.session?.access_token) throw new Error("A live Admin session is required.");
   return data.session.access_token;
 }
 

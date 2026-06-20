@@ -37,7 +37,7 @@ export function validateSupabaseEnvironment(input: {
       supabaseEnv,
       urlConfigured,
       anonKeyConfigured,
-      reason: "Supabase URL and anon key are required before a live client can be created.",
+      reason: "Live system connection settings are required before this portal can use live data.",
     };
   }
 
@@ -48,7 +48,7 @@ export function validateSupabaseEnvironment(input: {
       supabaseEnv,
       urlConfigured,
       anonKeyConfigured,
-      reason: "PIPE-DEV-001 / SOP-REL-01 guard: local and preview app builds must not connect to production Supabase.",
+      reason: "PIPE-DEV-001 / SOP-REL-01 guard: local and preview app builds must not connect to production live data.",
     };
   }
 

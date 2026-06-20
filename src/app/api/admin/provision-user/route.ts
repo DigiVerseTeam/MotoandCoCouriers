@@ -67,10 +67,10 @@ async function findAuthUserByEmail(supabase: AdminSupabaseClient, email: string)
 
 async function callerContext(request: NextRequest, supabase: AdminSupabaseClient) {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) return { error: json(401, { error: "Missing Supabase bearer token." }) };
+  if (!token) return { error: json(401, { error: "Missing live sign-in session." }) };
 
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !authData?.user?.id) return { error: json(401, { error: "Invalid Supabase session." }) };
+  if (authError || !authData?.user?.id) return { error: json(401, { error: "Invalid live sign-in session." }) };
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
@@ -138,7 +138,7 @@ async function writeAudit(
 export async function GET(request: NextRequest) {
   try {
     const supabase = serviceClient();
-    if (!supabase) return json(500, { error: "Server-side Supabase service key is not configured." });
+    if (!supabase) return json(500, { error: "Server-side provisioning is not configured." });
     const caller = await callerContext(request, supabase);
     if ("error" in caller) return caller.error;
 
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = serviceClient();
-    if (!supabase) return json(500, { error: "Server-side Supabase service key is not configured." });
+    if (!supabase) return json(500, { error: "Server-side provisioning is not configured." });
     const caller = await callerContext(request, supabase);
     if ("error" in caller) return caller.error;
 
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     if (role === "driver" && !driverId) return json(400, { error: "Driver role must be linked to a driver record." });
 
     const existing = await findAuthUserByEmail(supabase, email);
-    if (existing) return json(409, { error: "Email already exists in Supabase Auth. Admin must investigate possible duplicate registration." });
+    if (existing) return json(409, { error: "Email already exists. Admin must investigate possible duplicate registration." });
 
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
       data: {
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     });
     if (inviteError) throw inviteError;
     const user = inviteData.user;
-    if (!user?.id) throw new Error("Supabase Auth did not return a user id.");
+    if (!user?.id) throw new Error("User invitation did not return a user id.");
 
     const profileRole = role;
     const { error: profileError } = await supabase.from("profiles").upsert({
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const supabase = serviceClient();
-    if (!supabase) return json(500, { error: "Server-side Supabase service key is not configured." });
+    if (!supabase) return json(500, { error: "Server-side provisioning is not configured." });
     const caller = await callerContext(request, supabase);
     if ("error" in caller) return caller.error;
 
