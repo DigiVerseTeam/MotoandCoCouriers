@@ -2354,7 +2354,7 @@ function isLiveRateLimitError(error) {
   return error?.status === 429 || detail.includes("rate_limit") || detail.includes("rate limit");
 }
 function liveMagicLinkCooldownMessage(cooldownUntil) {
-  return `Too many login links were requested for this email. Email security has paused new links. Use the newest email link already received, or wait ${liveLoginWaitLabel(cooldownUntil)} before requesting another one.`;
+  return `Email security has temporarily paused new login links for this address. Use the newest email link already received, or wait ${liveLoginWaitLabel(cooldownUntil)} before requesting another one.`;
 }
 function liveMagicLinkErrorMessage(error, cooldownUntil = 0) {
   const detail = `${error?.code || ""} ${error?.error_code || ""} ${error?.message || ""}`.toLowerCase();
@@ -2379,6 +2379,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
   const [liveLoginCooldownExpiry, setLiveLoginCooldownExpiry] = useState(0);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [requestHistory, setRequestHistory] = useState({});
+  const liveLoginRequestInFlight = useRef(false);
   const liveLoginEnabled = Boolean(liveRuntimeStatus?.enabled);
   const liveLoginRoleHint = liveRoleHintForPortalSide(portalSide, tab);
   const liveLoginCooldownActive = liveLoginEnabled && liveLoginCooldownExpiry > liveLoginCooldownNow;
@@ -2465,6 +2466,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     if (!email.trim()) { setErr("Email required"); return; }
     const loginEmail = email.trim().toLowerCase();
     if (liveLoginEnabled) {
+      if (liveLoginRequestInFlight.current) return;
       const cooldownUntil = liveLoginCooldownUntil(portalSide, liveLoginRoleHint, loginEmail);
       if (cooldownUntil > Date.now()) {
         setLiveLoginCooldownExpiry(cooldownUntil);
@@ -2472,6 +2474,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
         setErr(liveMagicLinkCooldownMessage(cooldownUntil));
         return;
       }
+      liveLoginRequestInFlight.current = true;
       setRequestingLiveLink(true);
       try {
         await requestLiveMagicLink(loginEmail, liveLoginRoleHint, returnPath);
@@ -2489,6 +2492,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
           setErr(liveMagicLinkErrorMessage(error));
         }
       } finally {
+        liveLoginRequestInFlight.current = false;
         setRequestingLiveLink(false);
       }
       return;
