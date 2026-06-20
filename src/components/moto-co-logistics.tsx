@@ -49,15 +49,17 @@ const css = `
   .main{flex:1;padding:1.4rem;max-width:820px;margin:0 auto;width:100%}
   /* LOGIN */
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.4rem;background:${T.bg}}
-  .login-card{background:${T.card};border:1px solid ${T.border};border-radius:8px;padding:2rem 1.8rem;width:100%;max-width:400px}
+  .login-card{background:${T.card};border:1px solid ${T.border};border-radius:8px;padding:2rem 1.8rem;width:100%;max-width:430px}
   .login-logo{text-align:center;margin-bottom:1.8rem}
   .login-logo img{width:142px;height:auto;margin:0 auto .8rem;display:block}
   .login-logo h1{font-size:1.6rem;font-weight:900;letter-spacing:0}
   .login-logo h1 span{color:${T.acc}}
   .login-logo p{font-size:.75rem;color:${T.mu};margin-top:.25rem;letter-spacing:.05em;text-transform:uppercase}
-  .tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem;background:rgba(0,0,0,.03);border:1px solid ${T.border};border-radius:8px;padding:.25rem}
-  .tab{flex:1 1 86px;padding:.45rem;font-size:.78rem;font-weight:800;line-height:1.15;border:none;background:transparent;color:${T.mu};border-radius:4px;cursor:pointer;transition:.15s}
-  .tab.active{background:${T.card};color:${T.tx};box-shadow:none;border:1px solid ${T.border}}
+  .entry-choices{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}
+  .entry-choice{border:1px solid ${T.border};border-radius:6px;background:${T.card};color:${T.tx};padding:.85rem .8rem;min-height:58px;font-size:.9rem;font-weight:900;cursor:pointer;transition:.15s}
+  .entry-choice:hover{border-color:${T.tx}}
+  .entry-choice.active{border-color:${T.acc};box-shadow:0 0 0 3px rgba(225,29,72,.08)}
+  .login-context{border:1px solid ${T.border};border-radius:6px;padding:.65rem .8rem;margin-bottom:1rem;font-size:.78rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:${T.tx};background:rgba(0,0,0,.02);text-align:center}
   /* FORMS */
   .f{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.9rem}
   .f label{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${T.mu}}
@@ -149,42 +151,72 @@ function routeIntentFromPath(pathname = "/") {
   if (path.startsWith("/admin")) {
     return {
       loginRole: "admin",
-      loginNotice: "Admin operations route. Login as Admin to review exceptions, dispatch, CRM, supplier, pricing, billing, retention, and audit work.",
+      loginPortalSide: "courier",
+      loginPortalSideLocked: true,
+      loginNotice: "Courier Business login. Approved Super Admin and Admin users open the operations console.",
     };
   }
   if (path.startsWith("/driver")) {
     return {
       loginRole: "driver",
-      loginNotice: "Driver run route. Login as Driver to work assigned pickup, delivery, POD, and run close tasks.",
+      loginPortalSide: "courier",
+      loginPortalSideLocked: true,
+      loginNotice: "Courier Business login. Approved Driver users open assigned run work.",
     };
   }
   if (path.startsWith("/tracking")) {
     return {
       loginRole: "client",
+      loginPortalSide: "customer",
+      loginPortalSideLocked: true,
       clientInitialView: "tracking",
-      loginNotice: "Tracking route. Login as Client Operational Contact to search account-scoped delivery records and POD evidence.",
+      loginNotice: "Customer login. Approved operational contacts open account tracking.",
     };
   }
   if (path.startsWith("/booking")) {
     return {
       loginRole: "client",
+      loginPortalSide: "customer",
+      loginPortalSideLocked: true,
       clientInitialView: "orders",
       startNewPickup: true,
-      loginNotice: "Booking route. Login as Client Operational Contact to submit pickup requests against approved suppliers. New public/unregistered bookings remain unresolved.",
+      loginNotice: "Customer login. Approved operational contacts open booking.",
     };
   }
   if (path.startsWith("/portal")) {
     return {
       loginRole: "client",
+      loginPortalSide: "",
+      loginPortalSideLocked: false,
       clientInitialView: "orders",
-      loginNotice: "Client portal route. Login as Client Operational Contact to manage orders, suppliers, tracking, updates, billing evidence, and profile details.",
+      loginNotice: "",
     };
   }
   return {
     loginRole: "client",
+    loginPortalSide: "",
+    loginPortalSideLocked: false,
     clientInitialView: "orders",
     loginNotice: "",
   };
+}
+
+function defaultRoleForPortalSide(side = "", preferredRole = "client") {
+  if (side === "customer") return ["client", "billing"].includes(preferredRole) ? preferredRole : "client";
+  if (side === "courier") return ["driver", "admin", "super_admin"].includes(preferredRole) ? (preferredRole === "super_admin" ? "admin" : preferredRole) : "admin";
+  return preferredRole || "client";
+}
+
+function portalSideLabel(side = "") {
+  if (side === "customer") return "Customer";
+  if (side === "courier") return "Courier Business";
+  return "";
+}
+
+function liveRoleHintForPortalSide(side = "", fallbackRole = "client") {
+  if (side === "customer") return "customer";
+  if (side === "courier") return "courier_business";
+  return fallbackRole;
 }
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -1915,7 +1947,7 @@ function accessReviewOutcome(action) {
   if (action === "restore") return "restore";
   return "retain";
 }
-function isStaffAccess(record) { return ["driver", "admin"].includes(record.role); }
+function isStaffAccess(record) { return ["driver", "admin", "super_admin"].includes(record.role); }
 function accessReviewDue(record) {
   if (!isStaffAccess(record) || record.status === "Revoked") return false;
   if (!record.reviewedAt) return true;
@@ -1967,18 +1999,23 @@ function buildAccessRecords(clients, drivers, overrides = []) {
     status: "Active",
     accessScope: "Assigned run brief, pickup outcomes, delivery outcomes, POD, and run close.",
   }, overrides)));
-  seedAdmins.forEach(admin => rows.push(withAccessOverride({
-    key: accessKey("admin", admin.id, admin.email),
-    role: "admin",
-    roleLabel: "Admin",
-    actorCode: "ACT-INT-002",
-    subjectId: admin.id,
-    subjectName: admin.name,
-    accountName: "Moto and Co Couriers",
-    email: admin.email,
-    status: "Active",
-    accessScope: "Operations console, CRM, dispatch, exceptions, billing, pricing, retention, audit, and access review.",
-  }, overrides)));
+  seedAdmins.forEach(admin => {
+    const role = admin.role === "super_admin" ? "super_admin" : "admin";
+    rows.push(withAccessOverride({
+      key: accessKey(role, admin.id, admin.email),
+      role,
+      roleLabel: role === "super_admin" ? "Super Admin" : "Admin",
+      actorCode: role === "super_admin" ? "ACT-INT-003" : "ACT-INT-002",
+      subjectId: admin.id,
+      subjectName: admin.name,
+      accountName: "Moto and Co Couriers",
+      email: admin.email,
+      status: "Active",
+      accessScope: role === "super_admin"
+        ? "SOP-IAM-03 elevated provisioning, Admin creation, operations console, audit, and access review."
+        : "Operations console, CRM, dispatch, exceptions, billing, pricing, retention, audit, and access review.",
+    }, overrides));
+  });
   return rows.map(row => ({ ...row, reviewDue: accessReviewDue(row) }));
 }
 function accessRecordForLogin(accessRecords, role, user, loginEmail) {
@@ -2133,8 +2170,10 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
-  const [tab, setTab] = useState(defaultRole || "client");
+function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessDenied, onResetLocalDemoData, defaultRole = "client", defaultPortalSide = "", portalSideLocked = false, entryNotice = "", liveRuntimeStatus = null, liveRuntimeError = "" }) {
+  const initialPortalSide = defaultPortalSide || "";
+  const [portalSide, setPortalSide] = useState(initialPortalSide);
+  const [tab, setTab] = useState(defaultRoleForPortalSide(initialPortalSide, defaultRole || "client"));
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [err, setErr] = useState("");
@@ -2146,18 +2185,41 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
   const liveLoginEnabled = Boolean(liveRuntimeStatus?.enabled);
 
   useEffect(() => {
-    resetForRole(defaultRole || "client");
-  }, [defaultRole]);
+    const nextSide = defaultPortalSide || "";
+    resetForRole(defaultRoleForPortalSide(nextSide, defaultRole || "client"), nextSide);
+  }, [defaultRole, defaultPortalSide]);
 
-  function findUser() {
-    const entered = email.trim().toLowerCase();
-    if (tab === "client") return clients.find(c => c.email.toLowerCase() === entered);
-    if (tab === "billing") return clients.find(c => (c.billingContact?.email || "").toLowerCase() === entered);
-    if (tab === "driver") return drivers.find(d => d.email.toLowerCase() === entered);
-    return seedAdmins.find(a => a.email.toLowerCase() === entered);
+  function findUserForRole(role, loginEmail) {
+    const entered = String(loginEmail || "").trim().toLowerCase();
+    if (role === "client") {
+      return clients.find(c =>
+        c.email.toLowerCase() === entered ||
+        (c.operationalContact?.email || "").toLowerCase() === entered
+      );
+    }
+    if (role === "billing") return clients.find(c => (c.billingContact?.email || "").toLowerCase() === entered);
+    if (role === "driver") return drivers.find(d => d.email.toLowerCase() === entered);
+    if (role === "admin" || role === "super_admin") {
+      return seedAdmins.find(a => (a.role === "super_admin" ? "super_admin" : "admin") === role && a.email.toLowerCase() === entered);
+    }
+    return null;
   }
 
-  function resetForRole(nextRole = tab) {
+  function resolveLoginTarget(loginEmail) {
+    const roles = portalSide === "customer"
+      ? ["client", "billing"]
+      : portalSide === "courier"
+        ? ["super_admin", "admin", "driver"]
+        : [tab];
+    for (const role of roles) {
+      const user = findUserForRole(role, loginEmail);
+      if (user) return { role, user };
+    }
+    return { role: defaultRoleForPortalSide(portalSide, tab), user: null };
+  }
+
+  function resetForRole(nextRole = tab, nextPortalSide = portalSide) {
+    setPortalSide(nextPortalSide || "");
     setTab(nextRole);
     setEmail("");
     setCode("");
@@ -2167,6 +2229,10 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setResetConfirmOpen(false);
   }
 
+  function choosePortalSide(nextSide) {
+    resetForRole(defaultRoleForPortalSide(nextSide, defaultRole), nextSide);
+  }
+
   function eligibleRequestTimes(key, now = Date.now()) {
     return (requestHistory[key] || []).filter(at => now - at < LOCAL_OTP_REQUEST_WINDOW_MS);
   }
@@ -2174,12 +2240,13 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
   async function requestCode() {
     setErr("");
     setNotice("");
+    if (!portalSide) { setErr("Choose Customer or Courier Business."); return; }
     if (!email.trim()) { setErr("Email required"); return; }
     const loginEmail = email.trim().toLowerCase();
     if (liveLoginEnabled) {
       setRequestingLiveLink(true);
       try {
-        await requestLiveMagicLink(loginEmail, tab);
+        await requestLiveMagicLink(loginEmail, liveRoleHintForPortalSide(portalSide, tab));
         setNotice("Supabase login link sent. Open the link from that email, then return here and the app will resolve your approved role record.");
       } catch (error) {
         setErr(error?.message || "Supabase Auth could not send a login link for this address.");
@@ -2188,7 +2255,9 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       }
       return;
     }
-    const requestKey = localLoginKey(tab, loginEmail);
+    const loginTarget = resolveLoginTarget(loginEmail);
+    const loginRole = loginTarget.role;
+    const requestKey = localLoginKey(loginRole, loginEmail);
     const now = Date.now();
     const recentRequests = eligibleRequestTimes(requestKey, now);
     if (recentRequests.length >= LOCAL_OTP_MAX_REQUESTS) {
@@ -2199,11 +2268,12 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setRequestHistory(prev => ({ ...prev, [requestKey]: [...recentRequests, now] }));
     const issuedCode = localOtpCode();
     const expiresAt = now + LOCAL_OTP_EXPIRY_MS;
-    const found = findUser();
+    const found = loginTarget.user;
     if (!found) {
       setPendingUser({
         loginEmail,
-        requestedRole: tab,
+        requestedRole: loginRole,
+        resolvedRole: loginRole,
         unknownLogin: true,
         issuedCode,
         issuedAt: new Date(now).toISOString(),
@@ -2215,7 +2285,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       setNotice(`Local testing code: ${issuedCode}. Expires at ${localOtpExpiryLabel(expiresAt)} and can be used once. Production Supabase Auth email delivery is not connected.`);
       return;
     }
-    const accessRecord = accessRecordForLogin(accessRecords, tab, found, loginEmail);
+    const accessRecord = accessRecordForLogin(accessRecords, loginRole, found, loginEmail);
     if (accessRecord?.status === "Revoked") {
       setErr("Access for this role is revoked. Contact Admin.");
       onAccessDenied?.(accessRecord);
@@ -2224,6 +2294,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
     setPendingUser({
       ...found,
       loginEmail,
+      resolvedRole: loginRole,
       accessKey: accessRecord?.key,
       issuedCode,
       issuedAt: new Date(now).toISOString(),
@@ -2271,7 +2342,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
       onAccessDenied?.(accessRecord);
       return;
     }
-    onLogin({ role: tab, user: pendingUser, accessKey: pendingUser.accessKey });
+    onLogin({ role: pendingUser.resolvedRole || tab, user: pendingUser, accessKey: pendingUser.accessKey });
     setCode("");
     setPendingUser(null);
     setNotice("");
@@ -2284,26 +2355,33 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
           <img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" />
           <p>Workshop support courier portal</p>
         </div>
-        <div className="tabs">
-          {["client", "billing", "driver", "admin"].map(t => (
-            <button key={t} className={`tab${tab === t ? " active" : ""}`} onClick={() => resetForRole(t)}>
-              {t === "billing" ? "Billing" : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
+        {portalSideLocked ? (
+          <div className="login-context">{portalSideLabel(portalSide)} Login</div>
+        ) : (
+          <div className="entry-choices" aria-label="Portal type">
+            <button className={`entry-choice${portalSide === "customer" ? " active" : ""}`} onClick={() => choosePortalSide("customer")}>Customer</button>
+            <button className={`entry-choice${portalSide === "courier" ? " active" : ""}`} onClick={() => choosePortalSide("courier")}>Courier Business</button>
+          </div>
+        )}
         {entryNotice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{entryNotice}</div>}
         {err && <div className="err">{err}</div>}
         {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{notice}</div>}
         {!pendingUser ? (
           <>
             {liveRuntimeError && <div className="card" style={{ fontSize: ".82rem", color: T.acc, marginBottom: ".8rem", borderColor: T.acc }}>{liveRuntimeError}</div>}
-            <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
-              {liveLoginEnabled
-                ? "Enter the email approved for this role. Supabase Auth will email a login link, then the app will check the matching profile and role record."
-                : "Enter the email registered for this role. The local prototype issues a one-use testing code on screen."}
-            </p>
-            <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
-            <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Supabase Login Link" : "Get Login Code"}</button>
+            {portalSide ? (
+              <>
+                <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
+                  {liveLoginEnabled
+                    ? `Enter your approved ${portalSideLabel(portalSide).toLowerCase()} email.`
+                    : "Enter the registered email. The local prototype issues a one-use testing code on screen."}
+                </p>
+                <div className="f"><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && requestCode()} /></div>
+                <button className="btn b-acc" onClick={requestCode} disabled={requestingLiveLink}>{requestingLiveLink ? "Sending..." : liveLoginEnabled ? "Send Supabase Login Link" : "Get Login Code"}</button>
+              </>
+            ) : (
+              <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem", textAlign: "center" }}>Choose Customer or Courier Business.</p>
+            )}
             {onResetLocalDemoData && !liveLoginEnabled && !resetConfirmOpen && <button className="btn b-ghost" style={{ marginTop: ".6rem" }} onClick={() => setResetConfirmOpen(true)}>Reset Local Demo Data</button>}
             {onResetLocalDemoData && !liveLoginEnabled && resetConfirmOpen && (
               <div className="card" style={{ marginTop: ".8rem", borderColor: T.acc }}>
@@ -2326,7 +2404,7 @@ function Login({ clients, drivers, accessRecords, onLogin, onRegister, onAccessD
             <button className="btn b-ghost" onClick={() => { setPendingUser(null); setCode(""); setNotice(""); setErr(""); }}>Use Another Email</button>
           </>
         )}
-        {tab === "client" && !pendingUser && !liveLoginEnabled && (
+        {portalSide === "customer" && !pendingUser && !liveLoginEnabled && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>
             Not registered? <span style={{ color: T.acc, cursor: "pointer" }} onClick={onRegister}>Register</span>
           </p>
@@ -12003,7 +12081,7 @@ export default function App() {
           <RegisterClient suppliers={suppliers} onDone={addClient} onCancel={() => setShowReg(false)} />
         </div>
       ) : !session ? (
-        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
+        <Login clients={clients} drivers={drivers} accessRecords={accessRecords} defaultRole={routeIntent.loginRole} defaultPortalSide={routeIntent.loginPortalSide} portalSideLocked={Boolean(routeIntent.loginPortalSideLocked)} entryNotice={routeIntent.loginNotice} liveRuntimeStatus={liveRuntimeStatus} liveRuntimeError={liveRuntimeError} onLogin={setSession} onRegister={() => setShowReg(true)} onAccessDenied={recordAccessDenied} onResetLocalDemoData={resetLocalDemoData} />
       ) : session.role === "client" ? (
         <ClientPortal user={session.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : session.role === "billing" ? (

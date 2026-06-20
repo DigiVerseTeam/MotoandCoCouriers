@@ -840,7 +840,7 @@ requireText(
   "docs/production-blocker-register.md",
   [
     "GitHub production repository handoff needs CI evidence",
-    "Approved production master data and non-admin Auth role records are missing",
+    "Full approved production master-data roster is incomplete",
     "Vercel production deployment must be smoke-tested after each production change",
     "Notification provider and channel are unconfirmed",
     "Production invoice dispatch is unconfirmed",
