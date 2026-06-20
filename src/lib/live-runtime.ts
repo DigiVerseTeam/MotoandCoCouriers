@@ -28,6 +28,7 @@ export const liveRuntimeDomains = {
 
 const allSnapshotKeys = Object.keys(liveRuntimeDomains);
 const LIVE_AUTH_RETURN_PATH_KEY = "motoCoLiveAuthReturnPath";
+const PRODUCTION_SITE_ORIGIN = "https://motoandcocouriers.vercel.app";
 
 export function getLiveRuntimeStatus() {
   const status = getBrowserSupabaseEnvironmentStatus();
@@ -69,12 +70,27 @@ function currentBrowserReturnPath() {
   return safeLiveAuthReturnPath(`${window.location.pathname || "/"}${window.location.search || ""}`);
 }
 
+function isLocalBrowserOrigin(origin = "") {
+  try {
+    const host = new URL(origin).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
 function publicSiteOrigin() {
   const configured = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
   const appEnv = String(process.env.NEXT_PUBLIC_APP_ENV || "").trim().toLowerCase();
-  if (appEnv === "production" && configured) return configured;
-  if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
-  return configured;
+  const supabaseEnv = String(process.env.NEXT_PUBLIC_SUPABASE_ENV || "").trim().toLowerCase();
+  const browserOrigin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "";
+  const productionLiveRuntime = appEnv === "production" || supabaseEnv === "production";
+
+  if (configured) return configured;
+  if (productionLiveRuntime && (!browserOrigin || isLocalBrowserOrigin(browserOrigin))) {
+    return PRODUCTION_SITE_ORIGIN;
+  }
+  return browserOrigin || configured;
 }
 
 function liveAuthCallbackUrl(returnPath = "/") {

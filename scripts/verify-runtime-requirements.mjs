@@ -640,6 +640,8 @@ requireText(
     "safeLiveAuthReturnPath",
     "/auth/callback?next=",
     "LIVE_AUTH_RETURN_PATH_KEY",
+    "PRODUCTION_SITE_ORIGIN",
+    "isLocalBrowserOrigin",
     "resolveLiveRuntimeSession",
     "loadLiveRuntimeSnapshot",
     "canSyncDomainForRole",
