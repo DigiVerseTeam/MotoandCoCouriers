@@ -3030,6 +3030,8 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
     if (!supplierSetupComplete) { setErr("Supplier access must be confirmed before pickup requests can be submitted"); return; }
     if (linkedSuppliers.length === 0) { setErr("Admin must approve supplier access before pickup requests can be submitted"); return; }
     if (!conNote || !vendor) { setErr("Con note and supplier required"); return; }
+    if (!requestedDate) { setErr("Requested run date required"); return; }
+    if (requestedDate < todayBrisbane()) { setErr("Requested run date cannot be in the past. Select today or a future run date."); return; }
     const schedule = applyCutoff(requestedDate);
     onNewOrder({ id: uid(), clientId: user.id, clientName: user.name, vendor, conNote, dropAddress: user.address, notes, status: "Pending", requestedDate, actualRunDate: schedule.actualRunDate, cutoffApplied: schedule.cutoffApplied, scheduleAdjusted: schedule.scheduleAdjusted, scheduleAdjustmentReason: schedule.scheduleAdjustmentReason, date: schedule.actualRunDate, submittedAt: isoNow(), driverId: null, price: null, recvName: "", sig: "" });
     setConNote(""); setVendor(""); setNotes(""); setRequestedDate(todayBrisbane()); setNewOrder(false); setErr("");
@@ -3517,7 +3519,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
               <h3>New Delivery Order</h3>
               {err && <div className="err">{err}</div>}
               <div className="f"><label>Con Note Number</label><input value={conNote} onChange={e => setConNote(e.target.value)} placeholder="e.g. LI-4821" /></div>
-              <div className="f"><label>Requested Run Date</label><input type="date" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} /></div>
+              <div className="f"><label>Requested Run Date</label><input type="date" min={todayBrisbane()} value={requestedDate} onChange={e => setRequestedDate(e.target.value)} /></div>
               <div className="f"><label>Supplier</label>
                 <select value={vendor} onChange={e => setVendor(e.target.value)}>
                   <option value="">— Select supplier —</option>

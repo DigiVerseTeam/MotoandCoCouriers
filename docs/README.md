@@ -17,6 +17,7 @@ Principle: do not fill gaps. If a detail is not confirmed by the source document
 - `decision-log.md` - dated record of confirmed and pending decisions.
 - `source-index.md` - local source files and archive contents identified so far.
 - `customer-journey-comparison.md` - uploaded customer/admin/driver journeys checked against the local build.
+- `user-journey-gap-audit.md` - 24-row user journey gap register audited against the current portal build.
 - `legacy-app-reference-notes.md` - old app references checked for reusable interaction patterns.
 - The in-app `/accountability` route now holds the source-backed software actor accountability model.
 - `launch-checklist.md` - staged build and launch checklist based on confirmed source material.
