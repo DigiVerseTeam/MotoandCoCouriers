@@ -8,10 +8,12 @@ import {
   completeLiveAuthRedirect,
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
+  registerLiveClient,
   requestLivePasswordLogin,
   resetLiveProvisionedUserPassword,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
+  syncLiveRuntimeDomain,
   updateLiveUserPassword,
 } from "@/lib/live-runtime";
 
@@ -2391,28 +2393,37 @@ function RegisterClient({ suppliers, onDone, onCancel }) {
   const [vendors, setVendors] = useState([]);
   const [consent, setConsent] = useState(false);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   function toggle(v) { setVendors(vs => vs.includes(v) ? vs.filter(x => x !== v) : [...vs, v]); }
 
-  function submit() {
+  async function submit() {
     if (!name || !email || !opName || !billingName || !billingEmail || !phone || !address) { setErr("All fields required"); return; }
     const addressStatus = physicalAddressStatus(address);
     if (!addressStatus.ok) { setErr("Delivery address must be a physical address in the SEQ service area. PO boxes are not accepted."); return; }
     if (vendors.length === 0) { setErr("Select at least one approved supplier"); return; }
     if (!consent) { setErr("Collection notice acknowledgement is required"); return; }
-    onDone({
-      id: "c" + Date.now(),
-      name,
-      email,
-      phone,
-      address: address.trim(),
-      vendors,
-      status: "Pending",
-      courierEligible: false,
-      operationalContact: { name: opName, email },
-      billingContact: { name: billingName, email: billingEmail },
-      consent: { notice: "Policy #4 Collection Notice", acceptedAt: isoNow() },
-    });
+    setBusy(true);
+    setErr("");
+    try {
+      await onDone({
+        id: "c" + Date.now(),
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        address: address.trim(),
+        vendors,
+        status: "Pending",
+        courierEligible: false,
+        operationalContact: { name: opName.trim(), email: email.trim().toLowerCase(), phone: phone.trim() },
+        billingContact: { name: billingName.trim(), email: billingEmail.trim().toLowerCase(), phone: phone.trim() },
+        consent: { notice: "Policy #4 Collection Notice", acceptedAt: isoNow() },
+      });
+    } catch (error) {
+      setErr(error?.message || "Registration could not be submitted. Contact Admin.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -2442,8 +2453,8 @@ function RegisterClient({ suppliers, onDone, onCancel }) {
         <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ width: "auto", marginTop: ".15rem" }} />
         I acknowledge the collection notice and consent record for account setup.
       </label>
-      <button className="btn b-acc" onClick={submit}>Submit for Admin Activation</button>
-      <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={onCancel}>Cancel</button>
+      <button className="btn b-acc" disabled={busy} onClick={submit}>{busy ? "Submitting..." : "Submit for Admin Activation"}</button>
+      <button className="btn b-ghost" disabled={busy} style={{ marginTop: ".5rem" }} onClick={onCancel}>Cancel</button>
     </div>
   );
 }
@@ -10960,6 +10971,26 @@ function workspaceSessionForLiveData(session, clients = [], drivers = []) {
   return session;
 }
 
+function mergeLiveClientsWithLocalPending(liveClients = [], localClients = []) {
+  const seen = new Set();
+  const merged = [];
+  for (const client of liveClients || []) {
+    if (!client?.id) continue;
+    seen.add(String(client.id));
+    merged.push(client);
+  }
+  for (const client of localClients || []) {
+    const status = client?.status || "Active";
+    const alreadySeen = seen.has(String(client?.id || ""));
+    const emailSeen = merged.some(item =>
+      String(item.email || "").toLowerCase() === String(client?.email || "").toLowerCase() ||
+      String(item.operationalContact?.email || "").toLowerCase() === String(client?.operationalContact?.email || client?.email || "").toLowerCase()
+    );
+    if (!alreadySeen && !emailSeen && status === "Pending") merged.unshift(client);
+  }
+  return merged;
+}
+
 export default function App() {
   const pathname = usePathname();
   const routeIntent = routeIntentFromPath(pathname || "/");
@@ -11098,7 +11129,7 @@ export default function App() {
       try {
         const snapshot = await loadLiveRuntimeSnapshot();
         if (cancelled) return;
-        if (snapshot.clients?.length) setClients(snapshot.clients);
+        if (snapshot.clients?.length) setClients(prev => mergeLiveClientsWithLocalPending(snapshot.clients, prev));
         if (snapshot.suppliers?.length) setSuppliers(snapshot.suppliers);
         if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
         if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
@@ -11767,12 +11798,13 @@ export default function App() {
     });
   }
 
-  function addClient(c) {
-    const next = [...clients, c];
+  async function addClient(c) {
+    const storedClient = liveRuntimeEnabled ? await registerLiveClient(c) : c;
+    const next = [...clients.filter(client => client.id !== storedClient.id), storedClient];
     setClients(next); save(KEY_CLIENTS, next);
     setShowReg(false);
-    setSession({ role: "client", user: c });
-    writeAudit("Customer registration submitted", `${c.name} pending Admin activation`, "client");
+    setSession({ role: "client", user: storedClient });
+    writeAudit("Customer registration submitted", `${storedClient.name} pending Admin activation`, "client");
   }
 
   function updateClient(updated) {
@@ -11787,6 +11819,11 @@ export default function App() {
     const next = previous ? clients.map(c => c.id === stored.id ? stored : c) : [stored, ...clients];
     setClients(next); save(KEY_CLIENTS, next);
     if (session?.user?.id === stored.id) setSession({ ...session, user: stored });
+    if (liveRuntimeEnabled && workspaceSession?.role && ["admin", "super_admin"].includes(workspaceSession.role)) {
+      syncLiveRuntimeDomain("clients", [stored], workspaceSession).catch(error => {
+        showWorkflowNotice(error?.message || "Customer update could not be synced to the live system.");
+      });
+    }
     recordAccountStatusNotices(previous, stored);
     if (!previous) {
       writeAudit("Customer account created", auditDetail || `${stored.name} CRM workshop record created`, "admin");

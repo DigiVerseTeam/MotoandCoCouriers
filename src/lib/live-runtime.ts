@@ -445,6 +445,17 @@ export async function resetLiveProvisionedUserPassword(input) {
   return provisioningApi("PATCH", { ...input, action: "reset_password" });
 }
 
+export async function registerLiveClient(input) {
+  const response = await fetch("/api/client/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input || {}),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || `Customer registration failed (${response.status}).`);
+  return payload?.client || null;
+}
+
 export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {
   const supabase = client();
   const recordType = liveRuntimeDomains[domainKey];
