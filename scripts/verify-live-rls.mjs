@@ -154,6 +154,8 @@ requireText(
   [
     "requestLivePasswordLogin",
     "signInWithPassword",
+    "updateLiveUserPassword",
+    "resetLiveProvisionedUserPassword",
     "syncLiveRuntimeDomain",
     "uploadLiveDeliveryProof",
   ],
@@ -168,6 +170,8 @@ requireText(
     "temporaryPasswordIssued",
     "email_confirm: true",
     "welcomeEmailSent: false",
+    "reset_user_password",
+    "temporary_password_issued",
   ],
   "SOP-IAM-03 provisioning creates password users without email invite dependency"
 );

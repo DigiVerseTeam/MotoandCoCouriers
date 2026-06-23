@@ -256,6 +256,16 @@ export async function requestLivePasswordLogin(email, password) {
   return true;
 }
 
+export async function updateLiveUserPassword(password) {
+  const supabase = client();
+  if (!supabase) throw new Error("Live sign-in is not configured.");
+  const { error } = await supabase.auth.updateUser({
+    password: String(password || ""),
+  });
+  if (error) throw error;
+  return true;
+}
+
 export async function signOutLiveRuntime() {
   const supabase = client();
   if (!supabase) return;
@@ -429,6 +439,10 @@ export async function provisionLiveUser(input) {
 
 export async function updateLiveProvisionedUserStatus(input) {
   return provisioningApi("PATCH", input);
+}
+
+export async function resetLiveProvisionedUserPassword(input) {
+  return provisioningApi("PATCH", { ...input, action: "reset_password" });
 }
 
 export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {

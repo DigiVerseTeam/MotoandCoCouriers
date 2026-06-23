@@ -9,8 +9,10 @@ import {
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
   requestLivePasswordLogin,
+  resetLiveProvisionedUserPassword,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
+  updateLiveUserPassword,
 } from "@/lib/live-runtime";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -2119,6 +2121,58 @@ function portalTaskTimeout(label, promise, timeoutMs = 15000) {
     timeoutId = setTimeout(() => reject(new Error(`${label} took too long. Refresh the page and try again.`)), timeoutMs);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
+function AccountSecurityModal({ session, onClose, onPasswordChanged }) {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function savePassword() {
+    setError("");
+    setNotice("");
+    const nextPassword = String(password || "");
+    if (nextPassword.length < 10) {
+      setError("Use at least 10 characters.");
+      return;
+    }
+    if (nextPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await updateLiveUserPassword(nextPassword);
+      setPassword("");
+      setConfirmPassword("");
+      setNotice("Password changed.");
+      onPasswordChanged?.();
+    } catch (changeError) {
+      setError(changeError?.message || "Password could not be changed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={event => event.stopPropagation()}>
+        <h3>Account Security</h3>
+        <div className="meta" style={{ marginBottom: ".8rem" }}>
+          <span>{session?.user?.email || "Signed-in user"}</span>
+          <span>{session?.role || "role"}</span>
+        </div>
+        <div className="f"><label>New Password</label><input value={password} onChange={event => setPassword(event.target.value)} type="password" placeholder="At least 10 characters" /></div>
+        <div className="f"><label>Confirm Password</label><input value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} type="password" placeholder="Re-enter password" onKeyDown={event => event.key === "Enter" && savePassword()} /></div>
+        {error && <div className="err">{error}</div>}
+        {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>{notice}</div>}
+        <button className="btn b-acc" onClick={savePassword} disabled={busy}>{busy ? "Saving..." : "Change Password"}</button>
+        <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
 }
 
 function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRuntimeStatus, liveAuthError = "", onAuthenticated }) {
@@ -4834,6 +4888,11 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const [accessAction, setAccessAction] = useState("");
   const [accessReviewType, setAccessReviewType] = useState("annual");
   const [accessReason, setAccessReason] = useState("");
+  const [passwordResetTarget, setPasswordResetTarget] = useState(null);
+  const [passwordResetApproval, setPasswordResetApproval] = useState("");
+  const [passwordResetReason, setPasswordResetReason] = useState("");
+  const [passwordResetBusy, setPasswordResetBusy] = useState(false);
+  const [passwordResetResult, setPasswordResetResult] = useState(null);
   const [activationTarget, setActivationTarget] = useState(null);
   const [activationReview, setActivationReview] = useState({
     b2bConfirmed: false,
@@ -6037,6 +6096,46 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     setAccessAction("");
     setAccessReviewType("annual");
     setAccessReason("");
+  }
+
+  function openPasswordReset(record) {
+    setPasswordResetTarget(record);
+    setPasswordResetApproval("");
+    setPasswordResetReason(`Admin password reset requested for ${record.email}`);
+    setPasswordResetResult(null);
+  }
+
+  function closePasswordReset() {
+    setPasswordResetTarget(null);
+    setPasswordResetApproval("");
+    setPasswordResetReason("");
+    setPasswordResetBusy(false);
+    setPasswordResetResult(null);
+  }
+
+  async function confirmPasswordReset() {
+    if (!passwordResetTarget) return;
+    const approvalReference = passwordResetApproval.trim();
+    const reason = passwordResetReason.trim();
+    if (!approvalReference) return showWorkflowNotice("Approval reference is required before resetting a password.");
+    if (!reason) return showWorkflowNotice("Password reset reason is required.");
+    setPasswordResetBusy(true);
+    try {
+      const result = await resetLiveProvisionedUserPassword({
+        email: passwordResetTarget.email,
+        approvalReference,
+        reason,
+      });
+      setPasswordResetResult(result);
+      if (result?.temporaryPassword && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(result.temporaryPassword);
+      }
+      onSaveAccessChange(passwordResetTarget, "review", `Password reset issued. ${reason}`, "other");
+    } catch (error) {
+      showWorkflowNotice(error?.message || "Password reset failed.");
+    } finally {
+      setPasswordResetBusy(false);
+    }
   }
 
   function overdueInvoicesForClient(clientId) {
@@ -7717,6 +7816,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   ) : (
                     <button className="btn b-red b-sm" onClick={() => openAccessAction(record, "revoke")}>Revoke Access</button>
                   )}
+                  {record.email && <button className="btn b-ghost b-sm" onClick={() => openPasswordReset(record)}>Reset Password</button>}
                 </div>
               </div>
             ))}
@@ -9369,7 +9469,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <span>{accessTarget.status}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                Local access register only. Production Supabase Auth identity binding and final RLS policies remain open pending Policy #21 and BOAS Sheet 05 review.
+                Access changes are recorded in the portal audit trail. Final live-access policy testing remains part of Policy #21 and BOAS Sheet 05 review.
               </div>
               <div className="f"><label>Review Type</label><select value={accessReviewType} onChange={e => setAccessReviewType(e.target.value)}>
                 {ACCESS_REVIEW_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
@@ -9382,6 +9482,34 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 {accessAction === "revoke" ? "Confirm Revoke" : accessAction === "restore" ? "Confirm Restore" : "Confirm Review"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setAccessTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {passwordResetTarget && (
+          <div className="overlay" onClick={closePasswordReset}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h3>Reset Password - {passwordResetTarget.subjectName}</h3>
+              <div className="meta" style={{ marginBottom: ".7rem" }}>
+                <span>{passwordResetTarget.roleLabel}</span>
+                <span>{passwordResetTarget.email}</span>
+              </div>
+              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
+                This creates a temporary password for the selected portal user and records the reset in the audit trail. The password is shown once here and copied to the clipboard when the browser allows it.
+              </div>
+              <div className="f"><label>Approval Reference *</label><input value={passwordResetApproval} onChange={e => setPasswordResetApproval(e.target.value)} placeholder="Owner/Admin approval reference" /></div>
+              <div className="f"><label>Reason *</label><textarea value={passwordResetReason} onChange={e => setPasswordResetReason(e.target.value)} placeholder="Reason for reset" /></div>
+              {passwordResetResult?.temporaryPassword && (
+                <div className="card" style={{ marginBottom: ".8rem" }}>
+                  <div className="card-title" style={{ marginBottom: ".4rem" }}>Temporary Password</div>
+                  <input readOnly value={passwordResetResult.temporaryPassword} onFocus={e => e.target.select()} />
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Give this to the user, then ask them to change it from Account Security after sign-in.</div>
+                </div>
+              )}
+              <button className="btn b-acc" onClick={confirmPasswordReset} disabled={passwordResetBusy || Boolean(passwordResetResult?.temporaryPassword)}>
+                {passwordResetBusy ? "Resetting..." : passwordResetResult?.temporaryPassword ? "Password Reset Issued" : "Issue Temporary Password"}
+              </button>
+              <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={closePasswordReset}>Close</button>
             </div>
           </div>
         )}
@@ -10051,6 +10179,7 @@ export default function App() {
   });
   const [accessOverrides, setAccessOverrides] = useState(() => load(KEY_ACCESS_OVERRIDES, []));
   const [showReg, setShowReg] = useState(false);
+  const [accountSecurityOpen, setAccountSecurityOpen] = useState(false);
   const [systemNotice, setSystemNotice] = useState("");
   const accessRecords = buildAccessRecords(clients, drivers, accessOverrides);
   const liveRuntimeStatus = getLiveRuntimeStatus();
@@ -11572,6 +11701,18 @@ export default function App() {
   return (
     <div className="app">
       <style>{css}</style>
+      {workspaceSession && (
+        <div style={{ position: "fixed", top: ".8rem", right: ".8rem", zIndex: 30, display: "flex", gap: ".45rem", alignItems: "center" }}>
+          <button className="btn b-ghost b-sm" onClick={() => setAccountSecurityOpen(true)}>Account</button>
+        </div>
+      )}
+      {accountSecurityOpen && (
+        <AccountSecurityModal
+          session={workspaceSession}
+          onClose={() => setAccountSecurityOpen(false)}
+          onPasswordChanged={() => writeAudit("Password changed", `${workspaceSession?.user?.email || "Signed-in user"} changed their password`, workspaceSession?.role || "system")}
+        />
+      )}
       {systemNotice && (
         <PolicyNotice title="System Workflow Rule" system onDismiss={() => setSystemNotice("")}>
           {systemNotice}

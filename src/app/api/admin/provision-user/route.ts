@@ -287,15 +287,73 @@ export async function PATCH(request: NextRequest) {
     if ("error" in caller) return caller.error;
 
     const body = await request.json();
+    const action = String(body.action || "status").trim().toLowerCase();
     const profileId = String(body.profileId || "").trim();
-    const nextStatus = String(body.status || "").trim().toLowerCase() as ProvisionStatus;
+    const email = normaliseEmail(body.email);
     const approvalReference = String(body.approvalReference || "").trim();
     const reason = String(body.reason || approvalReference).trim();
 
+    if (!approvalReference) return json(400, { error: "Approval reference is required." });
+    if (!reason) return json(400, { error: "Change reason is required." });
+
+    if (action === "reset_password") {
+      if (!isUuid(profileId) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return json(400, { error: "A valid profile id or email address is required." });
+      }
+
+      const query = supabase
+        .from("profiles")
+        .select("id, email, display_name, role, status")
+        .limit(1);
+      const { data: rows, error: profileError } = isUuid(profileId)
+        ? await query.eq("id", profileId)
+        : await query.eq("email", email);
+      if (profileError) throw profileError;
+      const existing = rows?.[0];
+      if (!existing) return json(404, { error: "Profile was not found." });
+
+      const targetRole = normaliseRole(existing.role);
+      if (!targetRole || !canAssign(caller.roles, targetRole)) {
+        return json(403, { error: "This caller is not permitted to reset that user's password." });
+      }
+
+      const initialPassword = temporaryPassword();
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(existing.id, {
+        password: initialPassword,
+        email_confirm: true,
+        ban_duration: "none",
+      });
+      if (passwordError) throw passwordError;
+
+      await writeAudit(
+        supabase,
+        caller.authUser.id,
+        existing.id,
+        "reset_user_password",
+        "profile",
+        "password",
+        "",
+        "temporary_password_issued",
+        reason,
+        approvalReference,
+      );
+
+      return json(200, {
+        profile: {
+          id: existing.id,
+          email: existing.email,
+          display_name: existing.display_name,
+          role: existing.role,
+          status: existing.status,
+        },
+        temporaryPassword: initialPassword,
+        temporaryPasswordIssued: true,
+      });
+    }
+
+    const nextStatus = String(body.status || "").trim().toLowerCase() as ProvisionStatus;
     if (!isUuid(profileId)) return json(400, { error: "A valid profile id is required." });
     if (!allowedStatuses.has(nextStatus)) return json(400, { error: "A valid target status is required." });
-    if (!approvalReference) return json(400, { error: "Approval reference is required." });
-    if (!reason) return json(400, { error: "Status change reason is required." });
 
     const { data: existing, error: existingError } = await supabase
       .from("profiles")
