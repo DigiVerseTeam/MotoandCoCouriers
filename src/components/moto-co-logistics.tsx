@@ -8,7 +8,6 @@ import {
   completeLiveAuthRedirect,
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
-  onLiveAuthStateChange,
   requestLivePasswordLogin,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
@@ -2122,7 +2121,7 @@ function portalTaskTimeout(label, promise, timeoutMs = 15000) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRuntimeStatus, liveAuthError = "" }) {
+function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRuntimeStatus, liveAuthError = "", onAuthenticated }) {
   const defaultEntry = ["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer";
   const [entryType, setEntryType] = useState(defaultEntry);
   const [email, setEmail] = useState("");
@@ -2156,6 +2155,16 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
     setSending(true);
     try {
       await requestLivePasswordLogin(loginEmail, password);
+      const resolved = await portalTaskTimeout("Secure session check", resolveLiveRuntimeSession(), 15000);
+      if (resolved?.blocked) {
+        setErr(resolved.reason || "This email is not approved for portal access.");
+        return;
+      }
+      if (!resolved?.role) {
+        setErr("Sign-in succeeded, but no active Moto & Co access role is assigned.");
+        return;
+      }
+      onAuthenticated?.(resolved);
       setNotice("Opening portal...");
     } catch (error) {
       setErr(passwordLoginErrorMessage(error));
@@ -10088,10 +10097,8 @@ export default function App() {
     }
 
     refreshLiveSession();
-    const unsubscribe = onLiveAuthStateChange(refreshLiveSession);
     return () => {
       cancelled = true;
-      unsubscribe?.();
     };
   }, [liveRuntimeEnabled]);
 
@@ -11585,7 +11592,18 @@ export default function App() {
           </div>
         </div>
       ) : !workspaceSession ? (
-        <Login defaultRole={routeIntent.loginRole} entryNotice={routeIntent.loginNotice} onRegister={() => setShowReg(true)} liveRuntimeStatus={liveRuntimeStatus} liveAuthError={liveAuthError} />
+        <Login
+          defaultRole={routeIntent.loginRole}
+          entryNotice={routeIntent.loginNotice}
+          onRegister={() => setShowReg(true)}
+          liveRuntimeStatus={liveRuntimeStatus}
+          liveAuthError={liveAuthError}
+          onAuthenticated={(resolved) => {
+            setSession(resolved);
+            setLiveAuthError("");
+            setLiveAuthLoading(false);
+          }}
+        />
       ) : workspaceSession.role === "client" ? (
         <ClientPortal user={workspaceSession.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : workspaceSession.role === "billing" ? (
