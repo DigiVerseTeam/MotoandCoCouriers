@@ -126,7 +126,11 @@ export async function completeLiveAuthRedirect() {
     liveAuthRedirectCompletedHref = href;
     liveAuthRedirectPromise = (async () => {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) throw error;
+      if (error) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) return next;
+        throw error;
+      }
       return next;
     })().finally(() => {
       liveAuthRedirectPromise = null;

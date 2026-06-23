@@ -669,6 +669,7 @@ requireText(
     "liveAuthRedirectPromise",
     "liveAuthRedirectCompletedHref",
     "exchangeCodeForSession",
+    "if (data?.session) return next",
     "Remove",
     "one-use code",
     "getSession",
@@ -677,6 +678,26 @@ requireText(
     "resolveLiveRuntimeSession",
   ],
   "live Supabase auth callback race guard and role mapping"
+);
+
+requireText(
+  "src/app/auth/callback/page.tsx",
+  [
+    "completeLiveAuthRedirect",
+    "window.location.replace",
+    "Completing your sign in",
+    "Request a new login link",
+  ],
+  "lightweight auth callback route"
+);
+
+forbidText(
+  "src/app/auth/callback/page.tsx",
+  [
+    "MotoCoLogisticsApp",
+    "@/components/moto-co-logistics",
+  ],
+  "auth callback must not mount the full portal"
 );
 
 requireText(
@@ -693,6 +714,8 @@ requireText(
     "NEXT_PUBLIC_APP_ENV",
     "NEXT_PUBLIC_SUPABASE_ENV",
     "validateSupabaseEnvironment",
+    "flowType: \"implicit\"",
+    "detectSessionInUrl: true",
   ],
   "Supabase environment labels are wired into client creation"
 );

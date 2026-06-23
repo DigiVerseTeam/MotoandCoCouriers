@@ -16,7 +16,14 @@ export function createBrowserSupabaseClient() {
     return null;
   }
 
-  return createClient(url!, anonKey!);
+  return createClient(url!, anonKey!, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "implicit",
+    },
+  });
 }
 
 export function getBrowserSupabaseEnvironmentStatus() {
