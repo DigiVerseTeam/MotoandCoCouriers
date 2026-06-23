@@ -29,6 +29,17 @@ function requireText(relativePath, markers, label = relativePath) {
   passes.push(`${label}: ${markers.length} marker(s) present`);
 }
 
+function forbidText(relativePath, markers, label = relativePath) {
+  const content = read(relativePath);
+  if (!content) return;
+  const found = markers.filter((marker) => content.includes(marker));
+  if (found.length) {
+    failures.push(`${label}: forbidden ${found.join(", ")} present`);
+    return;
+  }
+  passes.push(`${label}: forbidden marker(s) absent`);
+}
+
 function failIfAny() {
   if (!failures.length) return;
   console.error("\nLive Supabase verification failed:\n");
@@ -147,6 +158,26 @@ requireText(
     "uploadLiveDeliveryProof",
   ],
   "Supabase password auth, sync, and private POD storage wiring"
+);
+
+requireText(
+  "src/app/api/admin/provision-user/route.ts",
+  [
+    "createUser",
+    "temporaryPassword",
+    "temporaryPasswordIssued",
+    "email_confirm: true",
+    "welcomeEmailSent: false",
+  ],
+  "SOP-IAM-03 provisioning creates password users without email invite dependency"
+);
+
+forbidText(
+  "src/app/api/admin/provision-user/route.ts",
+  [
+    "inviteUserByEmail",
+  ],
+  "SOP-IAM-03 provisioning avoids Supabase email invite rate limits"
 );
 
 requireText(

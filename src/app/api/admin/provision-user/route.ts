@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomBytes } from "node:crypto";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,11 @@ function actorCodeForRole(role: ProvisionRole, linkCode = "") {
   if (role === "driver") return "ACT-INT-001";
   if (role === "client_billing") return "ACT-CRM-001b";
   return "ACT-CRM-001a";
+}
+
+function temporaryPassword() {
+  const token = randomBytes(12).toString("base64url").replace(/[^a-zA-Z0-9]/g, "").slice(0, 18);
+  return `Mco-${token}!`;
 }
 
 function canAssign(callerRoles: Set<string>, targetRole: ProvisionRole) {
@@ -198,15 +204,19 @@ export async function POST(request: NextRequest) {
     const existing = await findAuthUserByEmail(supabase, email);
     if (existing) return json(409, { error: "Email already exists. Admin must investigate possible duplicate registration." });
 
-    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: {
+    const initialPassword = temporaryPassword();
+    const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password: initialPassword,
+      email_confirm: true,
+      user_metadata: {
         display_name: displayName,
         sop_iam_03_role: role,
       },
     });
-    if (inviteError) throw inviteError;
-    const user = inviteData.user;
-    if (!user?.id) throw new Error("User invitation did not return a user id.");
+    if (createError) throw createError;
+    const user = createData.user;
+    if (!user?.id) throw new Error("User creation did not return a user id.");
 
     const profileRole = role;
     const { error: profileError } = await supabase.from("profiles").upsert({
@@ -214,7 +224,7 @@ export async function POST(request: NextRequest) {
       actor_id: actorId,
       email,
       role: profileRole,
-      status: "pending",
+      status: "active",
       display_name: displayName,
       account_id: accountId,
       driver_id: driverId,
@@ -256,11 +266,13 @@ export async function POST(request: NextRequest) {
         email,
         display_name: displayName,
         role,
-        status: "pending",
+        status: "active",
         account_id: accountId,
         driver_id: driverId,
       },
-      welcomeEmailSent: true,
+      temporaryPassword: initialPassword,
+      temporaryPasswordIssued: true,
+      welcomeEmailSent: false,
     });
   } catch (error) {
     return json(500, { error: error instanceof Error ? error.message : "Provisioning failed." });
