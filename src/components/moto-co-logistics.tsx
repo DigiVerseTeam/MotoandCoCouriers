@@ -3173,7 +3173,177 @@ function QuantityStepper({ value, onChange }) {
   );
 }
 
-function DriverRunCard({ order, suppliers, enroute = false, onConfirmPickup }) {
+function blankPickupCounts() {
+  return { tyreQty: 0, part5: 0, part10: 0, partHeavy: 0, returnQty: 0 };
+}
+
+function pickupCountsForOrder(order = {}) {
+  const counts = {
+    tyreQty: Number(order.pickupTyreQty || order.tyreQty || 0),
+    part5: Number(order.pickupPart5Qty || order.part5Qty || 0),
+    part10: Number(order.pickupPart10Qty || order.part10Qty || 0),
+    partHeavy: Number(order.pickupPartHeavyQty || order.partHeavyQty || 0),
+    returnQty: Number(order.pickupReturnQty || order.returnQty || order.returnsQty || 0),
+  };
+  const legacyQty = Number(order.pickupItemQty || order.itemQty || 0);
+  const legacyText = String(`${order.pickupItemType || order.itemType || ""} ${order.pickupWeightBand || order.weightBand || ""}`).toLowerCase();
+  const hasStructuredCounts = Object.values(counts).some(value => value > 0);
+  if (!hasStructuredCounts && legacyQty > 0) {
+    if (legacyText.includes("tyre")) counts.tyreQty = legacyQty;
+    else if (legacyText.includes("return")) counts.returnQty = legacyQty;
+    else if (legacyText.includes("10+") || legacyText.includes("10_plus") || legacyText.includes("heavy")) counts.partHeavy = legacyQty;
+    else if (legacyText.includes("5-10") || legacyText.includes("5_to_10")) counts.part10 = legacyQty;
+    else counts.part5 = legacyQty;
+  }
+  return counts;
+}
+
+function pickupBreakdownForCounts(counts = {}, priceRules = []) {
+  const safeCounts = { ...blankPickupCounts(), ...counts };
+  const priceFallbacks = fallbackDeliveryPrices(priceRules);
+  const tyreCharge = tyreChargeFor(safeCounts.tyreQty, priceRules);
+  const part5Total = safeCounts.part5 * priceFallbacks.part5;
+  const part10Total = safeCounts.part10 * priceFallbacks.part10;
+  const partHeavyTotal = safeCounts.partHeavy * priceFallbacks.partHeavy;
+  const returnsTotal = safeCounts.returnQty * priceFallbacks.returns;
+  const totalCharge = tyreCharge.amount + part5Total + part10Total + partHeavyTotal + returnsTotal;
+  const totalItems = safeCounts.tyreQty + safeCounts.part5 + safeCounts.part10 + safeCounts.partHeavy + safeCounts.returnQty;
+  const lines = [
+    { key: "tyreQty", label: "Tyres", qty: safeCounts.tyreQty, rate: safeCounts.tyreQty ? tyreCharge.amount / safeCounts.tyreQty : 0, amount: tyreCharge.amount, rateLabel: tyreCharge.label },
+    { key: "part5", label: "Parts up to 5kg", qty: safeCounts.part5, rate: priceFallbacks.part5, amount: part5Total },
+    { key: "part10", label: "Parts 5-10kg", qty: safeCounts.part10, rate: priceFallbacks.part10, amount: part10Total },
+    { key: "partHeavy", label: "Parts 10kg+", qty: safeCounts.partHeavy, rate: priceFallbacks.partHeavy, amount: partHeavyTotal },
+    { key: "returnQty", label: "Returns to supplier", qty: safeCounts.returnQty, rate: priceFallbacks.returns, amount: returnsTotal },
+  ];
+  const nonZeroLines = lines.filter(line => Number(line.qty) > 0);
+  return {
+    counts: safeCounts,
+    lines,
+    nonZeroLines,
+    tyreCharge,
+    priceFallbacks,
+    totalCharge,
+    totalItems,
+    itemSummary: nonZeroLines.map(line => `${line.label} ${line.qty}`).join("; ") || "No items counted",
+  };
+}
+
+function PickupItemCounter({ counts, priceRules, onChange, onFinalise, onCancel, finaliseLabel = "Finalise Con Note" }) {
+  const breakdown = pickupBreakdownForCounts(counts, priceRules);
+  const update = (key, value) => onChange({ ...breakdown.counts, [key]: value });
+  return (
+    <div className="ux-step" style={{ marginTop: ".85rem", padding: ".9rem" }}>
+      <div className="ux-section-title">Count Items Into Van</div>
+      <div className="ux-field"><label>Total Tyres Picked Up</label>
+        <div className="ux-qty-hero">
+          <QuantityStepper value={breakdown.counts.tyreQty} onChange={value => update("tyreQty", value)} />
+          <div style={{ fontSize: ".7rem", fontWeight: 900, letterSpacing: ".12em", textTransform: "uppercase" }}>Tyres</div>
+        </div>
+      </div>
+      {breakdown.counts.tyreQty > 0 && (
+        <div className="ux-address-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div><small>Rate Applied</small><strong>{breakdown.tyreCharge.label}</strong></div>
+          <strong style={{ color: "#c8102e", fontSize: "1.3rem" }}>${breakdown.tyreCharge.amount.toFixed(2)}</strong>
+        </div>
+      )}
+      <div className="ux-section-title" style={{ marginTop: "1rem" }}>Parts Consignments</div>
+      {[
+        ["part5", "Up to 5kg", breakdown.priceFallbacks.part5],
+        ["part10", "5-10kg", breakdown.priceFallbacks.part10],
+        ["partHeavy", "10kg+", breakdown.priceFallbacks.partHeavy],
+      ].map(([key, label, amount]) => (
+        <div className="ux-line" key={key}>
+          <div><strong>{label}</strong><div className="ux-order-meta">${Number(amount).toFixed(2)} per consignment</div></div>
+          <QuantityStepper value={breakdown.counts[key]} onChange={value => update(key, value)} />
+          {Number(breakdown.counts[key]) > 0 && <strong style={{ color: "#c8102e" }}>${(Number(breakdown.counts[key]) * Number(amount)).toFixed(2)}</strong>}
+        </div>
+      ))}
+      <div className="ux-section-title" style={{ marginTop: "1rem" }}>Returns to Supplier</div>
+      <div className="ux-line">
+        <div><strong>Return Packages</strong><div className="ux-order-meta">${breakdown.priceFallbacks.returns.toFixed(2)} per package (pre-labelled)</div></div>
+        <QuantityStepper value={breakdown.counts.returnQty} onChange={value => update("returnQty", value)} />
+        {breakdown.counts.returnQty > 0 && <strong style={{ color: "#c8102e" }}>${(breakdown.counts.returnQty * breakdown.priceFallbacks.returns).toFixed(2)}</strong>}
+      </div>
+      {breakdown.totalItems > 0 && <div className="ux-total"><div><strong style={{ fontSize: ".75rem", letterSpacing: ".12em" }}>PICKUP TOTAL</strong><small>ex GST - ${(breakdown.totalCharge * 1.1).toFixed(2)} inc GST</small></div><strong>${breakdown.totalCharge.toFixed(2)} <small style={{ display: "inline", opacity: .8 }}>EX GST</small></strong></div>}
+      <div style={{ display: "grid", gridTemplateColumns: onCancel ? "120px 1fr" : "1fr", gap: ".6rem", marginTop: ".75rem" }}>
+        {onCancel && <button className="ux-btn secondary" onClick={onCancel}>Cancel</button>}
+        <button className="ux-btn primary" disabled={breakdown.totalItems <= 0} onClick={() => onFinalise(breakdown)}>{finaliseLabel}</button>
+      </div>
+    </div>
+  );
+}
+
+function PickupSummary({ order, priceRules, compact = false }) {
+  const breakdown = pickupBreakdownForCounts(pickupCountsForOrder(order), priceRules);
+  return (
+    <div className="ux-address-block" style={{ marginTop: compact ? ".5rem" : ".8rem" }}>
+      <small>Items counted at pickup</small>
+      {breakdown.nonZeroLines.length === 0 ? (
+        <div>No pickup item count recorded.</div>
+      ) : (
+        breakdown.nonZeroLines.map(line => (
+          <div key={line.key} style={{ display: "flex", justifyContent: "space-between", gap: ".8rem", marginTop: ".25rem" }}>
+            <span>{line.label} x {line.qty}</span>
+            <strong>${line.amount.toFixed(2)}</strong>
+          </div>
+        ))
+      )}
+      <div style={{ display: "flex", justifyContent: "space-between", gap: ".8rem", borderTop: "1px solid #d5cfc3", marginTop: ".55rem", paddingTop: ".55rem" }}>
+        <strong>Total</strong>
+        <strong style={{ color: "#c8102e" }}>${Number(order.pickupCalculatedPrice || breakdown.totalCharge || 0).toFixed(2)} ex GST</strong>
+      </div>
+    </div>
+  );
+}
+
+function pickupWeightBandForCounts(counts = {}) {
+  if (Number(counts.partHeavy || 0) > 0) return "10kg_plus";
+  if (Number(counts.part10 || 0) > 0) return "5_to_10kg";
+  if (Number(counts.part5 || 0) > 0) return "lt_5kg";
+  return "";
+}
+
+function orderWithPickupBreakdown(order, breakdown, user = {}) {
+  const counts = breakdown.counts || blankPickupCounts();
+  const capturedAt = isoNow();
+  return {
+    ...order,
+    status: "En Route",
+    driverId: order.driverId || user.id,
+    driverName: order.driverName || user.name,
+    pickupOutcome: "Picked Up",
+    pickupConfirmedAt: order.pickupConfirmedAt || capturedAt,
+    pickupOutcomeAt: capturedAt,
+    pickupDriverId: user.id,
+    pickupReadyBy10Confirmed: true,
+    pickupLabelledConfirmed: true,
+    pickupPackagingConfirmed: true,
+    pickupGoodsAcceptanceConfirmed: true,
+    pickupAcceptanceFinalConfirmed: true,
+    pickupGoodsAcceptancePolicyRef: "Policy #15 / POL-OPS-015",
+    pickupStandardsPolicyRef: "Policy #15 / Policy #16 / APP-DRV-002",
+    pickupItemType: breakdown.itemSummary,
+    pickupItemQty: breakdown.totalItems,
+    pickupTyreQty: counts.tyreQty,
+    pickupPart5Qty: counts.part5,
+    pickupPart10Qty: counts.part10,
+    pickupPartHeavyQty: counts.partHeavy,
+    pickupReturnQty: counts.returnQty,
+    pickupPartsQty: counts.part5 + counts.part10 + counts.partHeavy,
+    pickupWeightBand: pickupWeightBandForCounts(counts),
+    pickupCalculatedPrice: Number(breakdown.totalCharge.toFixed(2)),
+    pickupPriceRuleId: breakdown.tyreCharge?.rule?.id || order.pickupPriceRuleId || "",
+    pickupCountSummary: breakdown.itemSummary,
+    pickupCountedAt: capturedAt,
+    pickupCountedBy: user.id || user.name || "driver",
+    itemType: breakdown.itemSummary,
+    itemQty: breakdown.totalItems,
+    price: Number(breakdown.totalCharge.toFixed(2)),
+    startedAt: order.startedAt || capturedAt,
+  };
+}
+
+function DriverRunCard({ order, suppliers, priceRules, enroute = false, pickupActive = false, pickupDraft, onStartPickup, onPickupDraftChange, onFinalisePickup, onCancelPickup }) {
   const supplier = supplierByName(suppliers, order.vendor);
   const pickupPhone = supplier?.phone || order.supplierPhone || "";
   const deliveryPhone = order.deliveryPhone || order.clientPhone || order.receiverPhone || "";
@@ -3200,7 +3370,19 @@ function DriverRunCard({ order, suppliers, enroute = false, onConfirmPickup }) {
           </div>
         )}
       </div>
-      {!enroute && <button className="ux-btn primary" style={{ marginTop: ".85rem" }} onClick={() => onConfirmPickup(order)}>Confirm Pickup</button>}
+      {enroute ? (
+        <PickupSummary order={order} priceRules={priceRules} compact />
+      ) : pickupActive ? (
+        <PickupItemCounter
+          counts={pickupDraft}
+          priceRules={priceRules}
+          onChange={onPickupDraftChange}
+          onFinalise={breakdown => onFinalisePickup(order, breakdown)}
+          onCancel={onCancelPickup}
+        />
+      ) : (
+        <button className="ux-btn primary" style={{ marginTop: ".85rem" }} onClick={() => onStartPickup(order)}>Pick Up</button>
+      )}
     </div>
   );
 }
@@ -3210,11 +3392,9 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const [query, setQuery] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const [tyreQty, setTyreQty] = useState(0);
-  const [part5, setPart5] = useState(0);
-  const [part10, setPart10] = useState(0);
-  const [partHeavy, setPartHeavy] = useState(0);
-  const [returnQty, setReturnQty] = useState(0);
+  const [activePickupId, setActivePickupId] = useState("");
+  const [pickupDrafts, setPickupDrafts] = useState({});
+  const [editingSignoffItems, setEditingSignoffItems] = useState(false);
   const [receiverName, setReceiverName] = useState("");
   const [receiverPhone, setReceiverPhone] = useState("");
   const [sig, setSig] = useState(null);
@@ -3246,12 +3426,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     return searchOk && vendorOk;
   });
   const asapCount = pickupOrders.filter(order => orderPriority(order) === "ASAP").length;
-  const priceFallbacks = fallbackDeliveryPrices(priceRules);
-  const tyreCharge = tyreChargeFor(tyreQty, priceRules);
-  const partsTotal = (part5 * priceFallbacks.part5) + (part10 * priceFallbacks.part10) + (partHeavy * priceFallbacks.partHeavy);
-  const returnsTotal = returnQty * priceFallbacks.returns;
-  const totalCharge = tyreCharge.amount + partsTotal + returnsTotal;
-  const totalItems = tyreQty + part5 + part10 + partHeavy + returnQty;
+  const selectedBreakdown = selectedOrder ? pickupBreakdownForCounts(pickupCountsForOrder(selectedOrder), priceRules) : pickupBreakdownForCounts(blankPickupCounts(), priceRules);
   const emptyPickupMessage = assignedOrders.length === 0 && unassignedToday.length > 0
     ? `${unassignedToday.length} pickup request${unassignedToday.length === 1 ? "" : "s"} waiting for Admin dispatch. They will appear here after Admin assigns the run to ${user.name || "this driver"}.`
     : assignedOrders.length === 0 && nextUnassignedRunDate
@@ -3265,48 +3440,76 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
 
   function resetSignoff() {
     setSelectedId("");
-    setTyreQty(0);
-    setPart5(0);
-    setPart10(0);
-    setPartHeavy(0);
-    setReturnQty(0);
+    setEditingSignoffItems(false);
     setReceiverName("");
     setReceiverPhone("");
     setSig(null);
   }
 
-  function confirmPickup(order) {
-    const updated = {
-      ...order,
-      status: "En Route",
-      driverId: order.driverId || user.id,
-      driverName: order.driverName || user.name,
-      pickupOutcome: "Picked Up",
-      pickupConfirmedAt: isoNow(),
-      pickupOutcomeAt: isoNow(),
-      pickupDriverId: user.id,
-      pickupReadyBy10Confirmed: true,
-      pickupLabelledConfirmed: true,
-      pickupPackagingConfirmed: true,
-      pickupGoodsAcceptanceConfirmed: true,
-      pickupAcceptanceFinalConfirmed: true,
-      pickupGoodsAcceptancePolicyRef: "Policy #15 / POL-OPS-015",
-      pickupStandardsPolicyRef: "Policy #15 / Policy #16 / APP-DRV-002",
-      startedAt: isoNow(),
-    };
+  function pickupDraftForOrder(order) {
+    return pickupDrafts[order.id] || pickupCountsForOrder(order);
+  }
+
+  function setPickupDraftForOrder(order, counts) {
+    setPickupDrafts(prev => ({ ...prev, [order.id]: counts }));
+  }
+
+  function startPickup(order) {
+    setActivePickupId(order.id);
+    setPickupDrafts(prev => ({ ...prev, [order.id]: prev[order.id] || pickupCountsForOrder(order) }));
+    setNotice("");
+  }
+
+  function finalisePickup(order, breakdown) {
+    if (breakdown.totalItems <= 0) {
+      setNotice("Count at least one item before finalising the con note.");
+      return;
+    }
+    const updated = orderWithPickupBreakdown(order, breakdown, user);
     onUpdateOrder(updated);
-    setNotice(`${order.conNote || order.id} moved to En Route.`);
+    setActivePickupId("");
+    setPickupDrafts(prev => {
+      const next = { ...prev };
+      delete next[order.id];
+      return next;
+    });
+    setSelectedId(order.id);
+    setNotice(`${order.conNote || order.id} counted and moved to Sign-Off.`);
+  }
+
+  function editSelectedItems() {
+    if (!selectedOrder) return;
+    setPickupDrafts(prev => ({ ...prev, [selectedOrder.id]: pickupCountsForOrder(selectedOrder) }));
+    setEditingSignoffItems(true);
+    setNotice("");
+  }
+
+  function saveSelectedItemEdit(breakdown) {
+    if (!selectedOrder) return;
+    if (breakdown.totalItems <= 0) {
+      setNotice("Count at least one item before saving the edit.");
+      return;
+    }
+    const updated = orderWithPickupBreakdown(selectedOrder, breakdown, user);
+    onUpdateOrder(updated);
+    setPickupDrafts(prev => {
+      const next = { ...prev };
+      delete next[selectedOrder.id];
+      return next;
+    });
+    setEditingSignoffItems(false);
+    setNotice(`${selectedOrder.conNote || selectedOrder.id} item count updated.`);
   }
 
   function completeDelivery() {
     if (!selectedOrder) { setNotice("Select a package before sign-off."); return; }
-    if (totalItems <= 0) { setNotice("Log what was delivered before sign-off."); return; }
+    if (selectedBreakdown.totalItems <= 0) { setNotice("Pickup item count is required before sign-off."); return; }
     if (!receiverName.trim()) { setNotice("Receiver name is required."); return; }
     if (!sig) { setNotice("Receiver signature is required."); return; }
     const deliveredAt = isoNow();
     const deliveryId = deliveryIdForOrder(selectedOrder);
     const signaturePath = deliveryProofSignaturePath({ ...selectedOrder, deliveryId });
-    const itemSummary = `Tyres ${tyreQty}; parts up to 5kg ${part5}; parts 5-10kg ${part10}; parts 10kg+ ${partHeavy}; returns ${returnQty}`;
+    const counts = selectedBreakdown.counts;
     onDeliveryProof({
       id: `proof-${Date.now()}`,
       orderId: selectedOrder.id,
@@ -3326,13 +3529,13 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
       retentionUntil: addYears(isoDate(deliveredAt), 7),
       storage: `delivery-proof/${signaturePath}`,
       bucketPrivate: true,
-      price: Number(totalCharge.toFixed(2)),
-      itemType: "Driver delivery sign-off",
-      itemQty: totalItems,
-      itemSummary,
-      tyreQty,
-      partsQty: part5 + part10 + partHeavy,
-      returnsQty: returnQty,
+      price: Number(selectedBreakdown.totalCharge.toFixed(2)),
+      itemType: selectedOrder.pickupItemType || "Driver pickup count",
+      itemQty: selectedBreakdown.totalItems,
+      itemSummary: selectedBreakdown.itemSummary,
+      tyreQty: counts.tyreQty,
+      partsQty: counts.part5 + counts.part10 + counts.partHeavy,
+      returnsQty: counts.returnQty,
       signoffAddressConfirmed: true,
       signoffGoodsMatched: true,
       signoffAuthorisedReceiverConfirmed: true,
@@ -3381,9 +3584,24 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               </select>
             </div>
             <div className="ux-run-section">Brisbane Pickups ({visiblePickupOrders.length})</div>
-            {visiblePickupOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">{pickupOrders.length === 0 && enRouteOrders.length === 0 ? emptyPickupMessage : "All pickups confirmed. Head to Gold Coast."}</div></div> : visiblePickupOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} onConfirmPickup={confirmPickup} />)}
+            {visiblePickupOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">{pickupOrders.length === 0 && enRouteOrders.length === 0 ? emptyPickupMessage : "All pickups confirmed. Head to Gold Coast."}</div></div> : visiblePickupOrders.map(order => (
+              <DriverRunCard
+                key={order.id}
+                order={order}
+                suppliers={suppliers}
+                priceRules={priceRules}
+                pickupActive={activePickupId === order.id}
+                pickupDraft={pickupDraftForOrder(order)}
+                onStartPickup={startPickup}
+                onPickupDraftChange={counts => setPickupDraftForOrder(order, counts)}
+                onFinalisePickup={finalisePickup}
+                onCancelPickup={() => setActivePickupId("")}
+              />
+            ))}
             <div className="ux-run-section" style={{ color: "#18733c" }}>En Route - Gold Coast ({visibleEnRouteOrders.length})</div>
-            {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} enroute onConfirmPickup={confirmPickup} />)}
+            {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => (
+              <DriverRunCard key={order.id} order={order} suppliers={suppliers} priceRules={priceRules} enroute />
+            ))}
           </>
         )}
 
@@ -3392,47 +3610,46 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
             <div className="ux-heading">
               <div>
                 <div className="ux-title">Delivery <span>Sign-Off</span></div>
-                <div className="ux-subtitle">Select package - log what was delivered - capture signature</div>
+                <div className="ux-subtitle">Select package - verify pickup count - capture signature</div>
               </div>
             </div>
             <div className="ux-step">
               <div className="ux-section-title">Step 1 - Select Package</div>
               {signoffOrders.length === 0 ? <div className="ux-empty">No en-route packages ready for sign-off.</div> : signoffOrders.map(order => (
-                <div key={order.id} className={`ux-radio-row${selectedOrder?.id === order.id ? " active" : ""}`} onClick={() => { setSelectedId(order.id); setNotice(""); }}>
-                  <span className="ux-radio-dot" />
-                  <div>
-                    <div className="ux-order-title">{order.conNote || order.id} - {order.vendor || "Supplier"}</div>
-                    <div className="ux-order-meta">{order.clientName || "Customer"} - {order.dropAddress || "(No address - update your profile)"}</div>
-                  </div>
-                  {orderPriority(order) === "ASAP" && <span className="ux-badge">ASAP</span>}
-                </div>
+                (() => {
+                  const rowBreakdown = pickupBreakdownForCounts(pickupCountsForOrder(order), priceRules);
+                  return (
+                    <div key={order.id} className={`ux-radio-row${selectedOrder?.id === order.id ? " active" : ""}`} onClick={() => { setSelectedId(order.id); setEditingSignoffItems(false); setNotice(""); }}>
+                      <span className="ux-radio-dot" />
+                      <div>
+                        <div className="ux-order-title">{order.conNote || order.id} - {order.vendor || "Supplier"}</div>
+                        <div className="ux-order-meta">{order.clientName || "Customer"} - {rowBreakdown.itemSummary} - ${Number(order.pickupCalculatedPrice || rowBreakdown.totalCharge || 0).toFixed(2)} ex GST</div>
+                      </div>
+                      {orderPriority(order) === "ASAP" && <span className="ux-badge">ASAP</span>}
+                    </div>
+                  );
+                })()
               ))}
             </div>
             <div className="ux-step">
-              <div className="ux-section-title">Step 2 - What Was Delivered?</div>
-              <div className="ux-field"><label>Total Tyres Delivered</label>
-                <div className="ux-qty-hero"><QuantityStepper value={tyreQty} onChange={setTyreQty} /><div style={{ fontSize: ".7rem", fontWeight: 900, letterSpacing: ".12em", textTransform: "uppercase" }}>Tyres</div></div>
-              </div>
-              {tyreQty > 0 && <div className="ux-address-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><small>Rate Applied</small><strong>{tyreCharge.label}</strong></div><strong style={{ color: "#c8102e", fontSize: "1.3rem" }}>${tyreCharge.amount.toFixed(2)}</strong></div>}
-              <div className="ux-section-title" style={{ marginTop: "1rem" }}>Parts Consignments</div>
-              {[
-                ["Up to 5kg", priceFallbacks.part5, part5, setPart5],
-                ["5-10kg", priceFallbacks.part10, part10, setPart10],
-                ["10kg+", priceFallbacks.partHeavy, partHeavy, setPartHeavy],
-              ].map(([label, amount, value, setter]) => (
-                <div className="ux-line" key={label}>
-                  <div><strong>{label}</strong><div className="ux-order-meta">${Number(amount).toFixed(2)} per consignment</div></div>
-                  <QuantityStepper value={value} onChange={setter} />
-                  {Number(value) > 0 && <strong style={{ color: "#c8102e" }}>${(Number(value) * Number(amount)).toFixed(2)}</strong>}
-                </div>
-              ))}
-              <div className="ux-section-title" style={{ marginTop: "1rem" }}>Returns to Supplier</div>
-              <div className="ux-line">
-                <div><strong>Return Packages</strong><div className="ux-order-meta">${priceFallbacks.returns.toFixed(2)} per package (pre-labelled)</div></div>
-                <QuantityStepper value={returnQty} onChange={setReturnQty} />
-                {returnQty > 0 && <strong style={{ color: "#c8102e" }}>${returnsTotal.toFixed(2)}</strong>}
-              </div>
-              {totalItems > 0 && <div className="ux-total"><div><strong style={{ fontSize: ".75rem", letterSpacing: ".12em" }}>TOTAL CHARGE</strong><small>ex GST - ${(totalCharge * 1.1).toFixed(2)} inc GST</small></div><strong>${totalCharge.toFixed(2)} <small style={{ display: "inline", opacity: .8 }}>EX GST</small></strong></div>}
+              <div className="ux-section-title">Step 2 - Pickup Count</div>
+              {!selectedOrder ? (
+                <div className="ux-empty">Select a package to review the pickup count.</div>
+              ) : editingSignoffItems ? (
+                <PickupItemCounter
+                  counts={pickupDraftForOrder(selectedOrder)}
+                  priceRules={priceRules}
+                  onChange={counts => setPickupDraftForOrder(selectedOrder, counts)}
+                  onFinalise={saveSelectedItemEdit}
+                  onCancel={() => setEditingSignoffItems(false)}
+                  finaliseLabel="Save Item Count"
+                />
+              ) : (
+                <>
+                  <PickupSummary order={selectedOrder} priceRules={priceRules} />
+                  <button className="ux-btn secondary" style={{ marginTop: ".75rem" }} onClick={editSelectedItems}>Edit Items</button>
+                </>
+              )}
             </div>
             <div className="ux-step">
               <div className="ux-section-title">Step 3 - Receiver Sign-Off</div>
@@ -3440,14 +3657,14 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
                 <div><div className="ux-order-meta">Client</div><strong>{selectedOrder?.clientName || "Select package"}</strong></div>
                 <div><div className="ux-order-meta">Con Note</div><strong>{selectedOrder?.conNote || "-"}</strong></div>
                 <div><div className="ux-order-meta">Deliver To</div><strong>{selectedOrder?.dropAddress || "(No address - update your profile)"}</strong></div>
-                <div><div className="ux-order-meta">Total (ex GST)</div><strong style={{ color: "#c8102e" }}>${totalCharge.toFixed(2)}</strong></div>
+                <div><div className="ux-order-meta">Total (ex GST)</div><strong style={{ color: "#c8102e" }}>${selectedBreakdown.totalCharge.toFixed(2)}</strong></div>
               </div>
               <div className="ux-grid-2">
                 <div className="ux-field"><label>Receiver Name *</label><input value={receiverName} onChange={e => setReceiverName(e.target.value)} placeholder="Full name" /></div>
                 <div className="ux-field"><label>Receiver Phone</label><input value={receiverPhone} onChange={e => setReceiverPhone(e.target.value)} placeholder="+61 4xx xxx xxx" /></div>
               </div>
               <div className="ux-field ux-sig"><label>Receiver Signature *</label><SigPad onSig={setSig} /></div>
-              <button className="ux-btn success full" disabled={!selectedOrder || totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
+              <button className="ux-btn success full" disabled={!selectedOrder || selectedBreakdown.totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
             </div>
           </>
         )}
@@ -11568,13 +11785,14 @@ export default function App() {
   function recordOrderStatusNotice(previous, upd) {
     if (!upd?.clientId) return;
     if (previous?.pickupOutcome !== upd.pickupOutcome && upd.pickupOutcome === "Picked Up") {
+      const itemEvidence = upd.pickupCountSummary || upd.pickupItemType || "not recorded";
       createOperationalNotice({
         clientId: upd.clientId,
         clientName: upd.clientName,
         orderId: upd.id,
         noticeType: "pickup_confirmed",
         subject: `Pickup confirmed - ${upd.id}`,
-        message: `${upd.vendor} pickup has been confirmed by ${upd.driverName || "Driver"} for run ${fmtFullDate(upd.actualRunDate || upd.date)}. Item evidence: ${upd.pickupItemType || "not recorded"}${upd.pickupItemQty ? ` x ${upd.pickupItemQty}` : ""}.`,
+        message: `${upd.vendor} pickup has been confirmed by ${upd.driverName || "Driver"} for run ${fmtFullDate(upd.actualRunDate || upd.date)}. Item evidence: ${itemEvidence}.`,
         eventRef: upd.pickupConfirmedAt || upd.pickupOutcomeAt || "",
         createdBy: "driver",
       });
