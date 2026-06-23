@@ -3399,7 +3399,6 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const [pickupDrafts, setPickupDrafts] = useState({});
   const [editingSignoffItems, setEditingSignoffItems] = useState(false);
   const [receiverName, setReceiverName] = useState("");
-  const [receiverPhone, setReceiverPhone] = useState("");
   const [sig, setSig] = useState(null);
   const [notice, setNotice] = useState("");
 
@@ -3445,7 +3444,6 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     setSelectedId("");
     setEditingSignoffItems(false);
     setReceiverName("");
-    setReceiverPhone("");
     setSig(null);
   }
 
@@ -3516,7 +3514,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     if (!receiverName.trim()) { setNotice("Receiver name is required."); return; }
     if (!sig) { setNotice("Receiver signature is required."); return; }
     const deliveredAt = isoNow();
-    const deliveryId = deliveryIdForOrder(selectedOrder);
+    const deliveryId = stableLocalDeliveryId(selectedOrder.id || selectedOrder.conNote || `delivery-${Date.now()}`);
     const signaturePath = deliveryProofSignaturePath({ ...selectedOrder, deliveryId });
     const counts = selectedBreakdown.counts;
     setNotice(`Saving delivery proof for ${selectedOrder.conNote || selectedOrder.id}...`);
@@ -3530,7 +3528,6 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
       clientName: selectedOrder.clientName,
       deliveryId,
       receiverName: receiverName.trim(),
-      receiverPhone: receiverPhone.trim(),
       signatureUrl: sig,
       signaturePath,
       driverId: user.id,
@@ -3671,10 +3668,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
                 <div><div className="ux-order-meta">Deliver To</div><strong>{selectedOrder?.dropAddress || "(No address - update your profile)"}</strong></div>
                 <div><div className="ux-order-meta">Total (ex GST)</div><strong style={{ color: "#c8102e" }}>${selectedBreakdown.totalCharge.toFixed(2)}</strong></div>
               </div>
-              <div className="ux-grid-2">
-                <div className="ux-field"><label>Receiver Name *</label><input value={receiverName} onChange={e => setReceiverName(e.target.value)} placeholder="Full name" /></div>
-                <div className="ux-field"><label>Receiver Phone</label><input value={receiverPhone} onChange={e => setReceiverPhone(e.target.value)} placeholder="+61 4xx xxx xxx" /></div>
-              </div>
+              <div className="ux-field"><label>Receiver Name *</label><input value={receiverName} onChange={e => setReceiverName(e.target.value)} placeholder="Full name" /></div>
               <div className="ux-field ux-sig"><label>Receiver Signature *</label><SigPad onSig={setSig} /></div>
               <button className="ux-btn success full" disabled={!selectedOrder || selectedBreakdown.totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
             </div>
@@ -12595,16 +12589,17 @@ export default function App() {
     const storedProof = normaliseDeliveryProof(proof, orders);
     const storedProofOrderIds = new Set(storedProof.groupOrderIds || []);
     if (storedProof.orderId) storedProofOrderIds.add(storedProof.orderId);
-    const matchedOrders = orders.filter(order =>
-      storedProofOrderIds.has(order.id) ||
-      order.deliveryId === storedProof.deliveryId ||
-      (storedProof.deliveryStopKey && (order.deliveryStopKey === storedProof.deliveryStopKey))
-    );
+    const hasExplicitOrderScope = storedProofOrderIds.size > 0;
+    const matchedOrders = orders.filter(order => {
+      if (hasExplicitOrderScope) return storedProofOrderIds.has(order.id);
+      return order.deliveryId === storedProof.deliveryId ||
+        (storedProof.deliveryStopKey && (order.deliveryStopKey === storedProof.deliveryStopKey));
+    });
     const duplicateProof = proofs.some(item => {
       const itemOrderIds = new Set(item.groupOrderIds || []);
       if (item.orderId) itemOrderIds.add(item.orderId);
       return item.id === storedProof.id ||
-        item.deliveryId === storedProof.deliveryId ||
+        (!hasExplicitOrderScope && item.deliveryId === storedProof.deliveryId) ||
         [...storedProofOrderIds].some(orderId => itemOrderIds.has(orderId));
     });
     if (duplicateProof || matchedOrders.some(order => order.proofId)) {
