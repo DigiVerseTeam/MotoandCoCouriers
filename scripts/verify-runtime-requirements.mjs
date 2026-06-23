@@ -647,6 +647,10 @@ requireText(
     "Customer Login",
     "Courier Business Login",
     "Send Login Link",
+    "loginLinkErrorMessage",
+    "over_email_send_rate_limit",
+    "Too many login emails have been requested",
+    "cooldownUntil",
   ],
   "production login uses live email-link entry flow"
 );
