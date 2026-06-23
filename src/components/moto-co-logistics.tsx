@@ -2114,6 +2114,14 @@ function passwordLoginErrorMessage(error) {
   return "We could not sign you in. Check the email and password, or contact Admin.";
 }
 
+function portalTaskTimeout(label, promise, timeoutMs = 15000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} took too long. Refresh the page and try again.`)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRuntimeStatus, liveAuthError = "" }) {
   const defaultEntry = ["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer";
   const [entryType, setEntryType] = useState(defaultEntry);
@@ -10041,6 +10049,7 @@ export default function App() {
   const [liveAuthLoading, setLiveAuthLoading] = useState(liveRuntimeEnabled);
   const [liveAuthError, setLiveAuthError] = useState("");
   const [liveSnapshotLoaded, setLiveSnapshotLoaded] = useState(false);
+  const liveRefreshSeq = useRef(0);
   const workspaceSession = workspaceSessionForLiveData(session, clients, drivers);
 
   useEffect(() => {
@@ -10051,11 +10060,12 @@ export default function App() {
     let cancelled = false;
 
     async function refreshLiveSession() {
+      const refreshSeq = ++liveRefreshSeq.current;
       setLiveAuthLoading(true);
       try {
-        await completeLiveAuthRedirect();
-        const resolved = await resolveLiveRuntimeSession();
-        if (cancelled) return;
+        await portalTaskTimeout("Secure login", completeLiveAuthRedirect(), 10000);
+        const resolved = await portalTaskTimeout("Secure session check", resolveLiveRuntimeSession(), 15000);
+        if (cancelled || refreshSeq !== liveRefreshSeq.current) return;
         if (resolved?.blocked) {
           setSession(null);
           setLiveAuthError(resolved.reason || "This email is not approved for portal access.");
@@ -10068,12 +10078,12 @@ export default function App() {
         }
         setSession(null);
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && refreshSeq === liveRefreshSeq.current) {
           setSession(null);
           setLiveAuthError(error?.message || "Login could not be completed. Contact Admin.");
         }
       } finally {
-        if (!cancelled) setLiveAuthLoading(false);
+        if (!cancelled && refreshSeq === liveRefreshSeq.current) setLiveAuthLoading(false);
       }
     }
 

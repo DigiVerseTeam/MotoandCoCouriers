@@ -649,6 +649,8 @@ requireText(
     "Courier Business Login",
     "Sign In",
     "passwordLoginErrorMessage",
+    "portalTaskTimeout",
+    "Secure session check",
     "Email or password is incorrect.",
   ],
   "production login uses simple email-password entry flow"
@@ -681,6 +683,7 @@ requireText(
     "actor_code",
     "requestLivePasswordLogin",
     "signInWithPassword",
+    "setTimeout(() => callback(), 0)",
     "resolveLiveRuntimeSession",
   ],
   "live Supabase auth callback race guard and role mapping"

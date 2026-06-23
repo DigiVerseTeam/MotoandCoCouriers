@@ -265,7 +265,11 @@ export async function signOutLiveRuntime() {
 export function onLiveAuthStateChange(callback) {
   const supabase = client();
   if (!supabase) return () => {};
-  const { data } = supabase.auth.onAuthStateChange(() => callback());
+  const { data } = supabase.auth.onAuthStateChange(() => {
+    // Supabase auth callbacks can deadlock when awaited directly inside the
+    // event. Schedule the portal session refresh outside the auth callback.
+    setTimeout(() => callback(), 0);
+  });
   return () => data?.subscription?.unsubscribe?.();
 }
 
