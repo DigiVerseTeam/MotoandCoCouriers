@@ -29,6 +29,8 @@ export const liveRuntimeDomains = {
 const allSnapshotKeys = Object.keys(liveRuntimeDomains);
 const LIVE_AUTH_RETURN_PATH_KEY = "motoCoLiveAuthReturnPath";
 const PRODUCTION_SITE_ORIGIN = "https://motoandcocouriers.vercel.app";
+let liveAuthRedirectPromise = null;
+let liveAuthRedirectCompletedHref = "";
 
 export function getLiveRuntimeStatus() {
   const status = getBrowserSupabaseEnvironmentStatus();
@@ -106,15 +108,46 @@ export async function completeLiveAuthRedirect() {
   const url = new URL(window.location.href);
   const next = safeLiveAuthReturnPath(url.searchParams.get("next") || readStoredLiveAuthReturnPath("/"));
   const code = url.searchParams.get("code");
+  const authError = url.searchParams.get("error_description") || url.searchParams.get("error") || "";
+
+  if (authError) {
+    if (url.pathname.startsWith("/auth/callback")) window.history.replaceState({}, "", next);
+    throw new Error(authError);
+  }
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
+    const href = window.location.href;
+    if (liveAuthRedirectPromise) return liveAuthRedirectPromise;
+    if (liveAuthRedirectCompletedHref === href) return next;
+
+    // Supabase can emit SIGNED_IN while this code path is still running. Remove
+    // the one-use code immediately and share one exchange promise across callers.
     window.history.replaceState({}, "", next);
-    return next;
+    liveAuthRedirectCompletedHref = href;
+    liveAuthRedirectPromise = (async () => {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+      return next;
+    })().finally(() => {
+      liveAuthRedirectPromise = null;
+    });
+    return liveAuthRedirectPromise;
   }
 
   const hasAuthHash = /access_token|refresh_token|error/.test(window.location.hash || "");
+  if (hasAuthHash && url.pathname.startsWith("/auth/callback")) {
+    if (liveAuthRedirectPromise) return liveAuthRedirectPromise;
+    liveAuthRedirectPromise = (async () => {
+      const { error } = await supabase.auth.getSession();
+      if (error) throw error;
+      window.history.replaceState({}, "", next);
+      return next;
+    })().finally(() => {
+      liveAuthRedirectPromise = null;
+    });
+    return liveAuthRedirectPromise;
+  }
+
   if (!hasAuthHash && url.pathname.startsWith("/auth/callback")) {
     window.history.replaceState({}, "", next);
     return next;

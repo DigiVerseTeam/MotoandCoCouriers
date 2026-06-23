@@ -666,12 +666,17 @@ forbidText(
 requireText(
   "src/lib/live-runtime.ts",
   [
+    "liveAuthRedirectPromise",
+    "liveAuthRedirectCompletedHref",
     "exchangeCodeForSession",
+    "Remove",
+    "one-use code",
+    "getSession",
     "actor_code",
     "requestLiveMagicLink",
     "resolveLiveRuntimeSession",
   ],
-  "live Supabase auth callback and role mapping"
+  "live Supabase auth callback race guard and role mapping"
 );
 
 requireText(
