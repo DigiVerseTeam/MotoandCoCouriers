@@ -12237,6 +12237,7 @@ export default function App() {
     const vehicleName = vehicleLabel(vehicle);
     const assignedAt = isoNow();
     const driverId = assignedDriver.driverId || driver.id;
+    if (!driverId) return order;
 
     return {
       ...order,
@@ -12300,6 +12301,30 @@ export default function App() {
     }
     return syncPromise;
   }
+
+  useEffect(() => {
+    if (!session?.role) return;
+    const autoAssignable = (order) =>
+      ["Pending", "Brought Forward"].includes(order.status || "Pending") &&
+      !order.driverId &&
+      !order.assignedDriverId;
+
+    let changed = false;
+    const updates = [];
+    const next = orders.map(order => {
+      if (!autoAssignable(order)) return order;
+      const assigned = orderWithSingleDriverAutoAssignment(order);
+      if (assigned === order) return order;
+      changed = true;
+      updates.push(assigned);
+      return assigned;
+    });
+
+    if (!changed) return;
+    setOrders(next); save(KEY_ORDERS, next);
+    syncLiveRecords("orders", updates, "Existing pickup requests could not be auto-assigned in the live system.");
+    writeAudit("Pending pickups auto-assigned", `${updates.length} unassigned pickup request${updates.length === 1 ? "" : "s"} assigned to ${updates[0]?.driverName || updates[0]?.driverId || "single active driver"}`, "system");
+  }, [orders, drivers, vehicles, session?.role]);
 
   function cancelOrderBeforeCollection(order, reason, actor = session?.role || "admin") {
     const state = cancellationState(order);
