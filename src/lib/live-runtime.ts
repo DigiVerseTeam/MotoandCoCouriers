@@ -410,7 +410,7 @@ async function liveAccessToken() {
   const supabase = client();
   if (!supabase) throw new Error("Live system connection is not configured.");
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data?.session?.access_token) throw new Error("A live Admin session is required.");
+  if (error || !data?.session?.access_token) throw new Error("A live portal session is required.");
   return data.session.access_token;
 }
 
@@ -457,30 +457,30 @@ export async function registerLiveClient(input) {
 }
 
 export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {
-  const supabase = client();
   const recordType = liveRuntimeDomains[domainKey];
-  if (!supabase || !recordType || !appSession?.role || !canSyncDomainForRole(domainKey, appSession.role)) {
+  if (!recordType || !appSession?.role || !canSyncDomainForRole(domainKey, appSession.role)) {
     return { skipped: true };
   }
 
   const payload = (rows || []).map((row) => ({
-    record_type: recordType,
-    local_id: runtimeRecordId(row),
-    owner_actor_id: ownerActorForRow(row, appSession),
-    driver_profile_id: driverProfileForRow(row, appSession),
-    payload: row || {},
-    updated_by: appSession?.user?.profileId || null,
-    source_ref: "Moto & Co V1 live runtime bridge",
+    ...(row || {}),
+    actorId: row?.actorId || row?.accountActorId || row?.account_actor_id || row?.clientActorId || appSession?.user?.actorId || "",
+    profileId: row?.profileId || row?.driverProfileId || row?.driver_profile_id || (appSession?.role === "driver" ? appSession?.user?.profileId : row?.profileId) || "",
   }));
-
   if (!payload.length) return { skipped: true };
 
-  const { error } = await supabase
-    .from("runtime_records")
-    .upsert(payload, { onConflict: "record_type,local_id" });
-
-  if (error) throw error;
-  return { synced: payload.length };
+  const token = await liveAccessToken();
+  const response = await fetch("/api/runtime-records", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ domainKey, rows: payload }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result?.error || `Runtime sync failed (${response.status}).`);
+  return result;
 }
 
 function dataUrlToBlob(dataUrl) {

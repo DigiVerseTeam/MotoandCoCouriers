@@ -2890,6 +2890,9 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
     onNewOrder({
       id: uid(),
       clientId: user.id,
+      actorId: user.actorId || user.accountActorId || "",
+      accountActorId: user.actorId || user.accountActorId || "",
+      accountId: user.accountId || user.id,
       clientName: clientBusinessName(user),
       vendor,
       conNote: cleanConNote,
@@ -3460,13 +3463,14 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     setNotice("");
   }
 
-  function finalisePickup(order, breakdown) {
+  async function finalisePickup(order, breakdown) {
     if (breakdown.totalItems <= 0) {
       setNotice("Count at least one item before finalising the con note.");
       return;
     }
     const updated = orderWithPickupBreakdown(order, breakdown, user);
-    onUpdateOrder(updated);
+    setNotice(`Saving ${order.conNote || order.id} pickup count...`);
+    const result = await onUpdateOrder(updated);
     setActivePickupId("");
     setPickupDrafts(prev => {
       const next = { ...prev };
@@ -3474,7 +3478,9 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
       return next;
     });
     setSelectedId(order.id);
-    setNotice(`${order.conNote || order.id} counted and moved to Sign-Off.`);
+    setNotice(result?.error
+      ? `${order.conNote || order.id} is saved on this device, but live sync failed. Stay logged in and try again.`
+      : `${order.conNote || order.id} counted and moved to Sign-Off.`);
   }
 
   function editSelectedItems() {
@@ -3484,24 +3490,27 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     setNotice("");
   }
 
-  function saveSelectedItemEdit(breakdown) {
+  async function saveSelectedItemEdit(breakdown) {
     if (!selectedOrder) return;
     if (breakdown.totalItems <= 0) {
       setNotice("Count at least one item before saving the edit.");
       return;
     }
     const updated = orderWithPickupBreakdown(selectedOrder, breakdown, user);
-    onUpdateOrder(updated);
+    setNotice(`Saving ${selectedOrder.conNote || selectedOrder.id} item count...`);
+    const result = await onUpdateOrder(updated);
     setPickupDrafts(prev => {
       const next = { ...prev };
       delete next[selectedOrder.id];
       return next;
     });
     setEditingSignoffItems(false);
-    setNotice(`${selectedOrder.conNote || selectedOrder.id} item count updated.`);
+    setNotice(result?.error
+      ? `${selectedOrder.conNote || selectedOrder.id} is updated on this device, but live sync failed. Stay logged in and try again.`
+      : `${selectedOrder.conNote || selectedOrder.id} item count updated.`);
   }
 
-  function completeDelivery() {
+  async function completeDelivery() {
     if (!selectedOrder) { setNotice("Select a package before sign-off."); return; }
     if (selectedBreakdown.totalItems <= 0) { setNotice("Pickup item count is required before sign-off."); return; }
     if (!receiverName.trim()) { setNotice("Receiver name is required."); return; }
@@ -3510,7 +3519,8 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     const deliveryId = deliveryIdForOrder(selectedOrder);
     const signaturePath = deliveryProofSignaturePath({ ...selectedOrder, deliveryId });
     const counts = selectedBreakdown.counts;
-    onDeliveryProof({
+    setNotice(`Saving delivery proof for ${selectedOrder.conNote || selectedOrder.id}...`);
+    const result = await onDeliveryProof({
       id: `proof-${Date.now()}`,
       orderId: selectedOrder.id,
       groupOrderIds: [selectedOrder.id],
@@ -3547,7 +3557,9 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     });
     resetSignoff();
     setTab("run");
-    setNotice("Delivery completed and signed off.");
+    setNotice(result?.some?.(item => item.value?.error)
+      ? "Delivery is saved on this device, but live sync failed. Stay logged in and try again."
+      : "Delivery completed and signed off.");
   }
 
   const tabs = [
@@ -11439,6 +11451,7 @@ export default function App() {
   const [liveAuthError, setLiveAuthError] = useState("");
   const [liveSnapshotLoaded, setLiveSnapshotLoaded] = useState(false);
   const liveRefreshSeq = useRef(0);
+  const pendingLiveSyncRef = useRef(new Set());
   const workspaceSession = workspaceSessionForLiveData(session, clients, drivers);
 
   useEffect(() => {
@@ -11522,6 +11535,11 @@ export default function App() {
   }, [liveRuntimeEnabled, session?.role, liveSnapshotLoaded]);
 
   async function logout() {
+    if (pendingLiveSyncRef.current.size) {
+      setSystemNotice("Finishing live saves before logging out...");
+      await Promise.allSettled([...pendingLiveSyncRef.current]);
+      setSystemNotice("");
+    }
     if (liveRuntimeEnabled) await signOutLiveRuntime();
     setSession(null);
     setLiveSnapshotLoaded(false);
@@ -11532,19 +11550,31 @@ export default function App() {
   }
 
   function syncLiveRecords(domainKey, rows = [], failureMessage = "Live system sync failed.") {
-    if (!liveRuntimeEnabled || !workspaceSession?.role || !rows?.length) return;
-    syncLiveRuntimeDomain(domainKey, rows, workspaceSession).catch(error => {
+    if (!liveRuntimeEnabled || !workspaceSession?.role || !rows?.length) return Promise.resolve({ skipped: true });
+    const syncPromise = syncLiveRuntimeDomain(domainKey, rows, workspaceSession).catch(error => {
       console.error(error);
       setSystemNotice(error?.message || failureMessage);
+      return { error };
     });
+    pendingLiveSyncRef.current.add(syncPromise);
+    syncPromise.finally(() => {
+      pendingLiveSyncRef.current.delete(syncPromise);
+    });
+    return syncPromise;
   }
 
   function syncLiveProof(proof) {
-    if (!liveRuntimeEnabled || !workspaceSession?.role || !proof) return;
-    uploadLiveDeliveryProof(proof, workspaceSession).catch(error => {
+    if (!liveRuntimeEnabled || !workspaceSession?.role || !proof) return Promise.resolve({ skipped: true });
+    const syncPromise = uploadLiveDeliveryProof(proof, workspaceSession).catch(error => {
       console.error(error);
       setSystemNotice(error?.message || "Delivery proof could not be saved to live storage.");
+      return { error };
     });
+    pendingLiveSyncRef.current.add(syncPromise);
+    syncPromise.finally(() => {
+      pendingLiveSyncRef.current.delete(syncPromise);
+    });
+    return syncPromise;
   }
 
   function resetLocalDemoData() {
@@ -12076,9 +12106,10 @@ export default function App() {
     const previous = orders.find(o => o.id === upd.id);
     const next = orders.map(o => o.id === upd.id ? upd : o);
     setOrders(next); save(KEY_ORDERS, next);
-    syncLiveRecords("orders", [upd], "Order update could not be synced to the live system.");
+    const syncPromise = syncLiveRecords("orders", [upd], "Order update could not be synced to the live system.");
     writeAudit("Order updated", `${upd.id} set to ${upd.status}`);
     recordOrderStatusNotice(previous, upd);
+    return syncPromise;
   }
 
   function updateOrders(updates, auditDetail = "Bulk order update") {
@@ -12087,15 +12118,16 @@ export default function App() {
     const previousById = new Map(orders.map(order => [order.id, order]));
     const next = orders.map(order => updateMap.get(order.id) || order);
     setOrders(next); save(KEY_ORDERS, next);
-    syncLiveRecords("orders", updates, "Order updates could not be synced to the live system.");
+    const syncPromise = syncLiveRecords("orders", updates, "Order updates could not be synced to the live system.");
     updates.forEach(update => recordOrderStatusNotice(previousById.get(update.id), update));
     writeAudit("Orders updated", auditDetail, "admin");
+    return syncPromise;
   }
 
   function addOrder(o) {
     const next = [o, ...orders];
     setOrders(next); save(KEY_ORDERS, next);
-    syncLiveRecords("orders", [o], "Pickup request could not be synced to the live system.");
+    const syncPromise = syncLiveRecords("orders", [o], "Pickup request could not be synced to the live system.");
     writeAudit("Pickup request created", `${o.id} for ${o.clientName}, supplier ${o.vendor}, run ${o.actualRunDate || o.date}`, "client");
     createOperationalNotice({
       clientId: o.clientId,
@@ -12120,6 +12152,7 @@ export default function App() {
         createdBy: "system",
       });
     }
+    return syncPromise;
   }
 
   function cancelOrderBeforeCollection(order, reason, actor = session?.role || "admin") {
@@ -12580,7 +12613,7 @@ export default function App() {
     }
     const next = [storedProof, ...proofs];
     setProofs(next); save(KEY_PROOFS, next);
-    syncLiveProof(storedProof);
+    const proofSync = syncLiveProof(storedProof);
     writeAudit("Delivery proof stored", `${storedProof.orderId} receiver ${storedProof.receiverName}; ${storedProof.signaturePath}; group size ${storedProof.deliveryGroupSize || 1}; SOP-DEL-04 sign-off evidence captured`, "driver");
     if (matchedOrders.length === 0) {
       addException({
@@ -12593,7 +12626,7 @@ export default function App() {
         severity: "High",
       });
       writeAudit("Delivery completion failed", `${storedProof.id}: no matching work item`, "system");
-      return;
+      return Promise.allSettled([proofSync]);
     }
     const deliveredAt = storedProof.deliveredAt || storedProof.capturedAt || isoNow();
     const completedIds = new Set(matchedOrders.map(order => order.id));
@@ -12634,9 +12667,10 @@ export default function App() {
     });
     const nextOrders = orders.map(order => completedIds.has(order.id) ? completedById.get(order.id) : order);
     setOrders(nextOrders); save(KEY_ORDERS, nextOrders);
-    syncLiveRecords("orders", [...completedById.values()], "Delivered order updates could not be synced to the live system.");
+    const orderSync = syncLiveRecords("orders", [...completedById.values()], "Delivered order updates could not be synced to the live system.");
     matchedOrders.forEach(previous => recordOrderStatusNotice(previous, completedById.get(previous.id)));
     writeAudit("Delivery completed by system", `${matchedOrders.map(order => order.id).join(", ")}: proof ${storedProof.id}; grouped stop billing-ready under SOP-DEL-01 / SOP-DEL-04 / SOP-DEL-05`, "system");
+    return Promise.allSettled([proofSync, orderSync]);
   }
 
   function raiseClientDispute(order, disputeInput) {
