@@ -16,6 +16,7 @@ import {
   signOutLiveRuntime,
   syncLiveRuntimeDomain,
   updateLiveUserPassword,
+  uploadLiveDeliveryProof,
 } from "@/lib/live-runtime";
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -2807,12 +2808,17 @@ function ExperienceOrderRow({ order, onCancel, onDispute }) {
   const canCancel = onCancel && cancellationState(order).canSelfCancel;
   const canRequestReview = onCancel && cancellationState(order).canRequestAdminReview;
   const deliveredLike = ["Delivered", "Failed Delivery", "No Pickup"].includes(order.status);
+  const scheduledRun = order.actualRunDate || order.runDate || order.date || order.requestedDate || "";
   return (
     <div className="ux-order-row">
       <div className="ux-order-id">{orderDisplayId(order)}</div>
       <div>
         <div className="ux-order-title">{order.vendor || "Supplier"} - {order.conNote || "Con note not recorded"}</div>
-        <div className="ux-order-meta">{order.dropAddress || "(No address - update your profile)"}</div>
+        <div className="ux-order-meta">
+          {order.dropAddress || "(No address - update your profile)"}
+          {scheduledRun && <span> · Run {fmtFullDate(scheduledRun)}</span>}
+          {!order.driverId && !deliveredLike && <span> · Awaiting dispatch</span>}
+        </div>
       </div>
       <div className="ux-order-actions">
         <span className="ux-badge">{orderPriority(order)}</span>
@@ -3217,6 +3223,12 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const assignedOrders = orders.filter(order => matchesDriverOrder(order, user) && !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status));
   const todayOrders = assignedOrders.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === todayBrisbane());
   const runOrders = (todayOrders.length ? todayOrders : assignedOrders).slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999));
+  const unassignedDispatchable = orders.filter(order => ["Pending", "Brought Forward"].includes(order.status || "Pending") && !order.driverId);
+  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === todayBrisbane());
+  const nextUnassignedRunDate = unassignedDispatchable
+    .map(order => (order.actualRunDate || order.date || "").slice(0, 10))
+    .filter(Boolean)
+    .sort()[0] || "";
   const pickupOrders = runOrders.filter(order => (order.status || "Pending") === "Pending" && !pickupAlreadyCollected(order));
   const enRouteOrders = runOrders.filter(order => order.status === "En Route" || pickupAlreadyCollected(order));
   const signoffOrders = enRouteOrders.length ? enRouteOrders : [];
@@ -3240,6 +3252,11 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const returnsTotal = returnQty * priceFallbacks.returns;
   const totalCharge = tyreCharge.amount + partsTotal + returnsTotal;
   const totalItems = tyreQty + part5 + part10 + partHeavy + returnQty;
+  const emptyPickupMessage = assignedOrders.length === 0 && unassignedToday.length > 0
+    ? `${unassignedToday.length} pickup request${unassignedToday.length === 1 ? "" : "s"} waiting for Admin dispatch. They will appear here after Admin assigns the run to ${user.name || "this driver"}.`
+    : assignedOrders.length === 0 && nextUnassignedRunDate
+      ? `${unassignedDispatchable.length} pickup request${unassignedDispatchable.length === 1 ? "" : "s"} waiting for Admin dispatch. Next scheduled run is ${fmtFullDate(nextUnassignedRunDate)}.`
+      : "No pickups assigned to this driver yet.";
 
   useEffect(() => {
     if (!selectedId && signoffOrders[0]) setSelectedId(signoffOrders[0].id);
@@ -3355,6 +3372,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               </div>
             </div>
             {asapCount > 0 && <div className="ux-alert">{asapCount} ASAP order{asapCount === 1 ? "" : "s"} - priority pickup required.</div>}
+            {assignedOrders.length === 0 && unassignedDispatchable.length > 0 && <div className="ux-alert">{emptyPickupMessage}</div>}
             <div className="ux-driver-tools">
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search client or workshop..." style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }} />
               <select value={vendorFilter} onChange={e => setVendorFilter(e.target.value)} style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }}>
@@ -3363,7 +3381,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               </select>
             </div>
             <div className="ux-run-section">Brisbane Pickups ({visiblePickupOrders.length})</div>
-            {visiblePickupOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">All pickups confirmed. Head to Gold Coast.</div></div> : visiblePickupOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} onConfirmPickup={confirmPickup} />)}
+            {visiblePickupOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">{pickupOrders.length === 0 && enRouteOrders.length === 0 ? emptyPickupMessage : "All pickups confirmed. Head to Gold Coast."}</div></div> : visiblePickupOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} onConfirmPickup={confirmPickup} />)}
             <div className="ux-run-section" style={{ color: "#18733c" }}>En Route - Gold Coast ({visibleEnRouteOrders.length})</div>
             {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} enroute onConfirmPickup={confirmPickup} />)}
           </>
@@ -11089,6 +11107,34 @@ function mergeLiveClientsWithLocalPending(liveClients = [], localClients = []) {
   return merged;
 }
 
+function mergeLiveOrdersWithLocalPending(liveOrders = [], localOrders = []) {
+  const seenIds = new Set();
+  const seenKeys = new Set();
+  const merged = [];
+  const keyFor = order => [
+    String(order?.clientId || order?.accountId || order?.clientName || "").toLowerCase(),
+    String(order?.vendor || "").toLowerCase(),
+    String(order?.conNote || "").toLowerCase(),
+  ].join("|");
+
+  for (const order of liveOrders || []) {
+    if (!order?.id) continue;
+    seenIds.add(String(order.id));
+    seenKeys.add(keyFor(order));
+    merged.push(order);
+  }
+
+  for (const order of localOrders || []) {
+    const status = order?.status || "Pending";
+    const recentlySubmitted = Boolean(order?.submittedAt || order?.createdAt);
+    const dispatchable = ["Pending", "Brought Forward", "En Route"].includes(status);
+    const alreadySeen = seenIds.has(String(order?.id || "")) || seenKeys.has(keyFor(order));
+    if (!alreadySeen && recentlySubmitted && dispatchable) merged.unshift(order);
+  }
+
+  return merged;
+}
+
 export default function App() {
   const pathname = usePathname();
   const routeIntent = routeIntentFromPath(pathname || "/");
@@ -11232,7 +11278,7 @@ export default function App() {
         if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
         if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
         if (snapshot.priceRules?.length) setPriceRules(snapshot.priceRules.map(normalisePriceRule));
-        if (snapshot.orders?.length) setOrders(snapshot.orders);
+        if (snapshot.orders?.length) setOrders(prev => mergeLiveOrdersWithLocalPending(snapshot.orders, prev));
         if (snapshot.proofs?.length) setProofs(snapshot.proofs.map(proof => normaliseDeliveryProof(proof, snapshot.orders?.length ? snapshot.orders : orders)));
         if (snapshot.exceptions?.length) setExceptions(snapshot.exceptions);
         if (snapshot.audit?.length) setAudit(snapshot.audit);
@@ -11266,6 +11312,22 @@ export default function App() {
 
   function showWorkflowNotice(message) {
     setSystemNotice(String(message || "A system workflow rule blocked this action."));
+  }
+
+  function syncLiveRecords(domainKey, rows = [], failureMessage = "Live system sync failed.") {
+    if (!liveRuntimeEnabled || !workspaceSession?.role || !rows?.length) return;
+    syncLiveRuntimeDomain(domainKey, rows, workspaceSession).catch(error => {
+      console.error(error);
+      setSystemNotice(error?.message || failureMessage);
+    });
+  }
+
+  function syncLiveProof(proof) {
+    if (!liveRuntimeEnabled || !workspaceSession?.role || !proof) return;
+    uploadLiveDeliveryProof(proof, workspaceSession).catch(error => {
+      console.error(error);
+      setSystemNotice(error?.message || "Delivery proof could not be saved to live storage.");
+    });
   }
 
   function resetLocalDemoData() {
@@ -11312,6 +11374,7 @@ export default function App() {
       save(KEY_OPERATIONAL_NOTICES, next);
       return next;
     });
+    syncLiveRecords("operationalNotices", [notice], "Operational notice could not be synced to the live system.");
     writeAudit("Operational notice recorded", `${orderId || clientId}: ${noticeType}; local record only`, createdBy);
   }
 
@@ -11795,6 +11858,7 @@ export default function App() {
     const previous = orders.find(o => o.id === upd.id);
     const next = orders.map(o => o.id === upd.id ? upd : o);
     setOrders(next); save(KEY_ORDERS, next);
+    syncLiveRecords("orders", [upd], "Order update could not be synced to the live system.");
     writeAudit("Order updated", `${upd.id} set to ${upd.status}`);
     recordOrderStatusNotice(previous, upd);
   }
@@ -11805,6 +11869,7 @@ export default function App() {
     const previousById = new Map(orders.map(order => [order.id, order]));
     const next = orders.map(order => updateMap.get(order.id) || order);
     setOrders(next); save(KEY_ORDERS, next);
+    syncLiveRecords("orders", updates, "Order updates could not be synced to the live system.");
     updates.forEach(update => recordOrderStatusNotice(previousById.get(update.id), update));
     writeAudit("Orders updated", auditDetail, "admin");
   }
@@ -11812,6 +11877,7 @@ export default function App() {
   function addOrder(o) {
     const next = [o, ...orders];
     setOrders(next); save(KEY_ORDERS, next);
+    syncLiveRecords("orders", [o], "Pickup request could not be synced to the live system.");
     writeAudit("Pickup request created", `${o.id} for ${o.clientName}, supplier ${o.vendor}, run ${o.actualRunDate || o.date}`, "client");
     createOperationalNotice({
       clientId: o.clientId,
@@ -12014,6 +12080,7 @@ export default function App() {
       save(KEY_EXCEPTIONS, next);
       return next;
     });
+    syncLiveRecords("exceptions", [event], "Exception could not be synced to the live system.");
     writeAudit("Exception recorded", `${event.type} on ${event.orderId}: ${event.note}`, actor);
   }
 
@@ -12295,6 +12362,7 @@ export default function App() {
     }
     const next = [storedProof, ...proofs];
     setProofs(next); save(KEY_PROOFS, next);
+    syncLiveProof(storedProof);
     writeAudit("Delivery proof stored", `${storedProof.orderId} receiver ${storedProof.receiverName}; ${storedProof.signaturePath}; group size ${storedProof.deliveryGroupSize || 1}; SOP-DEL-04 sign-off evidence captured`, "driver");
     if (matchedOrders.length === 0) {
       addException({
@@ -12348,6 +12416,7 @@ export default function App() {
     });
     const nextOrders = orders.map(order => completedIds.has(order.id) ? completedById.get(order.id) : order);
     setOrders(nextOrders); save(KEY_ORDERS, nextOrders);
+    syncLiveRecords("orders", [...completedById.values()], "Delivered order updates could not be synced to the live system.");
     matchedOrders.forEach(previous => recordOrderStatusNotice(previous, completedById.get(previous.id)));
     writeAudit("Delivery completed by system", `${matchedOrders.map(order => order.id).join(", ")}: proof ${storedProof.id}; grouped stop billing-ready under SOP-DEL-01 / SOP-DEL-04 / SOP-DEL-05`, "system");
   }
