@@ -2770,12 +2770,71 @@ function matchesClientOrder(order, user) {
   return String(order?.clientName || "").toLowerCase() === String(user?.name || user?.businessName || "").toLowerCase();
 }
 
+function normaliseIdentityEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function compactIdentityValues(values = []) {
+  return values.filter(Boolean).map(value => String(value).trim()).filter(Boolean);
+}
+
+function driverAssignmentFields(driver = {}) {
+  const driverId = driver.id || driver.driverRecordId || driver.driverId || driver.assignedDriverId || "";
+  return {
+    driverId,
+    assignedDriverId: driver.assignedDriverId || driverId,
+    driverRecordId: driver.driverRecordId || driverId,
+    driverProfileId: driver.profileId || driver.driverProfileId || driver.driver_profile_id || "",
+    driverActorId: driver.actorId || driver.driverActorId || driver.actor_id || "",
+    driverEmail: normaliseIdentityEmail(driver.email || driver.driverEmail || driver.loginEmail || ""),
+    driverName: driver.name || driver.displayName || driver.driverName || "",
+  };
+}
+
+function driverUserIdentityValues(user = {}) {
+  return compactIdentityValues([
+    user.id,
+    user.driverId,
+    user.driverRecordId,
+    user.assignedDriverId,
+    user.profileId,
+    user.driverProfileId,
+    user.driver_profile_id,
+    user.actorId,
+    user.driverActorId,
+    user.actor_id,
+    user.actorCode,
+    user.code,
+    user.contactId,
+  ]);
+}
+
+function orderDriverIdentityValues(order = {}) {
+  return compactIdentityValues([
+    order.driverId,
+    order.assignedDriverId,
+    order.driverRecordId,
+    order.driverProfileId,
+    order.driver_profile_id,
+    order.driverActorId,
+    order.driver_actor_id,
+    order.pickupDriverId,
+    order.pickupDriverProfileId,
+    order.pickupDriverActorId,
+  ]);
+}
+
 function matchesDriverOrder(order, user) {
-  const userIds = new Set([user?.id, user?.driverId, user?.profileId, user?.actorId].filter(Boolean).map(String));
-  const orderDriverValues = [order?.driverId, order?.assignedDriverId, order?.driverProfileId].filter(Boolean).map(String);
-  if (orderDriverValues.some(value => userIds.has(value))) return true;
-  if (order?.driverEmail && user?.email && String(order.driverEmail).toLowerCase() === String(user.email).toLowerCase()) return true;
-  return String(order?.driverName || "").toLowerCase() === String(user?.name || "").toLowerCase();
+  const userIds = new Set(driverUserIdentityValues(user));
+  if (orderDriverIdentityValues(order).some(value => userIds.has(value))) return true;
+
+  const orderEmails = [order?.driverEmail, order?.pickupDriverEmail].map(normaliseIdentityEmail).filter(Boolean);
+  const userEmails = [user?.email, user?.driverEmail, user?.loginEmail].map(normaliseIdentityEmail).filter(Boolean);
+  if (orderEmails.some(value => userEmails.includes(value))) return true;
+
+  const orderDriverName = normaliseMatchText(order?.driverName || "");
+  const userNames = [user?.name, user?.displayName, user?.driverName].map(normaliseMatchText).filter(Boolean);
+  return Boolean(orderDriverName && userNames.includes(orderDriverName));
 }
 
 function ExperienceNav({ role, user, tabs, activeTab, onTab, onLogout }) {
@@ -3309,15 +3368,29 @@ function pickupWeightBandForCounts(counts = {}) {
 function orderWithPickupBreakdown(order, breakdown, user = {}) {
   const counts = breakdown.counts || blankPickupCounts();
   const capturedAt = isoNow();
+  const assignedDriver = driverAssignmentFields({
+    ...user,
+    id: user.driverRecordId || user.driverId || user.id,
+    name: user.name || user.displayName || user.driverName,
+    email: user.email || user.driverEmail || user.loginEmail,
+  });
   return {
     ...order,
     status: "En Route",
-    driverId: order.driverId || user.id,
-    driverName: order.driverName || user.name,
+    driverId: order.driverId || assignedDriver.driverId,
+    assignedDriverId: order.assignedDriverId || assignedDriver.assignedDriverId || assignedDriver.driverId,
+    driverRecordId: order.driverRecordId || assignedDriver.driverRecordId || assignedDriver.driverId,
+    driverProfileId: order.driverProfileId || assignedDriver.driverProfileId,
+    driverActorId: order.driverActorId || assignedDriver.driverActorId,
+    driverEmail: order.driverEmail || assignedDriver.driverEmail,
+    driverName: order.driverName || assignedDriver.driverName,
     pickupOutcome: "Picked Up",
     pickupConfirmedAt: order.pickupConfirmedAt || capturedAt,
     pickupOutcomeAt: capturedAt,
-    pickupDriverId: user.id,
+    pickupDriverId: assignedDriver.driverId || user.id,
+    pickupDriverProfileId: assignedDriver.driverProfileId || user.profileId || "",
+    pickupDriverActorId: assignedDriver.driverActorId || user.actorId || "",
+    pickupDriverEmail: assignedDriver.driverEmail || user.email || "",
     pickupReadyBy10Confirmed: true,
     pickupLabelledConfirmed: true,
     pickupPackagingConfirmed: true,
@@ -8057,6 +8130,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
 
     const compiledAt = isoNow();
     const runId = runIdFor(compileRunDate, driver.id, vehicleName);
+    const assignedDriver = driverAssignmentFields(driver);
     const supplierSequence = new Map();
     compileCandidates.forEach(order => {
       const supplier = order.vendor || "Supplier not recorded";
@@ -8065,8 +8139,10 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     const updates = compileCandidates.map((order, index) => ({
       ...order,
       status: order.status === "Brought Forward" ? "Pending" : order.status,
-      driverId: driver.id,
-      driverName: driver.name,
+      ...assignedDriver,
+      driverId: assignedDriver.driverId || driver.id,
+      assignedDriverId: assignedDriver.assignedDriverId || assignedDriver.driverId || driver.id,
+      driverName: assignedDriver.driverName || driver.name,
       vehicleId: vehicle.id,
       vehicleName,
       runId,
@@ -8105,11 +8181,14 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     if (driverIsBlocked(driver.id, runDate)) return showWorkflowNotice(`${driver.name} is ${availability.status} for ${fmt(runDate)}. Update availability before assigning this run.`);
     const assignedAt = isoNow();
     const runId = runIdFor(runDate, driver.id, vehicleName);
+    const assignedDriver = driverAssignmentFields(driver);
     onUpdateOrder({
       ...order,
       status: order.status === "Brought Forward" ? "Pending" : order.status,
-      driverId: driver.id,
-      driverName: driver.name,
+      ...assignedDriver,
+      driverId: assignedDriver.driverId || driver.id,
+      assignedDriverId: assignedDriver.assignedDriverId || assignedDriver.driverId || driver.id,
+      driverName: assignedDriver.driverName || driver.name,
       vehicleId: vehicle.id,
       vehicleName,
       runId,
@@ -8137,6 +8216,11 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     onUpdateOrder({
       ...order,
       driverId: null,
+      assignedDriverId: null,
+      driverRecordId: null,
+      driverProfileId: null,
+      driverActorId: null,
+      driverEmail: "",
       driverName: null,
       vehicleId: null,
       vehicleName: "",
@@ -11298,13 +11382,35 @@ function workspaceSessionForLiveData(session, clients = [], drivers = []) {
   }
 
   if (session.role === "driver") {
-    const driver = (drivers || []).find(row =>
-      row.id === session.user.id ||
-      row.code === session.user.actorCode ||
-      row.profileId === session.user.profileId ||
-      String(row.email || "").toLowerCase() === email
-    );
-    if (driver) return { ...session, user: { ...driver, ...session.user, id: driver.id, name: driver.name || session.user.name } };
+    const sessionIds = new Set(driverUserIdentityValues(session.user));
+    const sessionNames = [session.user.name, session.user.displayName, session.user.driverName].map(normaliseMatchText).filter(Boolean);
+    const driver = (drivers || []).find(row => {
+      const rowIds = driverUserIdentityValues(row);
+      if (rowIds.some(value => sessionIds.has(value))) return true;
+      if (email && [row.email, row.driverEmail, row.loginEmail].map(normaliseIdentityEmail).includes(email)) return true;
+      const rowName = normaliseMatchText(row.name || row.displayName || row.driverName || "");
+      return Boolean(rowName && sessionNames.includes(rowName));
+    });
+    if (driver) {
+      const assignedDriver = driverAssignmentFields(driver);
+      return {
+        ...session,
+        user: {
+          ...driver,
+          ...session.user,
+          ...assignedDriver,
+          id: driver.id || session.user.id,
+          driverId: session.user.driverId || driver.driverId || driver.id || assignedDriver.driverId,
+          driverRecordId: driver.id || assignedDriver.driverRecordId || session.user.driverRecordId || "",
+          profileId: session.user.profileId || driver.profileId || driver.driverProfileId || "",
+          actorId: session.user.actorId || driver.actorId || driver.driverActorId || "",
+          email: session.user.email || driver.email || assignedDriver.driverEmail || "",
+          driverEmail: assignedDriver.driverEmail || session.user.email || "",
+          name: driver.name || session.user.name,
+          displayName: driver.name || session.user.displayName || session.user.name,
+        },
+      };
+    }
   }
 
   return session;
