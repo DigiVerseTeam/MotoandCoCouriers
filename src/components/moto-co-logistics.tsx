@@ -8,6 +8,7 @@ import {
   completeLiveAuthRedirect,
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
+  provisionLiveUser,
   registerLiveClient,
   requestLivePasswordLogin,
   resetLiveProvisionedUserPassword,
@@ -2021,6 +2022,8 @@ function buildAccessRecords(clients, drivers, overrides = []) {
       subjectName: client.operationalContact?.name || client.name,
       accountName: client.name,
       email: client.email,
+      actorId: client.actorId || "",
+      contactId: client.operationalContact?.id || "",
       status: "Active",
       accessScope: "Pickup requests, tracking, delivery disputes, and billing visibility for own account.",
     }, overrides));
@@ -2033,6 +2036,8 @@ function buildAccessRecords(clients, drivers, overrides = []) {
       subjectName: client.billingContact?.name || client.name,
       accountName: client.name,
       email: client.billingContact?.email || client.email,
+      actorId: client.actorId || "",
+      contactId: client.billingContact?.id || "",
       status: "Active",
       accessScope: "Invoices, account notices, payment evidence, and billing disputes for own account.",
     }, overrides));
@@ -2046,6 +2051,8 @@ function buildAccessRecords(clients, drivers, overrides = []) {
     subjectName: driver.name,
     accountName: "Moto and Co Couriers",
     email: driver.email,
+    actorId: driver.actorId || "",
+    contactId: driver.contactId || "",
     status: "Active",
     accessScope: "Assigned run brief, pickup outcomes, delivery outcomes, POD, and run close.",
   }, overrides)));
@@ -5763,6 +5770,11 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const [passwordResetReason, setPasswordResetReason] = useState("");
   const [passwordResetBusy, setPasswordResetBusy] = useState(false);
   const [passwordResetResult, setPasswordResetResult] = useState(null);
+  const [provisionTarget, setProvisionTarget] = useState(null);
+  const [provisionApproval, setProvisionApproval] = useState("");
+  const [provisionReason, setProvisionReason] = useState("");
+  const [provisionBusy, setProvisionBusy] = useState(false);
+  const [provisionResult, setProvisionResult] = useState(null);
   const [activationTarget, setActivationTarget] = useState(null);
   const [activationReview, setActivationReview] = useState({
     b2bConfirmed: false,
@@ -6973,6 +6985,62 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     setPasswordResetApproval("");
     setPasswordResetReason(`Admin password reset requested for ${record.email}`);
     setPasswordResetResult(null);
+  }
+
+  function provisionRoleForAccess(record) {
+    if (record?.role === "client") return "client_ops";
+    if (record?.role === "billing") return "client_billing";
+    if (record?.role === "driver") return "driver";
+    return record?.role || "";
+  }
+
+  function openProvisionLogin(record) {
+    setProvisionTarget(record);
+    setProvisionApproval("");
+    setProvisionReason(`Admin approved first login for ${record.email}`);
+    setProvisionResult(null);
+  }
+
+  function closeProvisionLogin() {
+    setProvisionTarget(null);
+    setProvisionApproval("");
+    setProvisionReason("");
+    setProvisionBusy(false);
+    setProvisionResult(null);
+  }
+
+  async function confirmProvisionLogin() {
+    if (!provisionTarget) return;
+    const approvalReference = provisionApproval.trim();
+    const reason = provisionReason.trim();
+    const role = provisionRoleForAccess(provisionTarget);
+    if (!approvalReference) return showWorkflowNotice("Approval reference is required before creating a login.");
+    if (!reason) return showWorkflowNotice("Provisioning reason is required.");
+    if (!["client_ops", "client_billing", "driver"].includes(role)) return showWorkflowNotice("This role is not provisioned from the Role Access Register.");
+    setProvisionBusy(true);
+    try {
+      const result = await provisionLiveUser({
+        email: provisionTarget.email,
+        displayName: provisionTarget.subjectName,
+        role,
+        actorId: provisionTarget.actorId,
+        contactId: provisionTarget.contactId,
+        accountId: provisionTarget.subjectId,
+        driverId: role === "driver" ? provisionTarget.subjectId : "",
+        actorCode: provisionTarget.actorCode,
+        approvalReference,
+        reason,
+      });
+      setProvisionResult(result);
+      if (result?.temporaryPassword && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(result.temporaryPassword);
+      }
+      onSaveAccessChange(provisionTarget, "review", `Login created and temporary password issued. ${reason}`, "other");
+    } catch (error) {
+      showWorkflowNotice(error?.message || "Login provisioning failed.");
+    } finally {
+      setProvisionBusy(false);
+    }
   }
 
   function closePasswordReset() {
@@ -8686,6 +8754,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   ) : (
                     <button className="btn b-red b-sm" onClick={() => openAccessAction(record, "revoke")}>Revoke Access</button>
                   )}
+                  {record.email && ["client", "billing", "driver"].includes(record.role) && <button className="btn b-acc b-sm" onClick={() => openProvisionLogin(record)}>Create Login</button>}
                   {record.email && <button className="btn b-ghost b-sm" onClick={() => openPasswordReset(record)}>Reset Password</button>}
                 </div>
               </div>
@@ -10352,6 +10421,35 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 {accessAction === "revoke" ? "Confirm Revoke" : accessAction === "restore" ? "Confirm Restore" : "Confirm Review"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setAccessTarget(null)}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {provisionTarget && (
+          <div className="overlay" onClick={closeProvisionLogin}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+              <h3>Create Login - {provisionTarget.subjectName}</h3>
+              <div className="meta" style={{ marginBottom: ".7rem" }}>
+                <span>{provisionTarget.roleLabel}</span>
+                <span>{provisionTarget.email}</span>
+                <span>{provisionTarget.accountName}</span>
+              </div>
+              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
+                This creates the live portal login and issues a temporary password. Give the temporary password to the user, then ask them to change it from Account Security after sign-in.
+              </div>
+              <div className="f"><label>Approval Reference *</label><input value={provisionApproval} onChange={e => setProvisionApproval(e.target.value)} placeholder="Admin approved customer login - date/reference" /></div>
+              <div className="f"><label>Reason *</label><textarea value={provisionReason} onChange={e => setProvisionReason(e.target.value)} placeholder="Reason for first login provisioning" /></div>
+              {provisionResult?.temporaryPassword && (
+                <div className="card" style={{ marginBottom: ".8rem" }}>
+                  <div className="card-title" style={{ marginBottom: ".4rem" }}>Temporary Password</div>
+                  <input readOnly value={provisionResult.temporaryPassword} onFocus={e => e.target.select()} />
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Copied to clipboard when your browser allows it. The user can change it after sign-in.</div>
+                </div>
+              )}
+              <button className="btn b-acc" onClick={confirmProvisionLogin} disabled={provisionBusy || Boolean(provisionResult?.temporaryPassword)}>
+                {provisionBusy ? "Creating..." : provisionResult?.temporaryPassword ? "Login Created" : "Create Login & Issue Password"}
+              </button>
+              <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={closeProvisionLogin}>Close</button>
             </div>
           </div>
         )}
