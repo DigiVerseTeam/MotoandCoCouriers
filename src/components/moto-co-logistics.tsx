@@ -125,6 +125,116 @@ const css = `
   .stat-num{font-size:1.7rem;font-weight:900;line-height:1}
   .stat-lbl{font-size:.7rem;color:${T.mu};font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-top:.3rem}
   select option{background:${T.card};color:${T.tx}}
+  /* UX refresh aligned to Moto&Co client and driver journey rules */
+  .ux-shell{min-height:100vh;background:#eae7e0;color:#1a1a1a;font-family:'Inter',sans-serif}
+  .ux-nav{height:58px;background:#c8102e;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:12;box-shadow:0 3px 16px rgba(0,0,0,.16)}
+  .ux-logo{display:flex;align-items:center;gap:.7rem;min-width:210px}
+  .ux-logo img{width:118px;height:auto;display:block;filter:brightness(0) invert(1)}
+  .ux-logo-sub{font-size:.55rem;letter-spacing:.32em;text-transform:uppercase;color:rgba(255,255,255,.72);font-weight:800}
+  .ux-tabs{display:flex;gap:.35rem;align-items:stretch;justify-content:center;flex:1}
+  .ux-tab{border:0;background:transparent;color:rgba(255,255,255,.72);padding:.75rem .8rem;font-size:.74rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;border-bottom:3px solid transparent;line-height:1}
+  .ux-tab:hover,.ux-tab.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.12)}
+  .ux-nav-right{display:flex;align-items:center;gap:.7rem;min-width:220px;justify-content:flex-end}
+  .ux-user{text-align:right;line-height:1.15;text-transform:uppercase}
+  .ux-user strong{display:block;font-size:.74rem;font-weight:900;letter-spacing:.04em;color:#fff}
+  .ux-user span{font-size:.61rem;letter-spacing:.13em;color:rgba(255,255,255,.68)}
+  .ux-role-chip,.ux-nav-out{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;padding:.45rem .7rem;font-size:.67rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;border-radius:2px}
+  .ux-nav-out{cursor:pointer}
+  .ux-main{width:min(100%,1040px);margin:0 auto;padding:2.2rem 1.4rem 4rem}
+  .ux-main.wide{width:min(100%,1120px)}
+  .ux-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;border-bottom:2px solid #d2cabb;padding-bottom:1rem;margin-bottom:1.35rem}
+  .ux-title{font-size:2.1rem;line-height:1;text-transform:uppercase;font-weight:900;letter-spacing:0;color:#0f0f0f}
+  .ux-title span{color:#c8102e}
+  .ux-subtitle{font-size:.82rem;color:#7a7060;margin-top:.35rem}
+  .ux-card{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  .ux-card.tint{background:#e7e0d2}
+  .ux-section-title{display:flex;align-items:center;gap:.8rem;color:#c8102e;font-size:.72rem;font-weight:900;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem}
+  .ux-section-title:after{content:"";height:1px;background:#d5cfc3;flex:1}
+  .ux-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;margin:1rem 0 1.25rem}
+  .ux-stat{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:1rem;text-align:center;min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ux-stat strong{font-size:1.85rem;line-height:1;font-weight:900;color:#c8102e}
+  .ux-stat.in-transit strong{color:#b8860b}
+  .ux-stat.delivered strong{color:#2d5a27}
+  .ux-stat span{font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#7a7060;margin-top:.35rem}
+  .ux-btn{border:1px solid transparent;border-radius:2px;padding:.75rem 1rem;font-weight:900;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;background:#fff;color:#1a1a1a;display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-height:42px}
+  .ux-btn.primary{background:#c8102e;color:#fff;border-color:#c8102e}
+  .ux-btn.secondary{background:#fff;color:#1a1a1a;border-color:#c8c0b1}
+  .ux-btn.success{background:#18733c;color:#fff;border-color:#18733c}
+  .ux-btn:disabled{opacity:.45;cursor:not-allowed}
+  .ux-btn.full{width:100%}
+  .ux-form{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:1.4rem}
+  .ux-field{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1rem}
+  .ux-field label{font-size:.68rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#7a7060}
+  .ux-field input,.ux-field select,.ux-field textarea{width:100%;border:1px solid #cfc7b8;border-radius:2px;background:#fff;padding:.72rem .85rem;font:inherit;color:#1a1a1a}
+  .ux-field input:focus,.ux-field select:focus,.ux-field textarea:focus{outline:none;border-color:#c8102e;box-shadow:0 0 0 3px rgba(200,16,46,.1)}
+  .ux-field textarea{min-height:84px;resize:vertical}
+  .ux-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .ux-priority{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem}
+  .ux-priority button{border:2px solid #d5cfc3;background:#fff;border-radius:2px;padding:1rem;text-align:center;cursor:pointer;font-weight:900;text-transform:uppercase}
+  .ux-priority button.active{border-color:#c8102e;background:#fff5f7}
+  .ux-dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:.45rem;background:#c8102e}
+  .ux-dot.green{background:#36b66d}
+  .ux-alert{border:1px solid rgba(200,16,46,.35);background:#fdf0f0;color:#c8102e;padding:.85rem 1rem;margin-bottom:1rem;font-size:.85rem}
+  .ux-order-list{display:flex;flex-direction:column;gap:.5rem}
+  .ux-order-row{background:#fff;border:1px solid #d5cfc3;border-left:3px solid #c8102e;border-radius:2px;padding:1rem;display:grid;grid-template-columns:76px 1fr auto;gap:1rem;align-items:center}
+  .ux-order-id{font-size:1.15rem;font-weight:900;color:#c8102e}
+  .ux-order-title{font-weight:900;text-transform:uppercase;font-size:.82rem}
+  .ux-order-meta{font-size:.76rem;color:#7a7060;margin-top:.25rem}
+  .ux-order-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}
+  .ux-badge{display:inline-flex;align-items:center;gap:.32rem;border:1px solid #c8102e;color:#c8102e;background:#fff;padding:.22rem .55rem;border-radius:2px;font-size:.66rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+  .ux-badge.done{border-color:#2d5a27;color:#2d5a27}
+  .ux-badge.enroute{border-color:#b8860b;color:#8f6800}
+  .ux-muted{color:#7a7060}
+  .ux-empty{text-align:center;color:#7a7060;padding:3.2rem 1rem;font-size:.9rem}
+  .ux-vendor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+  .ux-driver-tools{display:grid;grid-template-columns:1fr 160px;gap:.7rem;margin-bottom:1rem}
+  .ux-run-stats{display:flex;gap:.5rem;align-items:center}
+  .ux-run-stat{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:.7rem 1rem;text-align:center;min-width:78px}
+  .ux-run-stat strong{display:block;color:#c8102e;font-size:1.45rem;line-height:1;font-weight:900}
+  .ux-run-stat span{font-size:.61rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#7a7060}
+  .ux-run-section{font-size:.72rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:#c8102e;margin:1.1rem 0 .6rem}
+  .ux-run-card{background:#fff;border:1px solid #d5cfc3;border-left:4px solid #c8102e;border-radius:2px;padding:1.1rem;margin-bottom:.6rem}
+  .ux-run-card.enroute{border-left-color:#2d5a27}
+  .ux-run-top{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.7rem}
+  .ux-run-con{font-size:1.05rem;font-weight:900;text-transform:uppercase}
+  .ux-run-vendor{font-size:.72rem;color:#7a7060;text-transform:uppercase;margin-top:.2rem}
+  .ux-address-block{background:#e7e0d2;border-left:3px solid #c8102e;padding:.85rem;margin-top:.65rem}
+  .ux-address-block small{display:block;color:#c8102e;font-size:.63rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;margin-bottom:.25rem}
+  .ux-step{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:1.15rem;margin-bottom:1rem}
+  .ux-radio-row{display:grid;grid-template-columns:auto 1fr auto;gap:.75rem;align-items:center;background:#e7e0d2;border:1px solid #d5cfc3;border-radius:2px;padding:.9rem;margin:.45rem 0;cursor:pointer}
+  .ux-radio-row.active{background:#fff5f7;border-color:#c8102e}
+  .ux-radio-dot{width:15px;height:15px;border:1px solid #9b9388;border-radius:50%;background:#fff}
+  .ux-radio-row.active .ux-radio-dot{border:4px solid #c8102e}
+  .ux-qty-hero{border:1px solid #d5cfc3;background:#fff;padding:1.2rem;display:flex;align-items:center;justify-content:center;gap:2rem;margin-bottom:.9rem}
+  .ux-stepper{display:inline-grid;grid-template-columns:42px 60px 42px;gap:.55rem;align-items:center}
+  .ux-stepper button{width:42px;height:42px;border:2px solid #c8102e;background:#fff;color:#c8102e;font-weight:900;font-size:1.1rem;cursor:pointer}
+  .ux-stepper button:disabled{border-color:#ead5da;color:#ead5da;cursor:not-allowed}
+  .ux-stepper strong{text-align:center;font-size:1.55rem;font-weight:900}
+  .ux-line{display:grid;grid-template-columns:1fr auto auto;gap:.8rem;align-items:center;background:#e7e0d2;border:1px solid #d5cfc3;padding:.85rem;margin:.45rem 0}
+  .ux-total{background:#c8102e;color:#fff;padding:1rem 1.15rem;display:flex;align-items:center;justify-content:space-between;margin-top:1rem}
+  .ux-total small{display:block;opacity:.75;font-size:.62rem;margin-top:.2rem}
+  .ux-total strong{font-size:1.65rem}
+  .ux-summary{background:#e7e0d2;border:1px solid #d5cfc3;padding:1rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .ux-sig .sigbox{height:120px;border-style:dashed;background:#fff;border-radius:2px}
+  @media (max-width:780px){
+    .ux-nav{height:auto;min-height:58px;padding:.65rem .9rem;align-items:flex-start;gap:.7rem;flex-wrap:wrap}
+    .ux-logo{min-width:auto}
+    .ux-logo img{width:98px}
+    .ux-tabs{order:3;width:100%;overflow-x:auto;justify-content:flex-start}
+    .ux-nav-right{min-width:auto;margin-left:auto}
+    .ux-main{padding:1.2rem .85rem 3rem}
+    .ux-heading{align-items:flex-start;flex-direction:column}
+    .ux-title{font-size:1.7rem}
+    .ux-stats,.ux-vendor-grid,.ux-grid-2,.ux-priority{grid-template-columns:1fr}
+    .ux-order-row{grid-template-columns:1fr;gap:.45rem}
+    .ux-order-actions{justify-content:flex-start}
+    .ux-driver-tools{grid-template-columns:1fr}
+    .ux-run-stats{width:100%;justify-content:space-between}
+    .ux-run-stat{flex:1}
+    .ux-summary{grid-template-columns:1fr}
+    .ux-line{grid-template-columns:1fr;gap:.55rem}
+    .ux-total{align-items:flex-start;flex-direction:column;gap:.45rem}
+  }
 `;
 
 function PolicyNotice({ title = "Workflow Rule", children, onDismiss, system = false }) {
@@ -2578,6 +2688,755 @@ function FirstLoginSupplierSetup({ user, suppliers, onConfirm, onSupplierSetupRe
         </div>
       </div>
     </>
+  );
+}
+
+function userFirstName(user) {
+  const source = String(user?.name || user?.businessName || user?.email || "there").trim();
+  return (source.split(/\s+/)[0] || source).replace(/[^a-zA-Z'-]/g, "") || "there";
+}
+
+function clientBusinessName(user) {
+  return user?.businessName || user?.name || user?.clientName || "Moto&Co customer";
+}
+
+function clientDeliveryAddress(user) {
+  return user?.address || user?.deliveryAddress || user?.dropAddress || user?.profile?.address || "";
+}
+
+function clientPhone(user) {
+  return user?.phone || user?.mobile || user?.operationalContact?.phone || user?.billingContact?.phone || "";
+}
+
+function orderDisplayId(order) {
+  const raw = String(order?.id || order?.conNote || "0000");
+  const digits = raw.replace(/\D/g, "");
+  if (digits) return `#${digits.slice(-4).padStart(4, "0")}`;
+  return `#${raw.slice(-4).toUpperCase().padStart(4, "0")}`;
+}
+
+function orderPriority(order) {
+  const value = String(order?.priority || order?.deliveryPriority || order?.serviceLevel || "").toLowerCase();
+  if (value.includes("asap") || order?.asap || order?.isAsap) return "ASAP";
+  return "NEXT RUN";
+}
+
+function orderSubmittedLabel(order) {
+  const value = order?.submittedAt || order?.createdAt || order?.requestedDate || order?.actualRunDate || order?.date || "";
+  if (!value) return "Not dated";
+  const date = new Date(String(value).includes("T") ? value : `${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+}
+
+function statusBadgeClass(status = "") {
+  if (["Delivered", "Captured", "Paid"].includes(status)) return "done";
+  if (["En Route", "Picked Up"].includes(status)) return "enroute";
+  return "";
+}
+
+function supplierByName(suppliers = [], name = "") {
+  return (suppliers || []).find(supplier => String(supplier.name || "").toLowerCase() === String(name || "").toLowerCase()) || null;
+}
+
+function telHref(phone = "") {
+  const clean = String(phone || "").replace(/[^\d+]/g, "");
+  return clean ? `tel:${clean}` : "";
+}
+
+function matchesClientOrder(order, user) {
+  const userIds = new Set([user?.id, user?.accountId, user?.clientId, user?.account_actor_id].filter(Boolean).map(String));
+  const orderClientValues = [order?.clientId, order?.accountId, order?.account_actor_id].filter(Boolean).map(String);
+  if (orderClientValues.some(value => userIds.has(value))) return true;
+  return String(order?.clientName || "").toLowerCase() === String(user?.name || user?.businessName || "").toLowerCase();
+}
+
+function matchesDriverOrder(order, user) {
+  const userIds = new Set([user?.id, user?.driverId, user?.profileId, user?.actorId].filter(Boolean).map(String));
+  const orderDriverValues = [order?.driverId, order?.assignedDriverId, order?.driverProfileId].filter(Boolean).map(String);
+  if (orderDriverValues.some(value => userIds.has(value))) return true;
+  if (order?.driverEmail && user?.email && String(order.driverEmail).toLowerCase() === String(user.email).toLowerCase()) return true;
+  return String(order?.driverName || "").toLowerCase() === String(user?.name || "").toLowerCase();
+}
+
+function ExperienceNav({ role, user, tabs, activeTab, onTab, onLogout }) {
+  return (
+    <div className="ux-nav">
+      <div className="ux-logo">
+        <img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" />
+        <div className="ux-logo-sub">Parts people</div>
+      </div>
+      <div className="ux-tabs">
+        {tabs.map(tab => (
+          <button key={tab.key} className={`ux-tab${activeTab === tab.key ? " active" : ""}`} onClick={() => onTab(tab.key)}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="ux-nav-right">
+        <div className="ux-user">
+          <strong>{user?.name || user?.email || "Moto&Co"}</strong>
+          <span>{role}</span>
+        </div>
+        <span className="ux-role-chip">{role}</span>
+        <button className="ux-nav-out" onClick={onLogout}>Logout</button>
+      </div>
+    </div>
+  );
+}
+
+function ExperienceOrderRow({ order, onCancel, onDispute }) {
+  const canCancel = onCancel && cancellationState(order).canSelfCancel;
+  const canRequestReview = onCancel && cancellationState(order).canRequestAdminReview;
+  const deliveredLike = ["Delivered", "Failed Delivery", "No Pickup"].includes(order.status);
+  return (
+    <div className="ux-order-row">
+      <div className="ux-order-id">{orderDisplayId(order)}</div>
+      <div>
+        <div className="ux-order-title">{order.vendor || "Supplier"} - {order.conNote || "Con note not recorded"}</div>
+        <div className="ux-order-meta">{order.dropAddress || "(No address - update your profile)"}</div>
+      </div>
+      <div className="ux-order-actions">
+        <span className="ux-badge">{orderPriority(order)}</span>
+        <span className={`ux-badge ${statusBadgeClass(order.status)}`}>{order.status || "Pending"}</span>
+        <span className="ux-muted" style={{ fontSize: ".74rem" }}>{orderSubmittedLabel(order)}</span>
+        {canCancel && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client self-service before Policy #14 cut-off")}>Cancel</button>}
+        {canRequestReview && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client cancellation review requested")}>Review</button>}
+        {deliveredLike && onDispute && <button className="ux-btn secondary" onClick={() => onDispute(order)}>Dispute</button>}
+      </div>
+    </div>
+  );
+}
+
+function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNotices, operationalNotices = [], proofs = [], exceptions = [], initialView = "dashboard", startNewPickup = false, onNewOrder, onCancelOrder, onCancellationRequest, onDispute, onBillingDispute, onSupplierSetupRequest, onUpdateClient, onLogout }) {
+  const firstTab = startNewPickup ? "new" : "dashboard";
+  const [tab, setTab] = useState(firstTab);
+  const [conNote, setConNote] = useState("");
+  const [vendor, setVendor] = useState("");
+  const [priority, setPriority] = useState("NEXT RUN");
+  const [requestedDate, setRequestedDate] = useState(todayBrisbane());
+  const [submittedTime, setSubmittedTime] = useState(() => new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }));
+  const [notes, setNotes] = useState("");
+  const [err, setErr] = useState("");
+  const [supplierRequestNames, setSupplierRequestNames] = useState([]);
+  const [supplierRequestNote, setSupplierRequestNote] = useState("");
+  const [profileDraft, setProfileDraft] = useState(() => ({
+    name: user.name || "",
+    businessName: user.businessName || user.name || "",
+    address: clientDeliveryAddress(user),
+    phone: clientPhone(user),
+    email: user.email || "",
+  }));
+
+  const activeSupplierList = activeSuppliers(suppliers);
+  const linkedSuppliers = activeSupplierList.filter(supplier => (user.vendors || []).includes(supplier.name));
+  const clientOrders = orders.filter(order => matchesClientOrder(order, user)).slice().sort((a, b) => String(b.submittedAt || b.createdAt || b.date || "").localeCompare(String(a.submittedAt || a.createdAt || a.date || "")));
+  const accountStatus = user.status || "Active";
+  const canRequest = accountStatus === "Active" && (user.courierEligible ?? true);
+  const total = clientOrders.length;
+  const pending = clientOrders.filter(order => ["Pending", "Submitted", "Scheduled", "Cut-off Adjusted"].includes(order.status || "Pending")).length;
+  const enRoute = clientOrders.filter(order => ["En Route", "Picked Up"].includes(order.status)).length;
+  const delivered = clientOrders.filter(order => order.status === "Delivered").length;
+  const deliveryAddress = clientDeliveryAddress(user);
+
+  useEffect(() => {
+    if (startNewPickup) setTab("new");
+    else if (initialView === "tracking" || initialView === "orders") setTab("dashboard");
+  }, [startNewPickup, initialView, user.id]);
+
+  function resetOrderForm() {
+    setConNote("");
+    setVendor("");
+    setPriority("NEXT RUN");
+    setRequestedDate(todayBrisbane());
+    setSubmittedTime(new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }));
+    setNotes("");
+    setErr("");
+  }
+
+  function submitOrder() {
+    const cleanConNote = conNote.trim();
+    if (!canRequest) { setErr(`Account ${accountStatus}. New pickup requests are not available.`); return; }
+    if (!cleanConNote) { setErr("Con Note Number is required."); return; }
+    if (!/^[a-z0-9][a-z0-9 _/-]{2,}$/i.test(cleanConNote)) { setErr("Con Note Number needs at least three letters or numbers."); return; }
+    if (!vendor) { setErr("Select one of your approved vendors."); return; }
+    const supplier = supplierByName(linkedSuppliers, vendor);
+    if (!supplier) { setErr("That vendor is not linked to this customer profile. Update Vendors or contact Admin."); return; }
+    const schedule = applyCutoff(requestedDate);
+    onNewOrder({
+      id: uid(),
+      clientId: user.id,
+      clientName: clientBusinessName(user),
+      vendor,
+      conNote: cleanConNote,
+      dropAddress: deliveryAddress,
+      notes: notes.trim(),
+      priority,
+      deliveryPriority: priority,
+      status: "Pending",
+      requestedDate,
+      actualRunDate: schedule.actualRunDate,
+      cutoffApplied: schedule.cutoffApplied,
+      scheduleAdjusted: schedule.scheduleAdjusted,
+      scheduleAdjustmentReason: schedule.scheduleAdjustmentReason,
+      date: schedule.actualRunDate,
+      submittedAt: isoNow(),
+      driverId: null,
+      price: null,
+      recvName: "",
+      sig: "",
+    });
+    resetOrderForm();
+    setTab("orders");
+  }
+
+  function cancelOrRequest(order, reason) {
+    const state = cancellationState(order);
+    if (state.canSelfCancel) {
+      onCancelOrder(order, reason);
+      setErr("");
+      return;
+    }
+    if (state.canRequestAdminReview) {
+      onCancellationRequest(order, reason);
+      setErr("");
+      return;
+    }
+    setErr(state.reason);
+  }
+
+  function toggleSupplierRequest(name) {
+    setSupplierRequestNames(names => names.includes(name) ? names.filter(item => item !== name) : [...names, name]);
+  }
+
+  function submitSupplierRequest() {
+    const note = supplierRequestNote.trim();
+    if (supplierRequestNames.length === 0 && !note) { setErr("Select a supplier or add a note for Admin."); return; }
+    onSupplierSetupRequest(user, { supplierNames: supplierRequestNames, note });
+    setSupplierRequestNames([]);
+    setSupplierRequestNote("");
+    setErr("");
+  }
+
+  function saveProfile() {
+    onUpdateClient({
+      ...user,
+      name: profileDraft.name || user.name,
+      businessName: profileDraft.businessName || profileDraft.name || user.businessName,
+      address: profileDraft.address,
+      deliveryAddress: profileDraft.address,
+      phone: profileDraft.phone,
+      email: profileDraft.email || user.email,
+      auditActor: "client",
+      auditDetail: `${clientBusinessName(user)} profile updated from client portal`,
+    });
+    setErr("");
+  }
+
+  const tabs = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "orders", label: "My Orders" },
+    { key: "new", label: "New Order" },
+    { key: "vendors", label: "Vendors" },
+    { key: "profile", label: "Profile" },
+  ];
+
+  if (accountStatus === "Pending") {
+    return <PendingActivationPortal user={user} suppliers={suppliers} onLogout={onLogout} />;
+  }
+
+  return (
+    <div className="ux-shell">
+      <ExperienceNav role="CLIENT" user={user} tabs={tabs} activeTab={tab} onTab={next => { setTab(next); setErr(""); }} onLogout={onLogout} />
+      <main className="ux-main">
+        {err && <div className="ux-alert">{err}</div>}
+
+        {tab === "dashboard" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">G'DAY, <span>{userFirstName(user).toUpperCase()}</span></div>
+                <div className="ux-subtitle">motoco - Gold Coast Delivery Client</div>
+              </div>
+              <button className="ux-btn primary" onClick={() => setTab("new")}>+ Place Order</button>
+            </div>
+            <div className="ux-card tint">
+              <div className="ux-section-title">Structured Freight Days</div>
+              <div style={{ fontSize: ".82rem", fontWeight: 900, textTransform: "uppercase" }}>{"Order Mon -> Delivered Tue   Order Wed -> Delivered Thu"}</div>
+              <div className="ux-muted" style={{ fontSize: ".78rem", marginTop: ".7rem" }}>Place orders before 12:30pm Brisbane time for the same-day dispatch cycle.</div>
+            </div>
+            <div className="ux-stats">
+              <div className="ux-stat"><strong>{total}</strong><span>Total Orders</span></div>
+              <div className="ux-stat"><strong>{pending}</strong><span>Pending</span></div>
+              <div className="ux-stat in-transit"><strong>{enRoute}</strong><span>In Transit</span></div>
+              <div className="ux-stat delivered"><strong>{delivered}</strong><span>Delivered</span></div>
+            </div>
+            <div className="ux-card">
+              <div className="ux-section-title">Recent Orders</div>
+              {clientOrders.length === 0 ? (
+                <div className="ux-empty">No orders yet - place your first one!</div>
+              ) : (
+                <div className="ux-order-list">
+                  {clientOrders.slice(0, 5).map(order => <ExperienceOrderRow key={order.id} order={order} />)}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {tab === "new" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Place <span>Order</span></div>
+                <div className="ux-subtitle">We collect from Brisbane - delivered to your Gold Coast workshop</div>
+              </div>
+            </div>
+            {!canRequest && <div className="ux-alert">Account {accountStatus}. Existing orders remain visible, but new pickup requests are blocked.</div>}
+            <div className="ux-form">
+              <div className="ux-field"><label>Con Note Number *</label><input value={conNote} onChange={e => setConNote(e.target.value)} placeholder="e.g. LI-2024-00482" /></div>
+              <div className="ux-field"><label>Vendor / Supplier *</label>
+                <select value={vendor} onChange={e => setVendor(e.target.value)}>
+                  <option value="">- Select Vendor -</option>
+                  {linkedSuppliers.map(supplier => <option key={supplier.id || supplier.name} value={supplier.name}>{supplier.name}</option>)}
+                </select>
+              </div>
+              {linkedSuppliers.length === 0 && <div className="ux-alert">No approved vendors on this profile. Use Vendors to request supplier setup.</div>}
+              <div className="ux-field">
+                <label>Delivery Address</label>
+                <div className="ux-card tint" style={{ margin: 0, padding: ".85rem" }}>{deliveryAddress || "(No address - update your profile)"}</div>
+                <div className="ux-muted" style={{ fontSize: ".74rem", marginTop: ".35rem" }}>From your profile. Update in the Profile tab if needed.</div>
+              </div>
+              <div className="ux-field"><label>Delivery Priority</label>
+                <div className="ux-priority">
+                  <button type="button" className={priority === "ASAP" ? "active" : ""} onClick={() => setPriority("ASAP")}><span className="ux-dot" />ASAP<br /><span className="ux-muted" style={{ fontSize: ".72rem", textTransform: "none" }}>Next available freight day</span></button>
+                  <button type="button" className={priority === "NEXT RUN" ? "active" : ""} onClick={() => setPriority("NEXT RUN")}><span className="ux-dot green" />Next Run<br /><span className="ux-muted" style={{ fontSize: ".72rem", textTransform: "none" }}>Hold until driver heads this way</span></button>
+                </div>
+              </div>
+              <div className="ux-grid-2">
+                <div className="ux-field"><label>Date Submitted</label><input type="date" value={requestedDate} onChange={e => setRequestedDate(e.target.value)} /></div>
+                <div className="ux-field"><label>Time Submitted</label><input value={submittedTime} onChange={e => setSubmittedTime(e.target.value)} /></div>
+              </div>
+              <div className="ux-field"><label>Notes / Special Instructions</label><textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Fragile parts, call before delivery, access instructions..." /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "96px 1fr", gap: ".6rem" }}>
+                <button className="ux-btn secondary" onClick={() => { resetOrderForm(); setTab("dashboard"); }}>Cancel</button>
+                <button className="ux-btn primary" disabled={!canRequest} onClick={submitOrder}>Place Order</button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === "orders" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">My <span>Orders</span></div>
+                <div className="ux-subtitle">{clientOrders.length} total orders</div>
+              </div>
+            </div>
+            {clientOrders.length === 0 ? (
+              <div className="ux-card"><div className="ux-empty">No orders yet - place your first one!</div></div>
+            ) : (
+              <div className="ux-order-list">
+                {clientOrders.map(order => <ExperienceOrderRow key={order.id} order={order} onCancel={cancelOrRequest} onDispute={onDispute} />)}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === "vendors" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">My <span>Vendors</span></div>
+                <div className="ux-subtitle">Approved supplier links for this customer profile</div>
+              </div>
+            </div>
+            <div className="ux-vendor-grid">
+              {linkedSuppliers.map(supplier => (
+                <div className="ux-card" key={supplier.id || supplier.name}>
+                  <div className="ux-order-title">{supplier.name}</div>
+                  <div className="ux-order-meta">{supplier.address || "Address not recorded"}</div>
+                  <div className="ux-order-meta">{supplier.phone || "Phone not recorded"}</div>
+                  <div className="ux-badge done" style={{ marginTop: ".7rem" }}>Approved</div>
+                </div>
+              ))}
+            </div>
+            {linkedSuppliers.length === 0 && <div className="ux-card"><div className="ux-empty">No approved vendors yet.</div></div>}
+            <div className="ux-card">
+              <div className="ux-section-title">Request Vendor Setup</div>
+              <div className="ux-vendor-grid">
+                {activeSupplierList.map(supplier => (
+                  <button key={supplier.id || supplier.name} className={`ux-btn ${supplierRequestNames.includes(supplier.name) ? "primary" : "secondary"}`} onClick={() => toggleSupplierRequest(supplier.name)}>
+                    {supplier.name}
+                  </button>
+                ))}
+              </div>
+              <div className="ux-field" style={{ marginTop: "1rem" }}><label>Request Note</label><textarea value={supplierRequestNote} onChange={e => setSupplierRequestNote(e.target.value)} placeholder="Supplier access to add or review" /></div>
+              <button className="ux-btn primary full" onClick={submitSupplierRequest}>Send to Admin</button>
+            </div>
+          </>
+        )}
+
+        {tab === "profile" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">My <span>Profile</span></div>
+                <div className="ux-subtitle">Customer details used for delivery</div>
+              </div>
+            </div>
+            <div className="ux-form">
+              <div className="ux-grid-2">
+                <div className="ux-field"><label>Contact Name</label><input value={profileDraft.name} onChange={e => setProfileDraft(p => ({ ...p, name: e.target.value }))} /></div>
+                <div className="ux-field"><label>Business Name</label><input value={profileDraft.businessName} onChange={e => setProfileDraft(p => ({ ...p, businessName: e.target.value }))} /></div>
+                <div className="ux-field"><label>Email</label><input value={profileDraft.email} onChange={e => setProfileDraft(p => ({ ...p, email: e.target.value }))} /></div>
+                <div className="ux-field"><label>Phone</label><input value={profileDraft.phone} onChange={e => setProfileDraft(p => ({ ...p, phone: e.target.value }))} /></div>
+              </div>
+              <div className="ux-field"><label>Delivery Address</label><input value={profileDraft.address} onChange={e => setProfileDraft(p => ({ ...p, address: e.target.value }))} placeholder="Workshop delivery address" /></div>
+              <button className="ux-btn primary full" onClick={saveProfile}>Save Profile</button>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function fallbackDeliveryPrices(priceRules = []) {
+  const rules = activePriceRules(priceRules);
+  const partRules = rules.filter(rule => String(rule.itemType || rule.label || "").toLowerCase().includes("part"));
+  const findPart = (tokens, fallback) => {
+    const rule = partRules.find(item => tokens.some(token => String(item.label || item.weightBand || "").toLowerCase().includes(token)));
+    return rule ? priceRuleDollars(rule) : fallback;
+  };
+  const returnRule = rules.find(rule => String(rule.itemType || rule.label || "").toLowerCase().includes("return"));
+  return {
+    part5: findPart(["up to 5", "0_to_5", "0-5", "5kg"], 15.60),
+    part10: findPart(["5_to_10", "5-10", "10kg"], 19.20),
+    partHeavy: findPart(["10_plus", "10+", "heavy"], 22.80),
+    returns: returnRule ? priceRuleDollars(returnRule) : 6,
+  };
+}
+
+function tyreChargeFor(qty, priceRules = []) {
+  const count = Number(qty || 0);
+  if (count <= 0) return { amount: 0, label: "0 Tyres" };
+  const tyreRules = activePriceRules(priceRules).filter(rule => String(rule.itemType || rule.label || "").toLowerCase().includes("tyre"));
+  const exactRule = tyreRules.find(rule => {
+    const min = Number(rule.tyreCountMin || rule.minQty || 0);
+    const max = Number(rule.tyreCountMax || rule.maxQty || min || 9999);
+    return count >= min && count <= max;
+  });
+  if (exactRule) {
+    const amount = priceRuleIsPerItem(exactRule) ? priceRuleDollars(exactRule) * count : priceRuleDollars(exactRule);
+    return { amount, label: `${count} Tyres (${exactRule.label || "rate"})`, rule: exactRule };
+  }
+  if (count === 1) return { amount: 16.80, label: "1 Tyre" };
+  if (count === 2) return { amount: 21.60, label: "2 Tyres" };
+  if (count === 3) return { amount: 30.00, label: "3 Tyres" };
+  return { amount: count * 11.20, label: `${count} Tyres (4+ rate)` };
+}
+
+function QuantityStepper({ value, onChange }) {
+  const safeValue = Math.max(0, Number(value || 0));
+  return (
+    <div className="ux-stepper">
+      <button type="button" disabled={safeValue <= 0} onClick={() => onChange(Math.max(0, safeValue - 1))}>-</button>
+      <strong>{safeValue}</strong>
+      <button type="button" onClick={() => onChange(safeValue + 1)}>+</button>
+    </div>
+  );
+}
+
+function DriverRunCard({ order, suppliers, enroute = false, onConfirmPickup }) {
+  const supplier = supplierByName(suppliers, order.vendor);
+  const pickupPhone = supplier?.phone || order.supplierPhone || "";
+  const deliveryPhone = order.deliveryPhone || order.clientPhone || order.receiverPhone || "";
+  return (
+    <div className={`ux-run-card${enroute ? " enroute" : ""}`}>
+      <div className="ux-run-top">
+        <div>
+          <div className="ux-run-con">{order.conNote || order.id}</div>
+          <div className="ux-run-vendor">{order.vendor || "Supplier not recorded"}</div>
+          <div className="ux-order-meta"><span className="ux-badge">{orderPriority(order)}</span> Submitted {orderSubmittedLabel(order)}</div>
+        </div>
+        <span className={`ux-badge ${statusBadgeClass(order.status)}`}>{enroute ? "En Route" : order.status || "Pending"}</span>
+      </div>
+      <div className="ux-order-meta">
+        Pickup: {supplier?.address || order.pickupAddress || "Supplier address not recorded"} {pickupPhone && <a href={telHref(pickupPhone)} style={{ color: "#c8102e" }}>{pickupPhone}</a>}
+      </div>
+      <div className="ux-address-block">
+        <small>Deliver to - Gold Coast</small>
+        <strong>{order.clientName || "Customer"}</strong>
+        <div>{order.dropAddress || "(No address - update your profile)"}</div>
+        {(deliveryPhone || order.receiverName || order.contactName) && (
+          <div className="ux-order-meta" style={{ marginTop: ".35rem" }}>
+            {deliveryPhone && <a href={telHref(deliveryPhone)} style={{ color: "#c8102e" }}>{deliveryPhone}</a>} {order.receiverName || order.contactName || ""}
+          </div>
+        )}
+      </div>
+      {!enroute && <button className="ux-btn primary" style={{ marginTop: ".85rem" }} onClick={() => onConfirmPickup(order)}>Confirm Pickup</button>}
+    </div>
+  );
+}
+
+function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exceptions, runClosures, onUpdateOrder, onUpdateOrders, onDeliveryProof, onException, onRunClose, onLogout }) {
+  const [tab, setTab] = useState("run");
+  const [query, setQuery] = useState("");
+  const [vendorFilter, setVendorFilter] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [tyreQty, setTyreQty] = useState(0);
+  const [part5, setPart5] = useState(0);
+  const [part10, setPart10] = useState(0);
+  const [partHeavy, setPartHeavy] = useState(0);
+  const [returnQty, setReturnQty] = useState(0);
+  const [receiverName, setReceiverName] = useState("");
+  const [receiverPhone, setReceiverPhone] = useState("");
+  const [sig, setSig] = useState(null);
+  const [notice, setNotice] = useState("");
+
+  const assignedOrders = orders.filter(order => matchesDriverOrder(order, user) && !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status));
+  const todayOrders = assignedOrders.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === todayBrisbane());
+  const runOrders = (todayOrders.length ? todayOrders : assignedOrders).slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999));
+  const pickupOrders = runOrders.filter(order => (order.status || "Pending") === "Pending" && !pickupAlreadyCollected(order));
+  const enRouteOrders = runOrders.filter(order => order.status === "En Route" || pickupAlreadyCollected(order));
+  const signoffOrders = enRouteOrders.length ? enRouteOrders : [];
+  const selectedOrder = signoffOrders.find(order => order.id === selectedId) || signoffOrders[0] || null;
+  const vendors = [...new Set(runOrders.map(order => order.vendor).filter(Boolean))];
+  const searchValue = query.trim().toLowerCase();
+  const visiblePickupOrders = pickupOrders.filter(order => {
+    const searchOk = !searchValue || [order.clientName, order.vendor, order.conNote, order.dropAddress].some(value => String(value || "").toLowerCase().includes(searchValue));
+    const vendorOk = !vendorFilter || order.vendor === vendorFilter;
+    return searchOk && vendorOk;
+  });
+  const visibleEnRouteOrders = enRouteOrders.filter(order => {
+    const searchOk = !searchValue || [order.clientName, order.vendor, order.conNote, order.dropAddress].some(value => String(value || "").toLowerCase().includes(searchValue));
+    const vendorOk = !vendorFilter || order.vendor === vendorFilter;
+    return searchOk && vendorOk;
+  });
+  const asapCount = pickupOrders.filter(order => orderPriority(order) === "ASAP").length;
+  const priceFallbacks = fallbackDeliveryPrices(priceRules);
+  const tyreCharge = tyreChargeFor(tyreQty, priceRules);
+  const partsTotal = (part5 * priceFallbacks.part5) + (part10 * priceFallbacks.part10) + (partHeavy * priceFallbacks.partHeavy);
+  const returnsTotal = returnQty * priceFallbacks.returns;
+  const totalCharge = tyreCharge.amount + partsTotal + returnsTotal;
+  const totalItems = tyreQty + part5 + part10 + partHeavy + returnQty;
+
+  useEffect(() => {
+    if (!selectedId && signoffOrders[0]) setSelectedId(signoffOrders[0].id);
+    if (selectedId && signoffOrders.length && !signoffOrders.some(order => order.id === selectedId)) setSelectedId(signoffOrders[0].id);
+  }, [selectedId, signoffOrders.map(order => order.id).join("|")]);
+
+  function resetSignoff() {
+    setSelectedId("");
+    setTyreQty(0);
+    setPart5(0);
+    setPart10(0);
+    setPartHeavy(0);
+    setReturnQty(0);
+    setReceiverName("");
+    setReceiverPhone("");
+    setSig(null);
+  }
+
+  function confirmPickup(order) {
+    const updated = {
+      ...order,
+      status: "En Route",
+      driverId: order.driverId || user.id,
+      driverName: order.driverName || user.name,
+      pickupOutcome: "Picked Up",
+      pickupConfirmedAt: isoNow(),
+      pickupOutcomeAt: isoNow(),
+      pickupDriverId: user.id,
+      pickupReadyBy10Confirmed: true,
+      pickupLabelledConfirmed: true,
+      pickupPackagingConfirmed: true,
+      pickupGoodsAcceptanceConfirmed: true,
+      pickupAcceptanceFinalConfirmed: true,
+      pickupGoodsAcceptancePolicyRef: "Policy #15 / POL-OPS-015",
+      pickupStandardsPolicyRef: "Policy #15 / Policy #16 / APP-DRV-002",
+      startedAt: isoNow(),
+    };
+    onUpdateOrder(updated);
+    setNotice(`${order.conNote || order.id} moved to En Route.`);
+  }
+
+  function completeDelivery() {
+    if (!selectedOrder) { setNotice("Select a package before sign-off."); return; }
+    if (totalItems <= 0) { setNotice("Log what was delivered before sign-off."); return; }
+    if (!receiverName.trim()) { setNotice("Receiver name is required."); return; }
+    if (!sig) { setNotice("Receiver signature is required."); return; }
+    const deliveredAt = isoNow();
+    const deliveryId = deliveryIdForOrder(selectedOrder);
+    const signaturePath = deliveryProofSignaturePath({ ...selectedOrder, deliveryId });
+    const itemSummary = `Tyres ${tyreQty}; parts up to 5kg ${part5}; parts 5-10kg ${part10}; parts 10kg+ ${partHeavy}; returns ${returnQty}`;
+    onDeliveryProof({
+      id: `proof-${Date.now()}`,
+      orderId: selectedOrder.id,
+      groupOrderIds: [selectedOrder.id],
+      deliveryStopKey: selectedOrder.deliveryStopKey || deliveryStopKeyForOrder(selectedOrder),
+      deliveryAddress: selectedOrder.dropAddress,
+      clientId: selectedOrder.clientId,
+      clientName: selectedOrder.clientName,
+      deliveryId,
+      receiverName: receiverName.trim(),
+      receiverPhone: receiverPhone.trim(),
+      signatureUrl: sig,
+      signaturePath,
+      driverId: user.id,
+      deliveredAt,
+      capturedAt: deliveredAt,
+      retentionUntil: addYears(isoDate(deliveredAt), 7),
+      storage: `delivery-proof/${signaturePath}`,
+      bucketPrivate: true,
+      price: Number(totalCharge.toFixed(2)),
+      itemType: "Driver delivery sign-off",
+      itemQty: totalItems,
+      itemSummary,
+      tyreQty,
+      partsQty: part5 + part10 + partHeavy,
+      returnsQty: returnQty,
+      signoffAddressConfirmed: true,
+      signoffGoodsMatched: true,
+      signoffAuthorisedReceiverConfirmed: true,
+      signoffHandoverConfirmed: true,
+      signoffPriceReviewed: true,
+      signoffDeviceSupervised: true,
+      deliverySignoffPolicyRef: "SOP-DEL-04 / APP-DRV-003",
+      completionSource: "SOP-DEL-04 delivery sign-off",
+    });
+    resetSignoff();
+    setTab("run");
+    setNotice("Delivery completed and signed off.");
+  }
+
+  const tabs = [
+    { key: "run", label: "Today's Run" },
+    { key: "signoff", label: "Sign-Off" },
+    { key: "pricing", label: "Pricing" },
+  ];
+
+  return (
+    <div className="ux-shell">
+      <ExperienceNav role="DRIVER" user={user} tabs={tabs} activeTab={tab} onTab={next => { setTab(next); setNotice(""); }} onLogout={onLogout} />
+      <main className="ux-main wide">
+        {notice && <div className="ux-alert">{notice}</div>}
+
+        {tab === "run" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Today's <span>Run</span></div>
+                <div className="ux-subtitle">{`${fmtFullDate(todayBrisbane())} - ${user.name || "Driver"} - Brisbane pickups -> Gold Coast drops`}</div>
+              </div>
+              <div className="ux-run-stats">
+                <div className="ux-run-stat"><strong>{pickupOrders.length}</strong><span>Pickup</span></div>
+                <div className="ux-run-stat"><strong style={{ color: "#b8860b" }}>{enRouteOrders.length}</strong><span>En Route</span></div>
+              </div>
+            </div>
+            {asapCount > 0 && <div className="ux-alert">{asapCount} ASAP order{asapCount === 1 ? "" : "s"} - priority pickup required.</div>}
+            <div className="ux-driver-tools">
+              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search client or workshop..." style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }} />
+              <select value={vendorFilter} onChange={e => setVendorFilter(e.target.value)} style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }}>
+                <option value="">All Vendors</option>
+                {vendors.map(vendorName => <option key={vendorName} value={vendorName}>{vendorName}</option>)}
+              </select>
+            </div>
+            <div className="ux-run-section">Brisbane Pickups ({visiblePickupOrders.length})</div>
+            {visiblePickupOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">All pickups confirmed. Head to Gold Coast.</div></div> : visiblePickupOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} onConfirmPickup={confirmPickup} />)}
+            <div className="ux-run-section" style={{ color: "#18733c" }}>En Route - Gold Coast ({visibleEnRouteOrders.length})</div>
+            {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => <DriverRunCard key={order.id} order={order} suppliers={suppliers} enroute onConfirmPickup={confirmPickup} />)}
+          </>
+        )}
+
+        {tab === "signoff" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Delivery <span>Sign-Off</span></div>
+                <div className="ux-subtitle">Select package - log what was delivered - capture signature</div>
+              </div>
+            </div>
+            <div className="ux-step">
+              <div className="ux-section-title">Step 1 - Select Package</div>
+              {signoffOrders.length === 0 ? <div className="ux-empty">No en-route packages ready for sign-off.</div> : signoffOrders.map(order => (
+                <div key={order.id} className={`ux-radio-row${selectedOrder?.id === order.id ? " active" : ""}`} onClick={() => { setSelectedId(order.id); setNotice(""); }}>
+                  <span className="ux-radio-dot" />
+                  <div>
+                    <div className="ux-order-title">{order.conNote || order.id} - {order.vendor || "Supplier"}</div>
+                    <div className="ux-order-meta">{order.clientName || "Customer"} - {order.dropAddress || "(No address - update your profile)"}</div>
+                  </div>
+                  {orderPriority(order) === "ASAP" && <span className="ux-badge">ASAP</span>}
+                </div>
+              ))}
+            </div>
+            <div className="ux-step">
+              <div className="ux-section-title">Step 2 - What Was Delivered?</div>
+              <div className="ux-field"><label>Total Tyres Delivered</label>
+                <div className="ux-qty-hero"><QuantityStepper value={tyreQty} onChange={setTyreQty} /><div style={{ fontSize: ".7rem", fontWeight: 900, letterSpacing: ".12em", textTransform: "uppercase" }}>Tyres</div></div>
+              </div>
+              {tyreQty > 0 && <div className="ux-address-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><small>Rate Applied</small><strong>{tyreCharge.label}</strong></div><strong style={{ color: "#c8102e", fontSize: "1.3rem" }}>${tyreCharge.amount.toFixed(2)}</strong></div>}
+              <div className="ux-section-title" style={{ marginTop: "1rem" }}>Parts Consignments</div>
+              {[
+                ["Up to 5kg", priceFallbacks.part5, part5, setPart5],
+                ["5-10kg", priceFallbacks.part10, part10, setPart10],
+                ["10kg+", priceFallbacks.partHeavy, partHeavy, setPartHeavy],
+              ].map(([label, amount, value, setter]) => (
+                <div className="ux-line" key={label}>
+                  <div><strong>{label}</strong><div className="ux-order-meta">${Number(amount).toFixed(2)} per consignment</div></div>
+                  <QuantityStepper value={value} onChange={setter} />
+                  {Number(value) > 0 && <strong style={{ color: "#c8102e" }}>${(Number(value) * Number(amount)).toFixed(2)}</strong>}
+                </div>
+              ))}
+              <div className="ux-section-title" style={{ marginTop: "1rem" }}>Returns to Supplier</div>
+              <div className="ux-line">
+                <div><strong>Return Packages</strong><div className="ux-order-meta">${priceFallbacks.returns.toFixed(2)} per package (pre-labelled)</div></div>
+                <QuantityStepper value={returnQty} onChange={setReturnQty} />
+                {returnQty > 0 && <strong style={{ color: "#c8102e" }}>${returnsTotal.toFixed(2)}</strong>}
+              </div>
+              {totalItems > 0 && <div className="ux-total"><div><strong style={{ fontSize: ".75rem", letterSpacing: ".12em" }}>TOTAL CHARGE</strong><small>ex GST - ${(totalCharge * 1.1).toFixed(2)} inc GST</small></div><strong>${totalCharge.toFixed(2)} <small style={{ display: "inline", opacity: .8 }}>EX GST</small></strong></div>}
+            </div>
+            <div className="ux-step">
+              <div className="ux-section-title">Step 3 - Receiver Sign-Off</div>
+              <div className="ux-summary">
+                <div><div className="ux-order-meta">Client</div><strong>{selectedOrder?.clientName || "Select package"}</strong></div>
+                <div><div className="ux-order-meta">Con Note</div><strong>{selectedOrder?.conNote || "-"}</strong></div>
+                <div><div className="ux-order-meta">Deliver To</div><strong>{selectedOrder?.dropAddress || "(No address - update your profile)"}</strong></div>
+                <div><div className="ux-order-meta">Total (ex GST)</div><strong style={{ color: "#c8102e" }}>${totalCharge.toFixed(2)}</strong></div>
+              </div>
+              <div className="ux-grid-2">
+                <div className="ux-field"><label>Receiver Name *</label><input value={receiverName} onChange={e => setReceiverName(e.target.value)} placeholder="Full name" /></div>
+                <div className="ux-field"><label>Receiver Phone</label><input value={receiverPhone} onChange={e => setReceiverPhone(e.target.value)} placeholder="+61 4xx xxx xxx" /></div>
+              </div>
+              <div className="ux-field ux-sig"><label>Receiver Signature *</label><SigPad onSig={setSig} /></div>
+              <button className="ux-btn success full" disabled={!selectedOrder || totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
+            </div>
+          </>
+        )}
+
+        {tab === "pricing" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Pricing <span>Reference</span></div>
+                <div className="ux-subtitle">Read-only delivery rates for driver reference</div>
+              </div>
+            </div>
+            <div className="ux-vendor-grid">
+              {activePriceRules(priceRules).map(rule => (
+                <div className="ux-card" key={rule.id || rule.label}>
+                  <div className="ux-order-title">{rule.label || rule.itemType}</div>
+                  <div className="ux-order-meta">{priceRuleBand(rule)} - {priceRuleIsPerItem(rule) ? "per item" : "flat"}</div>
+                  <strong style={{ color: "#c8102e", fontSize: "1.3rem" }}>${priceRuleDollars(rule).toFixed(2)}</strong>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
   );
 }
 
@@ -11702,7 +12561,7 @@ export default function App() {
     <div className="app">
       <style>{css}</style>
       {workspaceSession && (
-        <div style={{ position: "fixed", top: ".8rem", right: ".8rem", zIndex: 30, display: "flex", gap: ".45rem", alignItems: "center" }}>
+        <div style={{ position: "fixed", bottom: ".8rem", right: ".8rem", zIndex: 30, display: "flex", gap: ".45rem", alignItems: "center" }}>
           <button className="btn b-ghost b-sm" onClick={() => setAccountSecurityOpen(true)}>Account</button>
         </div>
       )}
@@ -11746,11 +12605,11 @@ export default function App() {
           }}
         />
       ) : workspaceSession.role === "client" ? (
-        <ClientPortal user={workspaceSession.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
+        <ClientExperiencePortal user={workspaceSession.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : workspaceSession.role === "billing" ? (
         <BillingContactPortal user={workspaceSession.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
       ) : workspaceSession.role === "driver" ? (
-        <DriverPortal user={workspaceSession.user} orders={orders} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
+        <DriverExperiencePortal user={workspaceSession.user} orders={orders} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
       ) : (
         <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
       )}
