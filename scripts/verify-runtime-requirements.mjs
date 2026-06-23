@@ -180,8 +180,9 @@ requireText(
     "function Login",
     "Customer Login",
     "Courier Business Login",
-    "Send Login Link",
-    "requestLiveMagicLink",
+    "Sign In",
+    "Password required",
+    "requestLivePasswordLogin",
     "resolveLiveRuntimeSession",
     "workspaceSessionForLiveData",
     "Live login is not configured for this deployment. Contact Admin.",
@@ -641,18 +642,16 @@ requireText(
 requireText(
   "src/components/moto-co-logistics.tsx",
   [
-    "requestLiveMagicLink",
+    "requestLivePasswordLogin",
     "resolveLiveRuntimeSession",
     "loadLiveRuntimeSnapshot",
     "Customer Login",
     "Courier Business Login",
-    "Send Login Link",
-    "loginLinkErrorMessage",
-    "over_email_send_rate_limit",
-    "Too many login emails have been requested",
-    "cooldownUntil",
+    "Sign In",
+    "passwordLoginErrorMessage",
+    "Email or password is incorrect.",
   ],
-  "production login uses live email-link entry flow"
+  "production login uses simple email-password entry flow"
 );
 
 forbidText(
@@ -661,6 +660,8 @@ forbidText(
     "Local testing code",
     "Production Supabase Auth email delivery is not connected",
     "Get Login Code",
+    "Send Login Link",
+    "Too many login emails have been requested",
     "Reset Local Demo Data",
     "[\"client\", \"billing\", \"driver\", \"admin\"]",
   ],
@@ -678,7 +679,8 @@ requireText(
     "one-use code",
     "getSession",
     "actor_code",
-    "requestLiveMagicLink",
+    "requestLivePasswordLogin",
+    "signInWithPassword",
     "resolveLiveRuntimeSession",
   ],
   "live Supabase auth callback race guard and role mapping"

@@ -9,7 +9,7 @@ import {
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
   onLiveAuthStateChange,
-  requestLiveMagicLink,
+  requestLivePasswordLogin,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
 } from "@/lib/live-runtime";
@@ -2102,39 +2102,26 @@ function SigPad({ onSig }) {
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 // ─── REGISTER CLIENT ─────────────────────────────────────────────────────────
-function loginLinkErrorMessage(error) {
+function passwordLoginErrorMessage(error) {
   const code = String(error?.code || "").toLowerCase();
   const message = String(error?.message || "").toLowerCase();
-  const status = Number(error?.status || 0);
-  if (status === 429 || code.includes("rate") || message.includes("rate limit")) {
-    return "Too many login emails have been requested. Wait before requesting another link, or ask Admin to issue a one-time link.";
+  if (code.includes("invalid_credentials") || message.includes("invalid login") || message.includes("invalid credentials")) {
+    return "Email or password is incorrect.";
   }
-  if (code.includes("user_not_found") || message.includes("user not found") || message.includes("signup")) {
-    return "This email is not active for portal access. Contact Admin.";
+  if (message.includes("email not confirmed")) {
+    return "This login is not active yet. Contact Admin.";
   }
-  return "We could not send a login link right now. Contact Admin if it keeps happening.";
-}
-
-function isLoginEmailRateLimited(error) {
-  const code = String(error?.code || "").toLowerCase();
-  const message = String(error?.message || "").toLowerCase();
-  const status = Number(error?.status || 0);
-  return status === 429 || code.includes("over_email_send_rate_limit") || code.includes("rate") || message.includes("rate limit");
-}
-
-function loginCooldownMessage(cooldownUntil) {
-  const retryTime = new Date(cooldownUntil).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
-  return `Too many login emails have been requested. Try again after ${retryTime}, or ask Admin to issue a one-time link.`;
+  return "We could not sign you in. Check the email and password, or contact Admin.";
 }
 
 function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRuntimeStatus, liveAuthError = "" }) {
   const defaultEntry = ["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer";
   const [entryType, setEntryType] = useState(defaultEntry);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
-  const [cooldownUntil, setCooldownUntil] = useState(0);
 
   useEffect(() => {
     setEntryType(["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer");
@@ -2142,7 +2129,7 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
     setNotice("");
   }, [defaultRole]);
 
-  async function sendLoginLink() {
+  async function signIn() {
     setErr("");
     setNotice("");
     const loginEmail = email.trim().toLowerCase();
@@ -2150,27 +2137,20 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
       setErr("Email required");
       return;
     }
+    if (!password) {
+      setErr("Password required");
+      return;
+    }
     if (!liveRuntimeStatus?.enabled) {
       setErr("Live login is not configured for this deployment. Contact Admin.");
       return;
     }
-    if (cooldownUntil && Date.now() < cooldownUntil) {
-      setErr(loginCooldownMessage(cooldownUntil));
-      return;
-    }
     setSending(true);
     try {
-      await requestLiveMagicLink(loginEmail, entryType);
-      setCooldownUntil(0);
-      setNotice("Check your email for the secure login link. It may take a minute to arrive.");
+      await requestLivePasswordLogin(loginEmail, password);
+      setNotice("Opening portal...");
     } catch (error) {
-      if (isLoginEmailRateLimited(error)) {
-        const nextCooldownUntil = Date.now() + 60 * 60 * 1000;
-        setCooldownUntil(nextCooldownUntil);
-        setErr(loginCooldownMessage(nextCooldownUntil));
-      } else {
-        setErr(loginLinkErrorMessage(error));
-      }
+      setErr(passwordLoginErrorMessage(error));
     } finally {
       setSending(false);
     }
@@ -2197,15 +2177,19 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
         {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{notice}</div>}
         <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
           {entryType === "customer"
-            ? "Enter your approved customer email."
-            : "Enter your approved courier business email."}
+            ? "Sign in with your customer email and password."
+            : "Sign in with your courier business email and password."}
         </p>
         <div className="f">
           <label>Email</label>
-          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && sendLoginLink()} />
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" type="email" onKeyDown={e => e.key === "Enter" && signIn()} />
         </div>
-        <button className="btn b-acc" onClick={sendLoginLink} disabled={sending}>
-          {sending ? "Sending..." : "Send Login Link"}
+        <div className="f">
+          <label>Password</label>
+          <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" onKeyDown={e => e.key === "Enter" && signIn()} />
+        </div>
+        <button className="btn b-acc" onClick={signIn} disabled={sending}>
+          {sending ? "Signing in..." : "Sign In"}
         </button>
         {entryType === "customer" && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>

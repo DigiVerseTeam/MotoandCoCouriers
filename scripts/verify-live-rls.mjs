@@ -131,13 +131,22 @@ requireText(
 requireText(
   "src/components/moto-co-logistics.tsx",
   [
-    "requestLiveMagicLink",
+    "requestLivePasswordLogin",
     "resolveLiveRuntimeSession",
-    "syncLiveRuntimeDomain",
-    "uploadLiveDeliveryProof",
-    "Send Supabase Login Link",
+    "Sign In",
   ],
   "Supabase Auth and live data wiring"
+);
+
+requireText(
+  "src/lib/live-runtime.ts",
+  [
+    "requestLivePasswordLogin",
+    "signInWithPassword",
+    "syncLiveRuntimeDomain",
+    "uploadLiveDeliveryProof",
+  ],
+  "Supabase password auth, sync, and private POD storage wiring"
 );
 
 requireText(

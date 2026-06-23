@@ -245,6 +245,17 @@ export async function requestLiveMagicLink(email, roleHint = "client", returnPat
   return true;
 }
 
+export async function requestLivePasswordLogin(email, password) {
+  const supabase = client();
+  if (!supabase) throw new Error("Live sign-in is not configured.");
+  const { error } = await supabase.auth.signInWithPassword({
+    email: normaliseEmail(email),
+    password: String(password || ""),
+  });
+  if (error) throw error;
+  return true;
+}
+
 export async function signOutLiveRuntime() {
   const supabase = client();
   if (!supabase) return;
