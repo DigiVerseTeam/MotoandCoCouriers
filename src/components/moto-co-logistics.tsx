@@ -12224,31 +12224,77 @@ export default function App() {
     return syncPromise;
   }
 
+  function orderWithSingleDriverAutoAssignment(order) {
+    if (order.driverId || order.assignedDriverId) return order;
+    const activeDrivers = activeDriverRecords(drivers);
+    if (activeDrivers.length !== 1) return order;
+
+    const driver = activeDrivers[0];
+    const assignedDriver = driverAssignmentFields(driver);
+    const runDate = order.actualRunDate || order.date || todayBrisbane();
+    const readyVehicles = activeVehicles(vehicles).filter(vehicle => vehicleComplianceState(vehicle, runDate).ready);
+    const vehicle = readyVehicles.length === 1 ? readyVehicles[0] : null;
+    const vehicleName = vehicleLabel(vehicle);
+    const assignedAt = isoNow();
+    const driverId = assignedDriver.driverId || driver.id;
+
+    return {
+      ...order,
+      ...assignedDriver,
+      driverId,
+      assignedDriverId: assignedDriver.assignedDriverId || driverId,
+      driverName: assignedDriver.driverName || driver.name,
+      vehicleId: vehicle?.id || order.vehicleId || "",
+      vehicleName: vehicleName || order.vehicleName || "",
+      runId: vehicleName ? runIdFor(runDate, driverId, vehicleName) : order.runId || "",
+      assignedAt,
+      runDate,
+      runCompiledAt: assignedAt,
+      runCompiledBy: "Auto assignment",
+      runSequence: order.runSequence || 1,
+      supplierSequence: order.supplierSequence || 1,
+      deliveryZone: deliveryZone(order.dropAddress),
+      dispatchMode: "single_active_driver_auto_assignment",
+      vehicleRegistrationCurrent: vehicle ? true : Boolean(order.vehicleRegistrationCurrent),
+      vehicleInsuranceCurrent: vehicle ? true : Boolean(order.vehicleInsuranceCurrent),
+      vehicleRegistrationExpiry: vehicle?.registrationExpiry || order.vehicleRegistrationExpiry || "",
+      vehicleInsuranceExpiry: vehicle?.insuranceExpiry || order.vehicleInsuranceExpiry || "",
+      vehicleComplianceCheckedAt: vehicle ? assignedAt : order.vehicleComplianceCheckedAt || "",
+      vehicleComplianceCheckedBy: vehicle ? "Auto assignment" : order.vehicleComplianceCheckedBy || "",
+      vehicleComplianceNote: vehicle ? "Single active driver / single ready vehicle auto-assignment" : order.vehicleComplianceNote || "",
+      vehicleComplianceSource: vehicle ? "vehicle_register_auto_assignment" : order.vehicleComplianceSource || "",
+    };
+  }
+
   function addOrder(o) {
-    const next = [o, ...orders];
+    const order = orderWithSingleDriverAutoAssignment(o);
+    const next = [order, ...orders];
     setOrders(next); save(KEY_ORDERS, next);
-    const syncPromise = syncLiveRecords("orders", [o], "Pickup request could not be synced to the live system.");
-    writeAudit("Pickup request created", `${o.id} for ${o.clientName}, supplier ${o.vendor}, run ${o.actualRunDate || o.date}`, "client");
+    const syncPromise = syncLiveRecords("orders", [order], "Pickup request could not be synced to the live system.");
+    writeAudit("Pickup request created", `${order.id} for ${order.clientName}, supplier ${order.vendor}, run ${order.actualRunDate || order.date}`, "client");
+    if (order.dispatchMode === "single_active_driver_auto_assignment") {
+      writeAudit("Pickup request auto-assigned", `${order.id} assigned to ${order.driverName || order.driverId}${order.vehicleName ? `, vehicle ${order.vehicleName}` : ""}`, "system");
+    }
     createOperationalNotice({
-      clientId: o.clientId,
-      clientName: o.clientName,
-      orderId: o.id,
+      clientId: order.clientId,
+      clientName: order.clientName,
+      orderId: order.id,
       noticeType: "pickup_request_submitted",
-      subject: `Pickup request received - ${o.id}`,
-      message: `${o.vendor} pickup request was recorded for run ${fmtFullDate(o.actualRunDate || o.date)}. Con note ${o.conNote}.`,
-      eventRef: o.submittedAt || "",
+      subject: `Pickup request received - ${order.id}`,
+      message: `${order.vendor} pickup request was recorded for run ${fmtFullDate(order.actualRunDate || order.date)}. Con note ${order.conNote}.`,
+      eventRef: order.submittedAt || "",
       createdBy: "client",
     });
-    if (o.scheduleAdjusted || o.cutoffApplied) {
-      const adjustmentLabel = runDateAdjustmentLabel(o.scheduleAdjustmentReason);
+    if (order.scheduleAdjusted || order.cutoffApplied) {
+      const adjustmentLabel = runDateAdjustmentLabel(order.scheduleAdjustmentReason);
       createOperationalNotice({
-        clientId: o.clientId,
-        clientName: o.clientName,
-        orderId: o.id,
+        clientId: order.clientId,
+        clientName: order.clientName,
+        orderId: order.id,
         noticeType: "schedule_adjusted",
-        subject: `Run date adjusted - ${o.id}`,
-        message: `${adjustmentLabel}. Requested ${fmtFullDate(o.requestedDate)}; scheduled ${fmtFullDate(o.actualRunDate || o.date)}.`,
-        eventRef: o.actualRunDate || o.date,
+        subject: `Run date adjusted - ${order.id}`,
+        message: `${adjustmentLabel}. Requested ${fmtFullDate(order.requestedDate)}; scheduled ${fmtFullDate(order.actualRunDate || order.date)}.`,
+        eventRef: order.actualRunDate || order.date,
         createdBy: "system",
       });
     }
