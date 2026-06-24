@@ -422,6 +422,15 @@ const seedOrders = [
   { id: "MC-UNMATCHED-001", clientId: "unknown-account", clientName: "SOP-EXC-03 Verification Fixture", vendor: "Whites Powersports", conNote: "WP-UNMATCHED-01", dropAddress: "44 Verification Ave, Southport QLD", notes: "Local fixture: delivered proof-linked job with intentionally unknown account_id to verify SOP-EXC-03 billing exclusion and Admin correction.", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-UNMATCHED-001"), price: 22, recvName: "Casey V", sig: "data:image/png;base64,sign-unmatched", proofId: "proof-seed-unmatched-1", itemType: "5 kg to 15 kg", itemQty: 1, weightBand: "5_to_15kg", priceRuleId: "price-parts-5-15", deliveryCompletionSource: "SOP-DEL-05 / delivery_proof insert", deliveryCompletedBy: "system", deliveryCompletedAt: "2026-05-13T04:15:00.000Z", billingReady: true, billingReadyAt: "2026-05-13T04:15:00.000Z", billingReadySource: "SOP-DEL-05", billingAccountMatchStatus: "unmatched_fixture", billingAccountMatchSource: "SOP-EXC-03 local verification fixture", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
 ];
 
+const seedOrderIds = new Set(seedOrders.map(order => String(order.id)));
+
+function isSeedRuntimeOrder(order = {}) {
+  return seedOrderIds.has(String(order.id || "")) ||
+    String(order.runId || "").includes("RUN-2026-05-14-d1-MCO-001") ||
+    String(order.notes || "").toLowerCase().includes("local sop-") ||
+    String(order.clientName || "").toLowerCase().includes("verification fixture");
+}
+
 const seedClients = [
   { id: "c1", name: "Gold Coast Cycles", email: "gc@example.com", phone: "07 5555 1234", address: "22 Ferry Rd, Southport QLD", vendors: ["Link International", "A1 Accessories"], status: "Active", courierEligible: true, operationalContact: { name: "Gold Coast Cycles Ops", email: "gc@example.com" }, billingContact: { name: "Gold Coast Cycles Billing", email: "accounts@goldcoastcycles.example" }, consent: { notice: "Policy #4 Collection Notice", acceptedAt: "2026-06-18T00:00:00.000Z" } },
   { id: "c2", name: "Moto Madness", email: "mm@example.com", phone: "07 5555 9999", address: "8 Griffith St, Coolangatta QLD", vendors: ["Ficeda"], status: "Active", courierEligible: true, operationalContact: { name: "Moto Madness Ops", email: "mm@example.com" }, billingContact: { name: "Moto Madness Billing", email: "accounts@motomadness.example" }, consent: { notice: "Policy #4 Collection Notice", acceptedAt: "2026-06-18T00:00:00.000Z" } },
@@ -429,35 +438,35 @@ const seedClients = [
 
 const seedDrivers = [
   {
-    id: "d1",
-    name: "Damo Reeves",
-    email: "damo@motoco.com.au",
-    phone: "0411 222 333",
+    id: "driver-peter-price",
+    name: "957OC8",
+    email: "gcmtm12@gmail.com",
+    phone: "",
     status: "Active",
-    notes: "Local logistics driver account for dispatch and availability.",
+    notes: "Launch V1 single active driver account for Peter Price.",
   },
 ];
 
 const seedVehicles = [
   {
-    id: "act-veh-001",
-    vehicleName: "MCO-001",
-    registrationPlate: "MCO-001",
-    make: "Local seed",
-    model: "Fleet vehicle",
-    year: "",
+    id: "veh-957oc8",
+    vehicleName: "2006 Toyota Hiace Van",
+    registrationPlate: "957OC8",
+    make: "Toyota",
+    model: "Hiace Van",
+    year: "2006",
     ownershipType: "Company",
     status: "Active",
-    assignedDriverId: "d1",
-    registrationExpiry: "2027-06-18",
+    assignedDriverId: "driver-peter-price",
+    registrationExpiry: "2027-02-17",
     insurancePolicy: "",
-    insuranceExpiry: "2027-06-18",
+    insuranceExpiry: "2026-08-22",
     gvmKg: "",
-    lastServiceDate: "2026-06-18",
-    nextServiceDue: "2026-12-18",
+    lastServiceDate: "",
+    nextServiceDue: "",
     defectStatus: "Clear",
-    lastReviewed: "2026-06-18",
-    notes: "Local seed from old Moto app vehicle MCO-001. Replace with live APP-FLT-001 evidence before production.",
+    lastReviewed: "2026-06-23",
+    notes: "Launch V1 vehicle record.",
   },
   {
     id: "act-veh-002",
@@ -11544,15 +11553,18 @@ export default function App() {
   const [showReg, setShowReg] = useState(false);
   const [accountSecurityOpen, setAccountSecurityOpen] = useState(false);
   const [systemNotice, setSystemNotice] = useState("");
-  const accessRecords = buildAccessRecords(clients, drivers, accessOverrides);
   const liveRuntimeStatus = getLiveRuntimeStatus();
   const liveRuntimeEnabled = Boolean(liveRuntimeStatus.enabled);
+  const operationalDrivers = (liveRuntimeEnabled ? drivers.filter(driver => !isSeedDriverRecord(driver)) : drivers)
+    .map(driver => isLaunchDriverAccount(driver) ? driverWithLaunchAccountLabel(driver) : driver);
+  const accessRecords = buildAccessRecords(clients, operationalDrivers, accessOverrides);
   const [liveAuthLoading, setLiveAuthLoading] = useState(liveRuntimeEnabled);
   const [liveAuthError, setLiveAuthError] = useState("");
   const [liveSnapshotLoaded, setLiveSnapshotLoaded] = useState(false);
   const liveRefreshSeq = useRef(0);
   const pendingLiveSyncRef = useRef(new Set());
-  const workspaceSession = workspaceSessionForLiveData(session, clients, drivers);
+  const workspaceSession = workspaceSessionForLiveData(session, clients, operationalDrivers);
+  const operationalOrders = liveRuntimeEnabled ? orders.filter(order => !isSeedRuntimeOrder(order)) : orders;
 
   useEffect(() => {
     if (!liveRuntimeEnabled) {
@@ -12230,6 +12242,26 @@ export default function App() {
       normaliseMatchText(driver.name) === "damo reeves";
   }
 
+  function isLaunchDriverAccount(driver = {}) {
+    const email = normaliseIdentityEmail(driver.email || driver.driverEmail || driver.loginEmail);
+    const name = normaliseMatchText(driver.name || driver.displayName || driver.driverName);
+    const id = String(driver.id || driver.driverId || driver.driverRecordId || "");
+    return email === "gcmtm12@gmail.com" ||
+      name === "peter price" ||
+      name === "957oc8" ||
+      id === "driver-peter-price";
+  }
+
+  function driverWithLaunchAccountLabel(driver = {}) {
+    return {
+      ...driver,
+      personName: driver.personName || (normaliseMatchText(driver.name) === "957oc8" ? "Peter Price" : driver.name || ""),
+      name: "957OC8",
+      displayName: "957OC8",
+      driverName: "957OC8",
+    };
+  }
+
   function isSeedDriverAssignment(order = {}) {
     return String(order.driverId || order.assignedDriverId || order.driverRecordId || "") === "d1" ||
       normaliseIdentityEmail(order.driverEmail) === "damo@motoco.com.au" ||
@@ -12237,8 +12269,7 @@ export default function App() {
   }
 
   function liveAssignableDrivers() {
-    const activeDrivers = activeDriverRecords(drivers);
-    return liveRuntimeEnabled ? activeDrivers.filter(driver => !isSeedDriverRecord(driver)) : activeDrivers;
+    return activeDriverRecords(operationalDrivers);
   }
 
   function orderWithSingleDriverAutoAssignment(order, options = {}) {
@@ -12326,6 +12357,7 @@ export default function App() {
     if (liveRuntimeEnabled && !liveSnapshotLoaded) return;
     const autoAssignable = (order) =>
       ["Pending", "Brought Forward"].includes(order.status || "Pending") &&
+      !isSeedRuntimeOrder(order) &&
       ((!order.driverId && !order.assignedDriverId) || (liveRuntimeEnabled && isSeedDriverAssignment(order)));
 
     let changed = false;
@@ -13252,13 +13284,13 @@ export default function App() {
           }}
         />
       ) : workspaceSession.role === "client" ? (
-        <ClientExperiencePortal user={workspaceSession.user} orders={orders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
+        <ClientExperiencePortal user={workspaceSession.user} orders={operationalOrders} suppliers={suppliers} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptions={exceptions} initialView={routeIntent.clientInitialView} startNewPickup={Boolean(routeIntent.startNewPickup)} onNewOrder={addOrder} onCancelOrder={cancelOrderBeforeCollection} onCancellationRequest={requestCancellationReview} onDispute={raiseClientDispute} onBillingDispute={raiseBillingDispute} onSupplierSetupRequest={requestSupplierSetup} onUpdateClient={updateClient} onLogout={logout} />
       ) : workspaceSession.role === "billing" ? (
-        <BillingContactPortal user={workspaceSession.user} orders={orders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
+        <BillingContactPortal user={workspaceSession.user} orders={operationalOrders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
       ) : workspaceSession.role === "driver" ? (
-        <DriverExperiencePortal user={workspaceSession.user} orders={orders} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
+        <DriverExperiencePortal user={workspaceSession.user} orders={operationalOrders} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
       ) : (
-        <AdminPortal orders={orders} clients={clients} drivers={drivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
+        <AdminPortal orders={operationalOrders} clients={clients} drivers={operationalDrivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
       )}
     </div>
   );
