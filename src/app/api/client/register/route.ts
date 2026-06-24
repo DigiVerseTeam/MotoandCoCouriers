@@ -40,6 +40,31 @@ function relationshipTier(value: unknown) {
   return ["transactional", "preferred", "strategic", "co_creation"].includes(normalised) ? normalised : "transactional";
 }
 
+function supplierNameKey(name = "") {
+  return String(name || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ");
+}
+
+function canonicalSupplierName(name = "") {
+  const key = supplierNameKey(name);
+  if (!key) return "";
+  if (key.includes("ficeda")) return "";
+  if (key.includes("link")) return "Link International";
+  if (key.includes("gas")) return "Gas Imports";
+  if (key.includes("mcleod") || key.includes("mcloed") || key.includes("mcleods")) return "McLeods";
+  if (key.includes("white")) return "Whites Powersports";
+  if (key.includes("a1") || key.includes("a one") || key.includes("accessor") || key.includes("assess")) return "A1 Accessories";
+  return cleanText(name);
+}
+
+function normaliseSupplierList(values: unknown[]) {
+  const approved = new Set(["Link International", "A1 Accessories", "McLeods", "Gas Imports", "Whites Powersports"]);
+  const seen = new Set<string>();
+  return values
+    .map((value) => canonicalSupplierName(cleanText(value)))
+    .filter((name) => approved.has(name))
+    .filter((name) => !seen.has(name) && seen.add(name));
+}
+
 async function findExistingClientRuntime(supabase: AdminSupabaseClient, email: string) {
   const { data, error } = await supabase
     .from("runtime_records")
@@ -63,9 +88,9 @@ async function findSupplierActorIds(supabase: AdminSupabaseClient, supplierNames
     .select("id, legal_name, trading_name")
     .eq("actor_type", "supplier");
   if (error) throw error;
-  const requested = new Set(supplierNames.map((name) => name.toLowerCase()));
+  const requested = new Set(supplierNames.map((name) => canonicalSupplierName(name).toLowerCase()));
   return (data || [])
-    .filter((actor) => requested.has(cleanText(actor.trading_name).toLowerCase()) || requested.has(cleanText(actor.legal_name).toLowerCase()))
+    .filter((actor) => requested.has(canonicalSupplierName(actor.trading_name).toLowerCase()) || requested.has(canonicalSupplierName(actor.legal_name).toLowerCase()))
     .map((actor) => actor.id);
 }
 
@@ -82,7 +107,7 @@ export async function POST(request: NextRequest) {
     const operationalName = cleanText(body.operationalContact?.name || body.opName || name);
     const billingName = cleanText(body.billingContact?.name || body.billingName || operationalName);
     const billingEmail = normaliseEmail(body.billingContact?.email || body.billingEmail || email);
-    const vendors = Array.isArray(body.vendors) ? body.vendors.map(cleanText).filter(Boolean) : [];
+    const vendors = Array.isArray(body.vendors) ? normaliseSupplierList(body.vendors) : [];
     const consentAcceptedAt = cleanText(body.consent?.acceptedAt) || new Date().toISOString();
 
     if (!name) return json(400, { error: "Business name is required." });

@@ -309,13 +309,68 @@ const approvedSupplierDefaults = {
   supplierApprovalEvidenceRef: CURRENT_SUPPLIER_NETWORK_REF,
 };
 const seedSuppliers = [
-  { id: "sup-link", name: "Link International", address: "14 Kimberly Rd, Dandenong South VIC 3175", phone: "03 9768 0600", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
-  { id: "sup-a1", name: "A1 Accessories", address: "15 Hoepner Rd, Bundamba QLD 4304", phone: "07 3282 4888", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
-  { id: "sup-mcleods", name: "McLeods", address: "3 Nestor Dr, Meadowbrook QLD 4131", phone: "07 3200 2820", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
-  { id: "sup-gas", name: "Gas Imports", address: "31 Gardner Ct, Wilsonton QLD 4350", phone: "07 4634 8233", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
-  { id: "sup-ficeda", name: "Ficeda", address: "12 Northumberland Rd, Caringbah NSW 2229", phone: "02 9526 6600", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
-  { id: "sup-whites", name: "Whites Powersports", address: "6 Hamill St, Archerfield QLD 4108", phone: "07 3277 5999", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-18" },
+  { id: "sup-link", name: "Link International", address: "38 Business St, Yatala QLD 4207", phone: "03 9768 0600", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-25" },
+  { id: "sup-a1", name: "A1 Accessories", address: "36 Transport St, Yatala QLD 4207", phone: "07 3282 4888", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-25" },
+  { id: "sup-mcleods", name: "McLeods", address: "59 Raubers Road, Northgate QLD 4013", phone: "07 3200 2820", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-25" },
+  { id: "sup-gas", name: "Gas Imports", address: "36 Terrence Road, Brendale QLD 4500", phone: "07 4634 8233", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-25" },
+  { id: "sup-whites", name: "Whites Powersports", address: "4/2 Logrunner Pl, Willawong QLD 4110", phone: "07 3277 5999", pickupWindow: "Goods ready at dock by 10:00am", packagingNotes: "Policy #16: tyres upright/stacked and secured; batteries hazardous-goods packaged; parts boxed/bagged and labelled.", status: "Active", lastReviewed: "2026-06-25" },
 ].map(supplier => ({ ...approvedSupplierDefaults, ...supplier, reviewIntervalDays: "" }));
+
+const removedSupplierNames = new Set(["ficeda"]);
+const approvedSupplierByName = new Map(seedSuppliers.map(supplier => [supplier.name.toLowerCase(), supplier]));
+
+function supplierNameKey(name = "") {
+  return String(name || "").trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ");
+}
+
+function canonicalSupplierName(name = "") {
+  const key = supplierNameKey(name);
+  if (!key) return "";
+  if (key.includes("ficeda")) return "";
+  if (key.includes("link")) return "Link International";
+  if (key.includes("gas")) return "Gas Imports";
+  if (key.includes("mcleod") || key.includes("mcloed") || key.includes("mcleods")) return "McLeods";
+  if (key.includes("white")) return "Whites Powersports";
+  if (key.includes("a1") || key.includes("a one") || key.includes("accessor") || key.includes("assess")) return "A1 Accessories";
+  return String(name || "").trim();
+}
+
+function isRemovedSupplierName(name = "") {
+  return supplierNameKey(name).includes("ficeda") || removedSupplierNames.has(canonicalSupplierName(name).toLowerCase());
+}
+
+function normaliseSupplierList(names = []) {
+  const seen = new Set();
+  return (names || [])
+    .map(canonicalSupplierName)
+    .filter(name => name && !isRemovedSupplierName(name) && approvedSupplierByName.has(name.toLowerCase()))
+    .filter(name => !seen.has(name) && seen.add(name));
+}
+
+function normaliseSupplierRecord(supplier = {}) {
+  const canonicalName = canonicalSupplierName(supplier.name);
+  if (isRemovedSupplierName(canonicalName)) return { ...supplier, name: canonicalName || supplier.name, status: "Archived" };
+  const approved = approvedSupplierByName.get(canonicalName.toLowerCase());
+  if (!approved) return supplier;
+  return {
+    ...supplier,
+    ...approved,
+    id: supplier.id || approved.id,
+    name: approved.name,
+    status: "Active",
+  };
+}
+
+function mergeApprovedSupplierRecords(suppliers = []) {
+  const byName = new Map(seedSuppliers.map(supplier => [supplier.name.toLowerCase(), supplier]));
+  for (const supplier of suppliers || []) {
+    const normalised = normaliseSupplierRecord(supplier);
+    if (!normalised?.name || isRemovedSupplierName(normalised.name)) continue;
+    const key = normalised.name.toLowerCase();
+    if (approvedSupplierByName.has(key)) byName.set(key, { ...byName.get(key), ...normalised, ...approvedSupplierByName.get(key), status: "Active" });
+  }
+  return [...byName.values()];
+}
 
 const VENDORS = seedSuppliers;
 
@@ -417,7 +472,7 @@ const seedOrders = [
   { id: "MC-004", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-DEL01", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-DEL-01 grouped delivery-stop fixture; same account and address as MC-001.", status: "En Route", pickupOutcome: "Picked Up", pickupPriceRuleId: "price-parts-lt-5", pickupItemType: "Less than 5 kg", pickupItemQty: 1, pickupWeightBand: "lt_5kg", pickupCalculatedPrice: 15, requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: 15, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
   { id: "MC-006", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-PUP02", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-PUP-02 fixture: assigned current-run supplier pickup requiring per-customer outcome and supplier-stop closeout before delivery start.", status: "Pending", requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: null, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
   { id: "MC-005", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-RUN04", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-RUN-04 fixture: future pickup eligible to bring forward only because Link International is already on today's planned route.", status: "Pending", requestedDate: "2026-05-19", actualRunDate: "2026-05-19", date: "2026-05-19", driverId: null, price: null, recvName: "", sig: "" },
-  { id: "MC-002", clientId: "c2", clientName: "Moto Madness", vendor: "Ficeda", conNote: "FC-9923", dropAddress: "8 Griffith St, Coolangatta QLD", notes: "", status: "Pending", requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: null, price: null, recvName: "", sig: "" },
+  { id: "MC-002", clientId: "c2", clientName: "Moto Madness", vendor: "Gas Imports", conNote: "GI-9923", dropAddress: "8 Griffith St, Coolangatta QLD", notes: "", status: "Pending", requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: null, price: null, recvName: "", sig: "" },
   { id: "MC-003", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-3311", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Heavy boxes", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-003"), price: 35, recvName: "Jake T", sig: "data:image/png;base64,sign", proofId: "proof-seed-1", invoiceId: "INV-SEED-001", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
   { id: "MC-UNMATCHED-001", clientId: "unknown-account", clientName: "SOP-EXC-03 Verification Fixture", vendor: "Whites Powersports", conNote: "WP-UNMATCHED-01", dropAddress: "44 Verification Ave, Southport QLD", notes: "Local fixture: delivered proof-linked job with intentionally unknown account_id to verify SOP-EXC-03 billing exclusion and Admin correction.", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-UNMATCHED-001"), price: 22, recvName: "Casey V", sig: "data:image/png;base64,sign-unmatched", proofId: "proof-seed-unmatched-1", itemType: "5 kg to 15 kg", itemQty: 1, weightBand: "5_to_15kg", priceRuleId: "price-parts-5-15", deliveryCompletionSource: "SOP-DEL-05 / delivery_proof insert", deliveryCompletedBy: "system", deliveryCompletedAt: "2026-05-13T04:15:00.000Z", billingReady: true, billingReadyAt: "2026-05-13T04:15:00.000Z", billingReadySource: "SOP-DEL-05", billingAccountMatchStatus: "unmatched_fixture", billingAccountMatchSource: "SOP-EXC-03 local verification fixture", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
 ];
@@ -433,7 +488,7 @@ function isSeedRuntimeOrder(order = {}) {
 
 const seedClients = [
   { id: "c1", name: "Gold Coast Cycles", email: "gc@example.com", phone: "07 5555 1234", address: "22 Ferry Rd, Southport QLD", vendors: ["Link International", "A1 Accessories"], status: "Active", courierEligible: true, operationalContact: { name: "Gold Coast Cycles Ops", email: "gc@example.com" }, billingContact: { name: "Gold Coast Cycles Billing", email: "accounts@goldcoastcycles.example" }, consent: { notice: "Policy #4 Collection Notice", acceptedAt: "2026-06-18T00:00:00.000Z" } },
-  { id: "c2", name: "Moto Madness", email: "mm@example.com", phone: "07 5555 9999", address: "8 Griffith St, Coolangatta QLD", vendors: ["Ficeda"], status: "Active", courierEligible: true, operationalContact: { name: "Moto Madness Ops", email: "mm@example.com" }, billingContact: { name: "Moto Madness Billing", email: "accounts@motomadness.example" }, consent: { notice: "Policy #4 Collection Notice", acceptedAt: "2026-06-18T00:00:00.000Z" } },
+  { id: "c2", name: "Moto Madness", email: "mm@example.com", phone: "07 5555 9999", address: "8 Griffith St, Coolangatta QLD", vendors: ["Gas Imports"], status: "Active", courierEligible: true, operationalContact: { name: "Moto Madness Ops", email: "mm@example.com" }, billingContact: { name: "Moto Madness Billing", email: "accounts@motomadness.example" }, consent: { notice: "Policy #4 Collection Notice", acceptedAt: "2026-06-18T00:00:00.000Z" } },
 ];
 
 const seedDrivers = [
@@ -1387,7 +1442,9 @@ function applyCutoff(requestedDate) {
     scheduleAdjustmentReason,
   };
 }
-function activeSuppliers(suppliers) { return suppliers.filter(s => (s.status || "Active") === "Active"); }
+function activeSuppliers(suppliers) {
+  return mergeApprovedSupplierRecords(suppliers).filter(s => (s.status || "Active") === "Active" && !isRemovedSupplierName(s.name));
+}
 function supplierApprovalGateReasons(supplier) {
   const status = supplier?.status || "Active";
   if (status !== "Active") return [];
@@ -11531,13 +11588,20 @@ function workspaceSessionForLiveData(session, clients = [], drivers = []) {
   return session;
 }
 
+function normaliseClientSupplierAccess(client = {}) {
+  return {
+    ...client,
+    vendors: normaliseSupplierList(client.vendors || []),
+  };
+}
+
 function mergeLiveClientsWithLocalPending(liveClients = [], localClients = []) {
   const seen = new Set();
   const merged = [];
   for (const client of liveClients || []) {
     if (!client?.id) continue;
     seen.add(String(client.id));
-    merged.push(client);
+    merged.push(normaliseClientSupplierAccess(client));
   }
   for (const client of localClients || []) {
     const status = client?.status || "Active";
@@ -11546,7 +11610,7 @@ function mergeLiveClientsWithLocalPending(liveClients = [], localClients = []) {
       String(item.email || "").toLowerCase() === String(client?.email || "").toLowerCase() ||
       String(item.operationalContact?.email || "").toLowerCase() === String(client?.operationalContact?.email || client?.email || "").toLowerCase()
     );
-    if (!alreadySeen && !emailSeen && status === "Pending") merged.unshift(client);
+    if (!alreadySeen && !emailSeen && status === "Pending") merged.unshift(normaliseClientSupplierAccess(client));
   }
   return merged;
 }
@@ -11591,14 +11655,14 @@ export default function App() {
     if (JSON.stringify(loaded) !== JSON.stringify(normalised)) save(KEY_ORDERS, normalised);
     return normalised;
   });
-  const [clients, setClients] = useState(() => load(KEY_CLIENTS, seedClients));
+  const [clients, setClients] = useState(() => load(KEY_CLIENTS, seedClients).map(normaliseClientSupplierAccess));
   const [drivers, setDrivers] = useState(() => {
     const loaded = load(KEY_DRIVERS, seedDrivers);
     const normalised = loaded.map(normaliseDriverRecord);
     if (JSON.stringify(loaded) !== JSON.stringify(normalised)) save(KEY_DRIVERS, normalised);
     return normalised;
   });
-  const [suppliers, setSuppliers] = useState(() => load(KEY_SUPPLIERS, seedSuppliers));
+  const [suppliers, setSuppliers] = useState(() => mergeApprovedSupplierRecords(load(KEY_SUPPLIERS, seedSuppliers)));
   const [priceRules, setPriceRules] = useState(() => {
     const loaded = load(KEY_PRICE_RULES, seedPriceRules);
     const next = loaded.map(normalisePriceRule);
@@ -11722,7 +11786,7 @@ export default function App() {
         const snapshot = await loadLiveRuntimeSnapshot();
         if (cancelled) return;
         if (snapshot.clients?.length) setClients(prev => mergeLiveClientsWithLocalPending(snapshot.clients, prev));
-        if (snapshot.suppliers?.length) setSuppliers(snapshot.suppliers);
+        if (snapshot.suppliers?.length) setSuppliers(mergeApprovedSupplierRecords(snapshot.suppliers));
         if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
         if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
         if (snapshot.priceRules?.length) setPriceRules(snapshot.priceRules.map(normalisePriceRule));
@@ -12542,7 +12606,8 @@ export default function App() {
   }
 
   async function addClient(c) {
-    const storedClient = liveRuntimeEnabled ? await registerLiveClient(c) : c;
+    const requestedClient = normaliseClientSupplierAccess(c);
+    const storedClient = normaliseClientSupplierAccess(liveRuntimeEnabled ? await registerLiveClient(requestedClient) : requestedClient);
     const next = [...clients.filter(client => client.id !== storedClient.id), storedClient];
     setClients(next); save(KEY_CLIENTS, next);
     setShowReg(false);
@@ -12553,7 +12618,7 @@ export default function App() {
   function updateClient(updated) {
     const auditDetail = updated.auditDetail;
     const auditActor = updated.auditActor;
-    const stored = { ...updated };
+    const stored = normaliseClientSupplierAccess({ ...updated });
     delete stored.auditDetail;
     delete stored.auditActor;
     const previous = clients.find(c => c.id === stored.id);
@@ -12580,12 +12645,13 @@ export default function App() {
   }
 
   function saveSupplier(supplier, reason = "Not recorded") {
-    const previous = suppliers.find(s => s.id === supplier.id);
+    const storedSupplier = normaliseSupplierRecord(supplier);
+    const previous = suppliers.find(s => s.id === storedSupplier.id || canonicalSupplierName(s.name) === canonicalSupplierName(storedSupplier.name));
     const exists = Boolean(previous);
-    const next = exists ? suppliers.map(s => s.id === supplier.id ? supplier : s) : [supplier, ...suppliers];
+    const next = mergeApprovedSupplierRecords(exists ? suppliers.map(s => s.id === previous.id ? storedSupplier : s) : [storedSupplier, ...suppliers]);
     setSuppliers(next); save(KEY_SUPPLIERS, next);
-    recordSupplierMasterDataChanges(previous, supplier, reason, exists ? "update" : "add");
-    writeAudit(exists ? "Supplier updated" : "Supplier added", `${supplier.name}: ${reason}`, "admin");
+    recordSupplierMasterDataChanges(previous, storedSupplier, reason, exists ? "update" : "add");
+    writeAudit(exists ? "Supplier updated" : "Supplier added", `${storedSupplier.name}: ${reason}`, "admin");
   }
 
   function archiveSupplier(id, reason = "Not recorded") {
