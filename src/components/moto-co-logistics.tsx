@@ -12224,9 +12224,28 @@ export default function App() {
     return syncPromise;
   }
 
-  function orderWithSingleDriverAutoAssignment(order) {
-    if (order.driverId || order.assignedDriverId) return order;
+  function isSeedDriverRecord(driver = {}) {
+    return String(driver.id || "") === "d1" ||
+      normaliseIdentityEmail(driver.email) === "damo@motoco.com.au" ||
+      normaliseMatchText(driver.name) === "damo reeves";
+  }
+
+  function isSeedDriverAssignment(order = {}) {
+    return String(order.driverId || order.assignedDriverId || order.driverRecordId || "") === "d1" ||
+      normaliseIdentityEmail(order.driverEmail) === "damo@motoco.com.au" ||
+      normaliseMatchText(order.driverName) === "damo reeves";
+  }
+
+  function liveAssignableDrivers() {
     const activeDrivers = activeDriverRecords(drivers);
+    return liveRuntimeEnabled ? activeDrivers.filter(driver => !isSeedDriverRecord(driver)) : activeDrivers;
+  }
+
+  function orderWithSingleDriverAutoAssignment(order, options = {}) {
+    const repairSeedAssignment = Boolean(options.repairSeedAssignment);
+    if (liveRuntimeEnabled && !liveSnapshotLoaded) return order;
+    if ((order.driverId || order.assignedDriverId) && !(repairSeedAssignment && isSeedDriverAssignment(order))) return order;
+    const activeDrivers = liveAssignableDrivers();
     if (activeDrivers.length !== 1) return order;
 
     const driver = activeDrivers[0];
@@ -12304,16 +12323,16 @@ export default function App() {
 
   useEffect(() => {
     if (!session?.role) return;
+    if (liveRuntimeEnabled && !liveSnapshotLoaded) return;
     const autoAssignable = (order) =>
       ["Pending", "Brought Forward"].includes(order.status || "Pending") &&
-      !order.driverId &&
-      !order.assignedDriverId;
+      ((!order.driverId && !order.assignedDriverId) || (liveRuntimeEnabled && isSeedDriverAssignment(order)));
 
     let changed = false;
     const updates = [];
     const next = orders.map(order => {
       if (!autoAssignable(order)) return order;
-      const assigned = orderWithSingleDriverAutoAssignment(order);
+      const assigned = orderWithSingleDriverAutoAssignment(order, { repairSeedAssignment: true });
       if (assigned === order) return order;
       changed = true;
       updates.push(assigned);
@@ -12324,7 +12343,7 @@ export default function App() {
     setOrders(next); save(KEY_ORDERS, next);
     syncLiveRecords("orders", updates, "Existing pickup requests could not be auto-assigned in the live system.");
     writeAudit("Pending pickups auto-assigned", `${updates.length} unassigned pickup request${updates.length === 1 ? "" : "s"} assigned to ${updates[0]?.driverName || updates[0]?.driverId || "single active driver"}`, "system");
-  }, [orders, drivers, vehicles, session?.role]);
+  }, [orders, drivers, vehicles, session?.role, liveRuntimeEnabled, liveSnapshotLoaded]);
 
   function cancelOrderBeforeCollection(order, reason, actor = session?.role || "admin") {
     const state = cancellationState(order);
