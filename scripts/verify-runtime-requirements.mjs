@@ -635,6 +635,10 @@ requireText(
     "Payment arrangement requires agreed date, amount, contact name/role, and written evidence reference.",
     "Operational and Billing contacts notified automatically on Admin reinstatement action.",
     "second attempt scheduled for next run",
+    "Received - Scheduled",
+    "Received - Awaiting Dispatch",
+    "Scheduled run",
+    "Run Date",
   ],
   "decisions register runtime alignment"
 );

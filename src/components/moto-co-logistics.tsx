@@ -3046,6 +3046,43 @@ function orderSubmittedLabel(order) {
   return date.toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
+function orderReceivedDate(order) {
+  return optionalIsoDate(order?.submittedAt || order?.createdAt) || order?.requestedDate || order?.date || "";
+}
+
+function orderRunDate(order) {
+  return order?.actualRunDate || order?.runDate || order?.date || order?.requestedDate || "";
+}
+
+function orderIsOpenForDispatch(order) {
+  return ["Pending", "Brought Forward"].includes(order?.status || "Pending");
+}
+
+function orderIsFutureRun(order) {
+  const runDate = orderRunDate(order);
+  return Boolean(runDate && runDate > todayBrisbane() && orderIsOpenForDispatch(order));
+}
+
+function clientFacingOrderStatus(order) {
+  const status = order?.status || "Pending";
+  if (status === "Pending") {
+    if (order?.driverId) return "Scheduled";
+    return orderIsFutureRun(order) ? "Received - Scheduled" : "Received - Awaiting Dispatch";
+  }
+  return status;
+}
+
+function orderScheduleSummary(order) {
+  const receivedDate = orderReceivedDate(order);
+  const runDate = orderRunDate(order);
+  if (!runDate && !receivedDate) return "Schedule not recorded";
+  if (runDate && receivedDate && runDate !== receivedDate) {
+    return `Received ${fmt(receivedDate)}; scheduled run ${fmt(runDate)}`;
+  }
+  if (runDate) return `Scheduled run ${fmt(runDate)}`;
+  return `Received ${fmt(receivedDate)}`;
+}
+
 function statusBadgeClass(status = "") {
   if (["Delivered", "Captured", "Paid"].includes(status)) return "done";
   if (["En Route", "Picked Up"].includes(status)) return "enroute";
@@ -3165,7 +3202,8 @@ function ExperienceOrderRow({ order, onCancel, onDispute }) {
   const canCancel = onCancel && cancellationState(order).canSelfCancel;
   const canRequestReview = onCancel && cancellationState(order).canRequestAdminReview;
   const deliveredLike = ["Delivered", "Failed Delivery", "No Pickup"].includes(order.status);
-  const scheduledRun = order.actualRunDate || order.runDate || order.date || order.requestedDate || "";
+  const scheduledRun = orderRunDate(order);
+  const displayStatus = clientFacingOrderStatus(order);
   return (
     <div className="ux-order-row">
       <div className="ux-order-id">{orderDisplayId(order)}</div>
@@ -3176,10 +3214,11 @@ function ExperienceOrderRow({ order, onCancel, onDispute }) {
           {scheduledRun && <span> · Run {fmtFullDate(scheduledRun)}</span>}
           {!order.driverId && !deliveredLike && <span> · Awaiting dispatch</span>}
         </div>
+        <div className="ux-order-meta" style={{ marginTop: ".2rem" }}>{orderScheduleSummary(order)}</div>
       </div>
       <div className="ux-order-actions">
         <span className="ux-badge">{orderPriority(order)}</span>
-        <span className={`ux-badge ${statusBadgeClass(order.status)}`}>{order.status || "Pending"}</span>
+        <span className={`ux-badge ${statusBadgeClass(displayStatus)}`}>{displayStatus}</span>
         <span className="ux-muted" style={{ fontSize: ".74rem" }}>{orderSubmittedLabel(order)}</span>
         {canCancel && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client self-service before Policy #14 cut-off")}>Cancel</button>}
         {canRequestReview && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client cancellation review requested")}>Review</button>}
@@ -4136,7 +4175,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
   }
 
   function statusBadge(s) {
-    const cls = { Pending: "b-pending", Submitted: "b-done", Scheduled: "b-pending", "Cut-off Adjusted": "b-pending", "En Route": "b-enroute", "Picked Up": "b-enroute", Delivered: "b-done", Captured: "b-done", "No POD": "b-pending", "No Pickup": "b-cancelled", "Brought Forward": "b-pending", "Failed Delivery": "b-cancelled", Cancelled: "b-cancelled" };
+    const cls = { Pending: "b-pending", Received: "b-done", "Received - Scheduled": "b-pending", "Received - Awaiting Dispatch": "b-pending", Submitted: "b-done", Scheduled: "b-pending", "Scheduled next run": "b-pending", "Cut-off Adjusted": "b-pending", "En Route": "b-enroute", "Picked Up": "b-enroute", Delivered: "b-done", Captured: "b-done", "No POD": "b-pending", "No Pickup": "b-cancelled", "Brought Forward": "b-pending", "Failed Delivery": "b-cancelled", Cancelled: "b-cancelled" };
     return <span className={`badge ${cls[s] || "b-pending"}`}>{s}</span>;
   }
 
@@ -4156,13 +4195,13 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
     return [
       {
         step: "Pickup request",
-        state: "Submitted",
+        state: "Received",
         record: fmtFullDate(isoDate(order.submittedAt || order.requestedDate || order.date)),
         evidence: `Con note ${order.conNote}; supplier ${order.vendor}`,
       },
       {
         step: "Run date",
-        state: (order.scheduleAdjusted || order.cutoffApplied) ? (order.cutoffApplied ? "Cut-off Adjusted" : "Schedule Adjusted") : "Scheduled",
+        state: orderIsFutureRun(order) ? "Scheduled next run" : (order.scheduleAdjusted || order.cutoffApplied) ? (order.cutoffApplied ? "Cut-off Adjusted" : "Schedule Adjusted") : "Scheduled",
         record: fmtFullDate(order.actualRunDate || order.date),
         evidence: (order.scheduleAdjusted || order.cutoffApplied) ? `Requested ${fmtFullDate(order.requestedDate)}; ${runDateAdjustmentLabel(order.scheduleAdjustmentReason)}` : "Original requested date retained",
       },
@@ -4327,14 +4366,16 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
             {myOrders.length === 0 && <div className="empty">No orders yet — create one above.</div>}
             {myOrders.map(o => (
               <div className="card" key={o.id}>
-                <div className="card-head"><div className="card-title">{o.id} — {o.vendor}</div>{statusBadge(o.status)}</div>
+                <div className="card-head"><div className="card-title">{o.id} — {o.vendor}</div>{statusBadge(clientFacingOrderStatus(o))}</div>
                 <div className="meta">
                   <span>📋 {o.conNote}</span>
                   <span>📍 {o.dropAddress}</span>
-                  <span>📅 Run {fmt(o.actualRunDate || o.date)}</span>
+                  <span>Received {fmt(orderReceivedDate(o))}</span>
+                  <span>Scheduled run {fmt(orderRunDate(o))}</span>
                   {(o.scheduleAdjusted || o.cutoffApplied) && <span>{runDateAdjustmentLabel(o.scheduleAdjustmentReason)}</span>}
                   {o.price && <span>💰 ${o.price}</span>}
                 </div>
+                {o.status === "Pending" && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>{orderScheduleSummary(o)}. Driver view opens after Admin dispatch assigns the run.</div>}
                 {o.notes && <div style={{ fontSize: ".8rem", color: T.mu }}>{o.notes}</div>}
                 <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".8rem" }}>
                   <button className="btn b-ghost b-sm" onClick={() => { setTrackingQuery(o.id); setView("tracking"); }}>Track</button>
@@ -7072,7 +7113,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   }
 
   function statusBadge(s) {
-    const cls = { Pending: "b-pending", "En Route": "b-enroute", Delivered: "b-done", "No Pickup": "b-cancelled", "Brought Forward": "b-pending", "Failed Delivery": "b-cancelled", Cancelled: "b-cancelled" };
+    const cls = { Pending: "b-pending", "Received - Scheduled": "b-pending", "Received - Awaiting Dispatch": "b-pending", Scheduled: "b-pending", "En Route": "b-enroute", Delivered: "b-done", "No Pickup": "b-cancelled", "Brought Forward": "b-pending", "Failed Delivery": "b-cancelled", Cancelled: "b-cancelled" };
     return <span className={`badge ${cls[s] || "b-pending"}`}>{s}</span>;
   }
 
@@ -8834,8 +8875,9 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
             <h2 style={{ marginBottom: ".8rem" }}>Pending Orders</h2>
             {orders.filter(o => o.status === "Pending").map(o => (
               <div className="card" key={o.id}>
-                <div className="card-head"><div className="card-title">{o.id} — {o.clientName}</div>{statusBadge(o.status)}</div>
-                <div className="meta"><span>📦 {o.vendor}</span><span>📋 {o.conNote}</span><span>📍 {o.dropAddress}</span><span>📅 {fmt(o.date)}</span></div>
+                <div className="card-head"><div className="card-title">{o.id} — {o.clientName}</div>{statusBadge(clientFacingOrderStatus(o))}</div>
+                <div className="meta"><span>{o.vendor}</span><span>{o.conNote}</span><span>{o.dropAddress}</span><span>Received {fmt(orderReceivedDate(o))}</span><span>Run {fmt(orderRunDate(o))}</span></div>
+                <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>{orderScheduleSummary(o)}.</div>
                 <hr className="dvd" />
                 <div style={{ display: "flex", gap: ".6rem" }}>
                   <button className="btn b-teal b-sm" onClick={() => setView("dispatch")}>Open Dispatch</button>
@@ -9261,12 +9303,12 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
             </div>
             <div className="card" style={{ padding: "0", overflow: "hidden" }}>
               <table className="tbl">
-                <thead><tr><th>ID</th><th>Client</th><th>Supplier</th><th>Con Note</th><th>Status</th><th>Date</th><th>Price</th></tr></thead>
+                <thead><tr><th>ID</th><th>Client</th><th>Supplier</th><th>Con Note</th><th>Status</th><th>Received</th><th>Run Date</th><th>Price</th></tr></thead>
                 <tbody>
                   {filtered.map(o => (
                     <tr key={o.id} style={{ cursor: "pointer" }} onClick={() => setSelOrder(o)}>
                       <td>{o.id}</td><td>{o.clientName}</td><td>{o.vendor}</td><td>{o.conNote}</td>
-                      <td>{statusBadge(o.status)}</td><td>{fmt(o.date)}</td><td>{o.price ? `$${o.price}` : "—"}</td>
+                      <td>{statusBadge(clientFacingOrderStatus(o))}</td><td>{fmt(orderReceivedDate(o))}</td><td>{fmt(orderRunDate(o))}</td><td>{o.price ? `$${o.price}` : "—"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -11722,8 +11764,11 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               <div className="meta" style={{ marginBottom: ".6rem" }}>
                 <span>👤 {selOrder.clientName}</span><span>📦 {selOrder.vendor}</span>
                 <span>📋 {selOrder.conNote}</span><span>📍 {selOrder.dropAddress}</span>
-                <span>📅 {fmt(selOrder.date)}</span>{selOrder.price && <span>💰 ${selOrder.price}</span>}
+                <span>Received {fmt(orderReceivedDate(selOrder))}</span>
+                <span>Scheduled run {fmt(orderRunDate(selOrder))}</span>
+                {selOrder.price && <span>💰 ${selOrder.price}</span>}
               </div>
+              <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".6rem" }}>{orderScheduleSummary(selOrder)}</div>
               {selOrder.notes && <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".6rem" }}>{selOrder.notes}</div>}
               {selOrder.recvName && <div style={{ fontSize: ".82rem", color: T.mu }}>Received by: {selOrder.recvName}</div>}
               <hr className="dvd" />
@@ -12708,7 +12753,7 @@ export default function App() {
       orderId: order.id,
       noticeType: "pickup_request_submitted",
       subject: `Pickup request received - ${order.id}`,
-      message: `${order.vendor} pickup request was recorded for run ${fmtFullDate(order.actualRunDate || order.date)}. Con note ${order.conNote}.`,
+      message: `${order.vendor} pickup request was received and scheduled for run ${fmtFullDate(orderRunDate(order))}. Con note ${order.conNote}.`,
       eventRef: order.submittedAt || "",
       createdBy: "client",
     });
