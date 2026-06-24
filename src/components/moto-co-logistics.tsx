@@ -1007,6 +1007,16 @@ function todayBrisbane() {
   const get = type => parts.find(p => p.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
+function brisbaneDateFromValue(value, fallback = "") {
+  if (!value) return fallback;
+  const raw = String(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return fallback || raw.slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const get = type => parts.find(p => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
 function brisbaneMinutes() {
   const parts = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Brisbane", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
   return Number(parts.find(p => p.type === "hour")?.value || 0) * 60 + Number(parts.find(p => p.type === "minute")?.value || 0);
@@ -1243,10 +1253,10 @@ function addYears(date, years) {
 }
 function isoDate(value) {
   if (!value) return todayBrisbane();
-  return String(value).slice(0, 10);
+  return brisbaneDateFromValue(value, todayBrisbane());
 }
 function optionalIsoDate(value) {
-  return value ? String(value).slice(0, 10) : "";
+  return brisbaneDateFromValue(value, "");
 }
 function isPoBoxAddress(address) {
   return /(^|[^a-z])(p\.?\s*o\.?|post\s+office)\s*box([^a-z]|$)/i.test(String(address || ""));
@@ -3043,7 +3053,7 @@ function orderSubmittedLabel(order) {
   if (!value) return "Not dated";
   const date = new Date(String(value).includes("T") ? value : `${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Australia/Brisbane" });
 }
 
 function orderReceivedDate(order) {
