@@ -283,15 +283,18 @@ export async function requestLivePasswordLogin(email, password) {
 }
 
 export async function requestLivePasswordReset(email, returnPath = "/") {
-  const supabase = client();
-  if (!supabase) throw new Error("Live password reset is not configured.");
   const resolvedReturnPath = safeLiveAuthReturnPath(returnPath || currentBrowserReturnPath());
   rememberLiveAuthReturnPath(resolvedReturnPath);
-  const redirectTo = liveAuthCallbackUrl(resolvedReturnPath);
-  const { error } = await supabase.auth.resetPasswordForEmail(normaliseEmail(email), {
-    redirectTo,
+  const response = await fetch("/api/auth/password-reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: normaliseEmail(email),
+      returnPath: resolvedReturnPath,
+    }),
   });
-  if (error) throw error;
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || `Password reset email failed (${response.status}).`);
   return true;
 }
 

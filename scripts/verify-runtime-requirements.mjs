@@ -691,12 +691,27 @@ requireText(
     "actor_code",
     "requestLivePasswordLogin",
     "signInWithPassword",
+    "requestLivePasswordReset",
+    "/api/auth/password-reset",
     "updateLiveUserPassword",
     "resetLiveProvisionedUserPassword",
     "setTimeout(() => callback(), 0)",
     "resolveLiveRuntimeSession",
   ],
   "live Supabase auth callback race guard and role mapping"
+);
+
+requireText(
+  "src/app/api/auth/password-reset/route.ts",
+  [
+    "resetPasswordForEmail",
+    "profiles",
+    "status",
+    "active",
+    "Do not reveal whether an email exists",
+    "auth/callback",
+  ],
+  "server-side self-service password reset"
 );
 
 requireText(
