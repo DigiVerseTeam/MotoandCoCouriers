@@ -11979,6 +11979,7 @@ export default function App() {
   const [liveSnapshotLoaded, setLiveSnapshotLoaded] = useState(false);
   const liveRefreshSeq = useRef(0);
   const pendingLiveSyncRef = useRef(new Set());
+  const liveSnapshotRefreshRef = useRef(null);
   const workspaceSession = workspaceSessionForLiveData(session, clients, operationalDrivers);
   const operationalOrders = liveRuntimeEnabled ? orders.filter(order => !isSeedRuntimeOrder(order)) : orders;
 
@@ -12028,43 +12029,93 @@ export default function App() {
     };
   }, [liveRuntimeEnabled]);
 
+  function applyLiveRuntimeSnapshot(snapshot = {}) {
+    if (snapshot.clients?.length) setClients(prev => mergeLiveClientsWithLocalPending(snapshot.clients, prev));
+    if (snapshot.suppliers?.length) setSuppliers(mergeApprovedSupplierRecords(snapshot.suppliers));
+    if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
+    if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
+    if (snapshot.priceRules?.length) setPriceRules(snapshot.priceRules.map(normalisePriceRule));
+    if (snapshot.orders?.length) setOrders(prev => mergeLiveOrdersWithLocalPending(snapshot.orders, prev));
+    if (snapshot.proofs?.length) setProofs(snapshot.proofs.map(proof => normaliseDeliveryProof(proof, snapshot.orders?.length ? snapshot.orders : [])));
+    if (snapshot.exceptions?.length) setExceptions(snapshot.exceptions);
+    if (snapshot.audit?.length) setAudit(snapshot.audit);
+    if (snapshot.invoices?.length) setInvoices(snapshot.invoices.map(normaliseInvoice));
+    if (snapshot.billingNotices?.length) setBillingNotices(snapshot.billingNotices);
+    if (snapshot.operationalNotices?.length) setOperationalNotices(snapshot.operationalNotices);
+    if (snapshot.runClosures?.length) setRunClosures(snapshot.runClosures);
+    if (snapshot.masterDataChanges?.length) setMasterDataChanges(snapshot.masterDataChanges);
+    if (snapshot.exceptionAlerts?.length) setExceptionAlerts(snapshot.exceptionAlerts);
+    if (snapshot.driverAvailability?.length) setDriverAvailability(snapshot.driverAvailability.map(normaliseDriverAvailabilityRecord));
+    if (snapshot.financialReconciliations?.length) setFinancialReconciliations(snapshot.financialReconciliations.map(normaliseFinancialReconciliation));
+    if (snapshot.aiDrafts?.length) setAiDrafts(snapshot.aiDrafts.map(normaliseAiDraft));
+    if (snapshot.dataBreachIncidents?.length) setDataBreachIncidents(snapshot.dataBreachIncidents.map(normaliseDataBreachIncident));
+    if (snapshot.dataUseRecords?.length) setDataUseRecords(snapshot.dataUseRecords.map(normaliseDataUseRecord));
+    if (snapshot.privacyRequests?.length) setPrivacyRequests(snapshot.privacyRequests.map(normalisePrivacyRequest));
+    setLiveSnapshotLoaded(true);
+  }
+
+  async function refreshLiveRuntimeSnapshot({ background = false } = {}) {
+    if (!liveRuntimeEnabled || !session?.role) return { skipped: true };
+    if (pendingLiveSyncRef.current.size) return { skipped: true, reason: "pending_sync" };
+    if (liveSnapshotRefreshRef.current) return liveSnapshotRefreshRef.current;
+
+    const refreshPromise = loadLiveRuntimeSnapshot()
+      .then(snapshot => {
+        applyLiveRuntimeSnapshot(snapshot);
+        if (!background) setLiveAuthError("");
+        return snapshot;
+      })
+      .catch(error => {
+        if (background) {
+          console.warn(error);
+          return { error };
+        }
+        setLiveAuthError(error?.message || "Live portal data could not be loaded. Contact Admin.");
+        return { error };
+      })
+      .finally(() => {
+        liveSnapshotRefreshRef.current = null;
+      });
+
+    liveSnapshotRefreshRef.current = refreshPromise;
+    return refreshPromise;
+  }
+
   useEffect(() => {
     if (!liveRuntimeEnabled || !session?.role || liveSnapshotLoaded) return;
-    let cancelled = false;
+    refreshLiveRuntimeSnapshot({ background: false });
+  }, [liveRuntimeEnabled, session?.role, liveSnapshotLoaded]);
 
-    async function loadSnapshot() {
-      try {
-        const snapshot = await loadLiveRuntimeSnapshot();
-        if (cancelled) return;
-        if (snapshot.clients?.length) setClients(prev => mergeLiveClientsWithLocalPending(snapshot.clients, prev));
-        if (snapshot.suppliers?.length) setSuppliers(mergeApprovedSupplierRecords(snapshot.suppliers));
-        if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
-        if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
-        if (snapshot.priceRules?.length) setPriceRules(snapshot.priceRules.map(normalisePriceRule));
-        if (snapshot.orders?.length) setOrders(prev => mergeLiveOrdersWithLocalPending(snapshot.orders, prev));
-        if (snapshot.proofs?.length) setProofs(snapshot.proofs.map(proof => normaliseDeliveryProof(proof, snapshot.orders?.length ? snapshot.orders : orders)));
-        if (snapshot.exceptions?.length) setExceptions(snapshot.exceptions);
-        if (snapshot.audit?.length) setAudit(snapshot.audit);
-        if (snapshot.invoices?.length) setInvoices(snapshot.invoices.map(normaliseInvoice));
-        if (snapshot.billingNotices?.length) setBillingNotices(snapshot.billingNotices);
-        if (snapshot.operationalNotices?.length) setOperationalNotices(snapshot.operationalNotices);
-        if (snapshot.runClosures?.length) setRunClosures(snapshot.runClosures);
-        if (snapshot.masterDataChanges?.length) setMasterDataChanges(snapshot.masterDataChanges);
-        if (snapshot.exceptionAlerts?.length) setExceptionAlerts(snapshot.exceptionAlerts);
-        if (snapshot.driverAvailability?.length) setDriverAvailability(snapshot.driverAvailability.map(normaliseDriverAvailabilityRecord));
-        if (snapshot.financialReconciliations?.length) setFinancialReconciliations(snapshot.financialReconciliations.map(normaliseFinancialReconciliation));
-        if (snapshot.aiDrafts?.length) setAiDrafts(snapshot.aiDrafts.map(normaliseAiDraft));
-        if (snapshot.dataBreachIncidents?.length) setDataBreachIncidents(snapshot.dataBreachIncidents.map(normaliseDataBreachIncident));
-        if (snapshot.dataUseRecords?.length) setDataUseRecords(snapshot.dataUseRecords.map(normaliseDataUseRecord));
-        if (snapshot.privacyRequests?.length) setPrivacyRequests(snapshot.privacyRequests.map(normalisePrivacyRequest));
-        setLiveSnapshotLoaded(true);
-      } catch (error) {
-        if (!cancelled) setLiveAuthError(error?.message || "Live portal data could not be loaded. Contact Admin.");
-      }
+  useEffect(() => {
+    if (!liveRuntimeEnabled || !session?.role || !liveSnapshotLoaded) return;
+    let cancelled = false;
+    let lastRefreshAt = 0;
+    const refreshIntervalMs = session.role === "driver" ? 12000 : 30000;
+    const minimumRefreshGapMs = 5000;
+
+    async function refreshIfReady() {
+      if (cancelled) return;
+      const now = Date.now();
+      if (now - lastRefreshAt < minimumRefreshGapMs) return;
+      lastRefreshAt = now;
+      await refreshLiveRuntimeSnapshot({ background: true });
     }
 
-    loadSnapshot();
-    return () => { cancelled = true; };
+    const intervalId = window.setInterval(refreshIfReady, refreshIntervalMs);
+    const handleFocus = () => refreshIfReady();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshIfReady();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [liveRuntimeEnabled, session?.role, liveSnapshotLoaded]);
 
   async function logout() {
