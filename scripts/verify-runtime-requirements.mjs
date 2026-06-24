@@ -657,6 +657,8 @@ requireText(
     "resetLiveProvisionedUserPassword",
     "requestLivePasswordReset",
     "Forgot Password / Set Password",
+    "Password emails are paused for this address",
+    "Try Again in",
     "Create Login & Send Setup Email",
     "Send Password Reset Email",
     "Email or password is incorrect.",
@@ -709,6 +711,8 @@ requireText(
     "status",
     "active",
     "Do not reveal whether an email exists",
+    "Retry-After",
+    "retryAfterSeconds",
     "auth/callback",
   ],
   "server-side self-service password reset"

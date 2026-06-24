@@ -8,9 +8,14 @@ type AdminSupabaseClient = SupabaseClient<any, "public", any>;
 
 const productionSiteOrigin = "https://motoandcocouriers.vercel.app";
 const allowedReturnPaths = new Set(["/", "/portal", "/booking", "/tracking", "/admin", "/driver"]);
+const rateLimitRetrySeconds = 60 * 60;
 
 function json(status: number, payload: Record<string, unknown>) {
   return NextResponse.json(payload, { status });
+}
+
+function jsonWithHeaders(status: number, payload: Record<string, unknown>, headers: Record<string, string>) {
+  return NextResponse.json(payload, { status, headers });
 }
 
 function normaliseEmail(value: unknown) {
@@ -58,6 +63,11 @@ function successPayload() {
   };
 }
 
+function isRateLimitError(error: unknown) {
+  const message = String(error instanceof Error ? error.message : (error as { message?: string } | null)?.message || error || "").toLowerCase();
+  return message.includes("rate") || message.includes("too many");
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -85,7 +95,17 @@ export async function POST(request: NextRequest) {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: authRedirectTo(returnPath),
     });
-    if (resetError) throw resetError;
+    if (resetError) {
+      if (isRateLimitError(resetError)) {
+        return jsonWithHeaders(429, {
+          error: "Too many password emails have been requested. Wait before trying again.",
+          retryAfterSeconds: rateLimitRetrySeconds,
+        }, {
+          "Retry-After": String(rateLimitRetrySeconds),
+        });
+      }
+      throw resetError;
+    }
 
     return json(200, {
       ...successPayload(),

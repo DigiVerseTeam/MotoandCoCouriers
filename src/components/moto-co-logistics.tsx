@@ -2306,9 +2306,54 @@ function passwordLoginErrorMessage(error) {
 function passwordResetErrorMessage(error) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("rate") || message.includes("too many")) {
-    return "Too many password emails have been requested. Try again later.";
+    return "Too many password emails have been requested. This timer clears automatically.";
   }
   return "We could not send the password email. Check the address or contact Admin.";
+}
+
+const PASSWORD_RESET_SUCCESS_COOLDOWN_SECONDS = 10 * 60;
+const PASSWORD_RESET_RATE_LIMIT_SECONDS = 60 * 60;
+
+function passwordResetCooldownKey(email) {
+  return `motoCoPasswordResetCooldown:${String(email || "").trim().toLowerCase()}`;
+}
+
+function readPasswordResetCooldownUntil(email) {
+  if (typeof window === "undefined" || !email) return 0;
+  try {
+    const until = Number(window.localStorage.getItem(passwordResetCooldownKey(email)) || 0);
+    if (until > Date.now()) return until;
+    window.localStorage.removeItem(passwordResetCooldownKey(email));
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writePasswordResetCooldownUntil(email, seconds) {
+  const until = Date.now() + Math.max(60, Number(seconds || PASSWORD_RESET_SUCCESS_COOLDOWN_SECONDS)) * 1000;
+  if (typeof window !== "undefined" && email) {
+    try {
+      window.localStorage.setItem(passwordResetCooldownKey(email), String(until));
+    } catch {
+      // Cooldown storage is best-effort; Supabase still enforces provider limits.
+    }
+  }
+  return until;
+}
+
+function passwordResetCooldownMinutes(until) {
+  return Math.max(1, Math.ceil((Number(until || 0) - Date.now()) / 60000));
+}
+
+function passwordResetCooldownLabel(until) {
+  const minutes = passwordResetCooldownMinutes(until);
+  if (minutes >= 60) return "about 1 hour";
+  return `${minutes} min`;
+}
+
+function passwordResetCooldownMessage(until) {
+  return `Password emails are paused for this address. Try again in ${passwordResetCooldownLabel(until)}. Admin cannot reset this timer; it clears automatically.`;
 }
 
 function portalTaskTimeout(label, promise, timeoutMs = 15000) {
@@ -2383,12 +2428,24 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetCooldownUntil, setResetCooldownUntil] = useState(0);
+  const [resetCooldownTick, setResetCooldownTick] = useState(0);
 
   useEffect(() => {
     setEntryType(["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer");
     setErr("");
     setNotice("");
   }, [defaultRole]);
+
+  useEffect(() => {
+    setResetCooldownUntil(readPasswordResetCooldownUntil(email));
+  }, [email]);
+
+  useEffect(() => {
+    if (!resetCooldownUntil || resetCooldownUntil <= Date.now()) return undefined;
+    const timer = window.setInterval(() => setResetCooldownTick(tick => tick + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, [resetCooldownUntil]);
 
   async function signIn() {
     setErr("");
@@ -2439,17 +2496,40 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
       setErr("Live password reset is not configured for this deployment. Contact Admin.");
       return;
     }
+    const existingCooldown = readPasswordResetCooldownUntil(loginEmail);
+    if (existingCooldown > Date.now()) {
+      setResetCooldownUntil(existingCooldown);
+      setErr(passwordResetCooldownMessage(existingCooldown));
+      return;
+    }
     setResetting(true);
     try {
       const returnPath = entryType === "customer" ? "/portal" : defaultRole === "driver" ? "/driver" : "/admin";
       await requestLivePasswordReset(loginEmail, returnPath);
-      setNotice("Password setup/reset email sent if this address is approved. Check your inbox.");
+      const cooldownUntil = writePasswordResetCooldownUntil(loginEmail, PASSWORD_RESET_SUCCESS_COOLDOWN_SECONDS);
+      setResetCooldownUntil(cooldownUntil);
+      setNotice(`Password setup/reset email sent if this address is approved. Check your inbox. The reset button is paused for ${passwordResetCooldownLabel(cooldownUntil)}.`);
     } catch (error) {
-      setErr(passwordResetErrorMessage(error));
+      const retrySeconds = Number(error?.retryAfterSeconds || 0);
+      if (retrySeconds > 0 || error?.status === 429) {
+        const cooldownUntil = writePasswordResetCooldownUntil(loginEmail, retrySeconds || PASSWORD_RESET_RATE_LIMIT_SECONDS);
+        setResetCooldownUntil(cooldownUntil);
+        setErr(passwordResetCooldownMessage(cooldownUntil));
+      } else {
+        setErr(passwordResetErrorMessage(error));
+      }
     } finally {
       setResetting(false);
     }
   }
+
+  const resetOnCooldown = resetCooldownUntil > Date.now();
+  const resetButtonLabel = resetting
+    ? "Sending..."
+    : resetOnCooldown
+      ? `Try Again in ${passwordResetCooldownLabel(resetCooldownUntil)}`
+      : "Forgot Password / Set Password";
+  void resetCooldownTick;
 
   return (
     <div className="login-wrap">
@@ -2490,9 +2570,9 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
           className="btn b-ghost"
           style={{ marginTop: ".55rem" }}
           onClick={sendPasswordReset}
-          disabled={sending || resetting}
+          disabled={sending || resetting || resetOnCooldown}
         >
-          {resetting ? "Sending..." : "Forgot Password / Set Password"}
+          {resetButtonLabel}
         </button>
         {entryType === "customer" && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>

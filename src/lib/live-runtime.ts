@@ -294,8 +294,13 @@ export async function requestLivePasswordReset(email, returnPath = "/") {
     }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || `Password reset email failed (${response.status}).`);
-  return true;
+  if (!response.ok) {
+    const error = new Error(payload?.error || `Password reset email failed (${response.status}).`) as Error & { status?: number; retryAfterSeconds?: number };
+    error.status = response.status;
+    error.retryAfterSeconds = payload?.retryAfterSeconds || Number(response.headers.get("Retry-After") || 0);
+    throw error;
+  }
+  return payload || true;
 }
 
 export async function updateLiveUserPassword(password) {
