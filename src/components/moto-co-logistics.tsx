@@ -2407,12 +2407,60 @@ function RegisterClient({ suppliers, onDone, onCancel }) {
   const [billingName, setBillingName] = useState("");
   const [billingEmail, setBillingEmail] = useState("");
   const [phone, setPhone] = useState(""); const [address, setAddress] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [addressSearching, setAddressSearching] = useState(false);
+  const [addressLookupError, setAddressLookupError] = useState("");
+  const [addressMenuOpen, setAddressMenuOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [consent, setConsent] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   function toggle(v) { setVendors(vs => vs.includes(v) ? vs.filter(x => x !== v) : [...vs, v]); }
+
+  useEffect(() => {
+    const query = address.trim();
+    setSelectedAddress(current => current?.label === query ? current : null);
+    if (query.length < 4) {
+      setAddressSuggestions([]);
+      setAddressSearching(false);
+      setAddressLookupError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const handle = setTimeout(async () => {
+      setAddressSearching(true);
+      setAddressLookupError("");
+      try {
+        const response = await fetch(`/api/address-search?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload?.error || "Address search is unavailable.");
+        setAddressSuggestions(Array.isArray(payload?.suggestions) ? payload.suggestions : []);
+        setAddressMenuOpen(true);
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        setAddressSuggestions([]);
+        setAddressLookupError("Address search unavailable. Enter the physical address manually.");
+      } finally {
+        setAddressSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      controller.abort();
+      clearTimeout(handle);
+    };
+  }, [address]);
+
+  function selectAddressSuggestion(suggestion) {
+    setAddress(suggestion.label);
+    setSelectedAddress(suggestion);
+    setAddressSuggestions([]);
+    setAddressMenuOpen(false);
+    setAddressLookupError("");
+  }
 
   async function submit() {
     if (!name || !email || !opName || !billingName || !billingEmail || !phone || !address) { setErr("All fields required"); return; }
@@ -2429,6 +2477,13 @@ function RegisterClient({ suppliers, onDone, onCancel }) {
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         address: address.trim(),
+        addressLookup: selectedAddress ? {
+          label: selectedAddress.label,
+          displayName: selectedAddress.displayName,
+          lat: selectedAddress.lat,
+          lon: selectedAddress.lon,
+          source: "address_search",
+        } : null,
         vendors,
         status: "Pending",
         courierEligible: false,
@@ -2459,7 +2514,58 @@ function RegisterClient({ suppliers, onDone, onCancel }) {
         <div className="f"><label>Billing Contact Name</label><input value={billingName} onChange={e => setBillingName(e.target.value)} /></div>
         <div className="f"><label>Billing Email</label><input value={billingEmail} onChange={e => setBillingEmail(e.target.value)} type="email" /></div>
       </div>
-      <div className="f"><label>Delivery Address</label><input value={address} onChange={e => setAddress(e.target.value)} placeholder="Physical street address, suburb, QLD" /></div>
+      <div className="f" style={{ position: "relative" }}>
+        <label>Delivery Address</label>
+        <input
+          value={address}
+          onChange={e => { setAddress(e.target.value); setAddressMenuOpen(true); }}
+          onFocus={() => addressSuggestions.length && setAddressMenuOpen(true)}
+          onBlur={() => setTimeout(() => setAddressMenuOpen(false), 150)}
+          placeholder="Start typing the workshop street address"
+          autoComplete="street-address"
+        />
+        {(addressSearching || selectedAddress || addressLookupError) && (
+          <div style={{ fontSize: ".72rem", color: addressLookupError ? T.acc : T.mu, marginTop: ".25rem" }}>
+            {addressSearching ? "Searching addresses..." : addressLookupError || (selectedAddress ? "Address selected from search." : "")}
+          </div>
+        )}
+        {addressMenuOpen && addressSuggestions.length > 0 && (
+          <div style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: "100%",
+            zIndex: 12,
+            background: "#fff",
+            border: "1px solid #bfc2cc",
+            boxShadow: "0 8px 18px rgba(30, 28, 25, .12)",
+            maxHeight: "14rem",
+            overflowY: "auto",
+          }}>
+            {addressSuggestions.map(suggestion => (
+              <button
+                key={suggestion.id || suggestion.label}
+                type="button"
+                onMouseDown={event => event.preventDefault()}
+                onClick={() => selectAddressSuggestion(suggestion)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: ".7rem .8rem",
+                  border: 0,
+                  borderBottom: "1px solid #ece8df",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: ".86rem",
+                }}
+              >
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="f"><label>Approved Suppliers You Use</label></div>
       <div className="pills">
         {activeSuppliers(suppliers).map(v => (
