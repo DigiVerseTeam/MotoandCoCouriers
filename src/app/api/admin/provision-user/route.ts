@@ -11,6 +11,7 @@ type AdminSupabaseClient = SupabaseClient<any, "public", any>;
 
 const allowedRoles = new Set<ProvisionRole>(["super_admin", "admin", "client_ops", "client_billing", "driver"]);
 const allowedStatuses = new Set<ProvisionStatus>(["pending", "active", "inactive", "revoked"]);
+const productionSiteOrigin = "https://motoandcocouriers.vercel.app";
 
 function json(status: number, payload: Record<string, unknown>) {
   return NextResponse.json(payload, { status });
@@ -40,6 +41,19 @@ function serviceClient(): AdminSupabaseClient | null {
   });
 }
 
+function siteOrigin() {
+  const configured = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim().replace(/\/+$/, "");
+  if (configured) return configured;
+  const vercelUrl = String(process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || "").trim().replace(/\/+$/, "");
+  if (!vercelUrl) return productionSiteOrigin;
+  return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
+}
+
+function authRedirectTo(returnPath = "/") {
+  const safePath = String(returnPath || "/").startsWith("/") ? String(returnPath || "/") : "/";
+  return `${siteOrigin()}/auth/callback?next=${encodeURIComponent(safePath)}`;
+}
+
 function actorCodeForRole(role: ProvisionRole, linkCode = "") {
   if (linkCode.trim()) return linkCode.trim();
   if (role === "super_admin") return "ACT-INT-003";
@@ -58,6 +72,14 @@ function canAssign(callerRoles: Set<string>, targetRole: ProvisionRole) {
   if (targetRole === "super_admin") return false;
   if (targetRole === "admin") return callerRoles.has("super_admin");
   return callerRoles.has("super_admin") || callerRoles.has("admin");
+}
+
+async function sendPasswordSetupEmail(supabase: AdminSupabaseClient, email: string, role: ProvisionRole) {
+  const returnPath = role === "driver" ? "/driver" : role === "admin" || role === "super_admin" ? "/admin" : "/portal";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: authRedirectTo(returnPath),
+  });
+  if (error) throw error;
 }
 
 async function findAuthUserByEmail(supabase: AdminSupabaseClient, email: string) {
@@ -141,6 +163,62 @@ async function writeAudit(
   if (error) throw error;
 }
 
+async function upsertAccessAssignment(
+  supabase: AdminSupabaseClient,
+  userId: string,
+  callerId: string,
+  role: ProvisionRole,
+  actorCode: string,
+  actorId: string | null,
+  contactId: string | null,
+  approvalReference: string,
+) {
+  const { data: existingRows, error: existingError } = await supabase
+    .from("access_role_assignments")
+    .select("id")
+    .eq("profile_id", userId)
+    .eq("application_role", role)
+    .limit(1);
+  if (existingError) throw existingError;
+
+  const existing = existingRows?.[0];
+  const assignment = {
+    actor_id: actorId,
+    contact_id: contactId,
+    application_role: role,
+    actor_code: actorCode,
+    status: "active",
+    last_reviewed_by: callerId,
+    last_reviewed_at: new Date().toISOString(),
+    last_review_reason: approvalReference,
+    revoked_by: null,
+    revoked_at: null,
+    revoked_reason: null,
+  };
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("access_role_assignments")
+      .update(assignment)
+      .eq("id", existing.id);
+    if (error) throw error;
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from("access_role_assignments")
+    .insert({
+      profile_id: userId,
+      granted_by: callerId,
+      granted_at: new Date().toISOString(),
+      ...assignment,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = serviceClient();
@@ -202,28 +280,42 @@ export async function POST(request: NextRequest) {
     if (role === "driver" && !driverId) return json(400, { error: "Driver role must be linked to a driver record." });
 
     const existing = await findAuthUserByEmail(supabase, email);
-    if (existing) return json(409, { error: "Email already exists. Admin must investigate possible duplicate registration." });
+    let user = existing || null;
+    let createdUser = false;
 
-    const initialPassword = temporaryPassword();
-    const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-      email,
-      password: initialPassword,
-      email_confirm: true,
-      user_metadata: {
-        display_name: displayName,
-        sop_iam_03_role: role,
-      },
-    });
-    if (createError) throw createError;
-    const user = createData.user;
-    if (!user?.id) throw new Error("User creation did not return a user id.");
+    if (user?.id) {
+      const { error: updateAuthError } = await supabase.auth.admin.updateUserById(user.id, {
+        email_confirm: true,
+        ban_duration: "none",
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          display_name: displayName,
+          sop_iam_03_role: role,
+        },
+      });
+      if (updateAuthError) throw updateAuthError;
+    } else {
+      const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+        email,
+        password: temporaryPassword(),
+        email_confirm: true,
+        user_metadata: {
+          display_name: displayName,
+          sop_iam_03_role: role,
+        },
+      });
+      if (createError) throw createError;
+      user = createData.user;
+      createdUser = true;
+    }
 
-    const profileRole = role;
+    if (!user?.id) throw new Error("User provisioning did not return a user id.");
+
     const { error: profileError } = await supabase.from("profiles").upsert({
       id: user.id,
       actor_id: actorId,
       email,
-      role: profileRole,
+      role,
       status: "active",
       display_name: displayName,
       account_id: accountId,
@@ -232,26 +324,14 @@ export async function POST(request: NextRequest) {
     }, { onConflict: "id" });
     if (profileError) throw profileError;
 
-    const { error: assignmentError } = await supabase.from("access_role_assignments").insert({
-      profile_id: user.id,
-      actor_id: actorId,
-      contact_id: contactId,
-      application_role: role,
-      actor_code: actorCode,
-      status: "active",
-      granted_by: caller.authUser.id,
-      granted_at: new Date().toISOString(),
-      last_reviewed_by: caller.authUser.id,
-      last_reviewed_at: new Date().toISOString(),
-      last_review_reason: approvalReference,
-    });
-    if (assignmentError) throw assignmentError;
+    await upsertAccessAssignment(supabase, user.id, caller.authUser.id, role, actorCode, actorId, contactId, approvalReference);
+    await sendPasswordSetupEmail(supabase, email, role);
 
     await writeAudit(
       supabase,
       caller.authUser.id,
       user.id,
-      "provision_user",
+      createdUser ? "provision_user" : "provision_existing_user",
       "profile",
       "role",
       "",
@@ -260,7 +340,7 @@ export async function POST(request: NextRequest) {
       approvalReference,
     );
 
-    return json(201, {
+    return json(createdUser ? 201 : 200, {
       profile: {
         id: user.id,
         email,
@@ -270,9 +350,10 @@ export async function POST(request: NextRequest) {
         account_id: accountId,
         driver_id: driverId,
       },
-      temporaryPassword: initialPassword,
-      temporaryPasswordIssued: true,
-      welcomeEmailSent: false,
+      setupEmailSent: true,
+      existingUser: !createdUser,
+      temporaryPasswordIssued: false,
+      welcomeEmailSent: true,
     });
   } catch (error) {
     return json(500, { error: error instanceof Error ? error.message : "Provisioning failed." });
@@ -317,23 +398,22 @@ export async function PATCH(request: NextRequest) {
         return json(403, { error: "This caller is not permitted to reset that user's password." });
       }
 
-      const initialPassword = temporaryPassword();
-      const { error: passwordError } = await supabase.auth.admin.updateUserById(existing.id, {
-        password: initialPassword,
+      const { error: authError } = await supabase.auth.admin.updateUserById(existing.id, {
         email_confirm: true,
         ban_duration: "none",
       });
-      if (passwordError) throw passwordError;
+      if (authError) throw authError;
+      await sendPasswordSetupEmail(supabase, existing.email, targetRole);
 
       await writeAudit(
         supabase,
         caller.authUser.id,
         existing.id,
-        "reset_user_password",
+        "send_user_password_reset",
         "profile",
         "password",
         "",
-        "temporary_password_issued",
+        "reset_email_sent",
         reason,
         approvalReference,
       );
@@ -346,8 +426,8 @@ export async function PATCH(request: NextRequest) {
           role: existing.role,
           status: existing.status,
         },
-        temporaryPassword: initialPassword,
-        temporaryPasswordIssued: true,
+        resetEmailSent: true,
+        temporaryPasswordIssued: false,
       });
     }
 

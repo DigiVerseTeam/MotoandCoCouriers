@@ -655,7 +655,10 @@ requireText(
     "updateLiveUserPassword",
     "Change Password",
     "resetLiveProvisionedUserPassword",
-    "Issue Temporary Password",
+    "requestLivePasswordReset",
+    "Forgot Password / Set Password",
+    "Create Login & Send Setup Email",
+    "Send Password Reset Email",
     "Email or password is incorrect.",
   ],
   "production login uses simple email-password entry flow"

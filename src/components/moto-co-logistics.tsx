@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { nextAvailableRunDate, resolveActualRunDate } from "@/lib/date-rules";
 import {
   completeLiveAuthRedirect,
+  consumeLivePasswordSetupRequest,
   getLiveRuntimeStatus,
   loadLiveRuntimeSnapshot,
   provisionLiveUser,
   registerLiveClient,
   requestLivePasswordLogin,
+  requestLivePasswordReset,
   resetLiveProvisionedUserPassword,
   resolveLiveRuntimeSession,
   signOutLiveRuntime,
@@ -2301,6 +2303,14 @@ function passwordLoginErrorMessage(error) {
   return "We could not sign you in. Check the email and password, or contact Admin.";
 }
 
+function passwordResetErrorMessage(error) {
+  const message = String(error?.message || "").toLowerCase();
+  if (message.includes("rate") || message.includes("too many")) {
+    return "Too many password emails have been requested. Try again later.";
+  }
+  return "We could not send the password email. Check the address or contact Admin.";
+}
+
 function portalTaskTimeout(label, promise, timeoutMs = 15000) {
   let timeoutId;
   const timeout = new Promise((_, reject) => {
@@ -2350,6 +2360,9 @@ function AccountSecurityModal({ session, onClose, onPasswordChanged }) {
           <span>{session?.user?.email || "Signed-in user"}</span>
           <span>{session?.role || "role"}</span>
         </div>
+        <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
+          Set a new password here after an account setup or reset email, or change your existing password at any time.
+        </div>
         <div className="f"><label>New Password</label><input value={password} onChange={event => setPassword(event.target.value)} type="password" placeholder="At least 10 characters" /></div>
         <div className="f"><label>Confirm Password</label><input value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} type="password" placeholder="Re-enter password" onKeyDown={event => event.key === "Enter" && savePassword()} /></div>
         {error && <div className="err">{error}</div>}
@@ -2369,6 +2382,7 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     setEntryType(["admin", "driver"].includes(defaultRole) ? "courier_business" : "customer");
@@ -2413,6 +2427,30 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
     }
   }
 
+  async function sendPasswordReset() {
+    setErr("");
+    setNotice("");
+    const loginEmail = email.trim().toLowerCase();
+    if (!loginEmail) {
+      setErr("Enter your email first.");
+      return;
+    }
+    if (!liveRuntimeStatus?.enabled) {
+      setErr("Live password reset is not configured for this deployment. Contact Admin.");
+      return;
+    }
+    setResetting(true);
+    try {
+      const returnPath = entryType === "customer" ? "/portal" : defaultRole === "driver" ? "/driver" : "/admin";
+      await requestLivePasswordReset(loginEmail, returnPath);
+      setNotice("Password setup/reset email sent if this address is approved. Check your inbox.");
+    } catch (error) {
+      setErr(passwordResetErrorMessage(error));
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <div className="login-wrap">
       <div className="login-card">
@@ -2447,6 +2485,14 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
         </div>
         <button className="btn b-acc" onClick={signIn} disabled={sending}>
           {sending ? "Signing in..." : "Sign In"}
+        </button>
+        <button
+          className="btn b-ghost"
+          style={{ marginTop: ".55rem" }}
+          onClick={sendPasswordReset}
+          disabled={sending || resetting}
+        >
+          {resetting ? "Sending..." : "Forgot Password / Set Password"}
         </button>
         {entryType === "customer" && (
           <p style={{ fontSize: ".75rem", color: T.mu, textAlign: "center", marginTop: "1rem" }}>
@@ -6262,6 +6308,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const [provisionBusy, setProvisionBusy] = useState(false);
   const [provisionResult, setProvisionResult] = useState(null);
   const [activationTarget, setActivationTarget] = useState(null);
+  const [activationBusy, setActivationBusy] = useState(false);
   const [activationReview, setActivationReview] = useState({
     b2bConfirmed: false,
     serviceAreaConfirmed: false,
@@ -7521,7 +7568,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       if (result?.temporaryPassword && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(result.temporaryPassword);
       }
-      onSaveAccessChange(provisionTarget, "review", `Login created and temporary password issued. ${reason}`, "other");
+      onSaveAccessChange(provisionTarget, "review", `Login created and setup email sent. ${reason}`, "other");
     } catch (error) {
       showWorkflowNotice(error?.message || "Login provisioning failed.");
     } finally {
@@ -7554,7 +7601,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       if (result?.temporaryPassword && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(result.temporaryPassword);
       }
-      onSaveAccessChange(passwordResetTarget, "review", `Password reset issued. ${reason}`, "other");
+      onSaveAccessChange(passwordResetTarget, "review", `Password reset email sent. ${reason}`, "other");
     } catch (error) {
       showWorkflowNotice(error?.message || "Password reset failed.");
     } finally {
@@ -8254,13 +8301,62 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     setActivationReview(review => ({ ...review, [key]: checked }));
   }
 
-  function confirmActivationReview() {
+  function clientLoginProvisionTargets(client) {
+    const targets = [];
+    const seenEmails = new Set();
+    const operationalEmail = normaliseIdentityEmail(client.operationalContact?.email || client.email);
+    const billingEmail = normaliseIdentityEmail(client.billingContact?.email || "");
+
+    if (operationalEmail) {
+      seenEmails.add(operationalEmail);
+      targets.push({
+        email: operationalEmail,
+        displayName: client.operationalContact?.name || client.name,
+        role: "client_ops",
+        actorCode: "ACT-CRM-001a",
+        contactId: client.operationalContact?.id || "",
+      });
+    }
+    if (billingEmail && !seenEmails.has(billingEmail)) {
+      targets.push({
+        email: billingEmail,
+        displayName: client.billingContact?.name || client.name,
+        role: "client_billing",
+        actorCode: "ACT-CRM-001b",
+        contactId: client.billingContact?.id || "",
+      });
+    }
+    return targets;
+  }
+
+  async function sendClientSetupEmailsForActivation(client, reviewedAt) {
+    if (!getLiveRuntimeStatus()?.enabled) return [];
+    const targets = clientLoginProvisionTargets(client);
+    const results = [];
+    for (const target of targets) {
+      const result = await provisionLiveUser({
+        email: target.email,
+        displayName: target.displayName,
+        role: target.role,
+        actorId: client.actorId || "",
+        contactId: target.contactId,
+        accountId: client.id,
+        actorCode: target.actorCode,
+        approvalReference: `${client.name} activated by Admin ${fmtFullDate(isoDate(reviewedAt))}`,
+        reason: `Admin approved client account activation for ${client.name}; send setup email for ${target.role}.`,
+      });
+      results.push({ ...target, result });
+    }
+    return results;
+  }
+
+  async function confirmActivationReview() {
     if (!activationTarget) return;
     const reviewedAt = isoNow();
     const addressStatus = physicalAddressStatus(activationTarget.address);
     const contactStatus = contactEligibilityStatus(activationTarget);
     const supplierStatus = supplierEligibilityStatus(activationTarget);
-    onUpdateClient({
+    const activatedClient = {
       ...activationTarget,
       status: "Active",
       courierEligible: true,
@@ -8277,9 +8373,22 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
         source: "DECISIONS-REGISTER Gap 5 / UJ-CRM-001A advisory eligibility review",
       },
       auditDetail: `${activationTarget.name} activated after Admin advisory eligibility review. Checklist reference: B2B ${String(Boolean(String(activationTarget.name || "").trim()))}; address ${addressStatus.reason}; contacts ${contactStatus.reason}; suppliers ${supplierStatus.reason}`,
-    });
-    setActivationTarget(null);
-    setActivationReview({ b2bConfirmed: false, serviceAreaConfirmed: false, contactsConfirmed: false, suppliersConfirmed: false, note: "" });
+    };
+    setActivationBusy(true);
+    try {
+      onUpdateClient(activatedClient);
+      const setupResults = await sendClientSetupEmailsForActivation(activatedClient, reviewedAt);
+      const setupEmails = setupResults.map(item => item.email).filter(Boolean);
+      showWorkflowNotice(setupEmails.length
+        ? `${activationTarget.name} activated. Setup email sent to ${setupEmails.join(", ")}.`
+        : `${activationTarget.name} activated. No separate setup email was sent because no live client contact email was available.`);
+      setActivationTarget(null);
+      setActivationReview({ b2bConfirmed: false, serviceAreaConfirmed: false, contactsConfirmed: false, suppliersConfirmed: false, note: "" });
+    } catch (error) {
+      showWorkflowNotice(error?.message || "Client was activated, but the setup email could not be sent. Use Access > Reset Password to resend.");
+    } finally {
+      setActivationBusy(false);
+    }
   }
 
   function dispatchComplianceReady() {
@@ -10887,7 +10996,9 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   </div>
                 ))}
                 <div className="f"><label>Review Note</label><textarea value={activationReview.note} onChange={e => setActivationReview(review => ({ ...review, note: e.target.value }))} placeholder="Eligibility evidence or service-area review note" /></div>
-                <button className="btn b-acc" onClick={confirmActivationReview}>Activate Account</button>
+                <button className="btn b-acc" onClick={confirmActivationReview} disabled={activationBusy}>
+                  {activationBusy ? "Activating..." : "Activate Account & Send Login Email"}
+                </button>
                 <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setActivationTarget(null)}>Cancel</button>
               </div>
             </div>
@@ -10932,7 +11043,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <span>{provisionTarget.accountName}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                This creates the live portal login and issues a temporary password. Give the temporary password to the user, then ask them to change it from Account Security after sign-in.
+                This creates the live portal login and emails the user a secure setup link so they can set their own password.
               </div>
               <div className="f"><label>Approval Reference *</label><input value={provisionApproval} onChange={e => setProvisionApproval(e.target.value)} placeholder="Admin approved customer login - date/reference" /></div>
               <div className="f"><label>Reason *</label><textarea value={provisionReason} onChange={e => setProvisionReason(e.target.value)} placeholder="Reason for first login provisioning" /></div>
@@ -10940,11 +11051,16 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <div className="card" style={{ marginBottom: ".8rem" }}>
                   <div className="card-title" style={{ marginBottom: ".4rem" }}>Temporary Password</div>
                   <input readOnly value={provisionResult.temporaryPassword} onFocus={e => e.target.select()} />
-                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Copied to clipboard when your browser allows it. The user can change it after sign-in.</div>
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Legacy fallback only. The standard path is the emailed setup link.</div>
                 </div>
               )}
-              <button className="btn b-acc" onClick={confirmProvisionLogin} disabled={provisionBusy || Boolean(provisionResult?.temporaryPassword)}>
-                {provisionBusy ? "Creating..." : provisionResult?.temporaryPassword ? "Login Created" : "Create Login & Issue Password"}
+              {provisionResult?.setupEmailSent && (
+                <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
+                  Setup email sent to {provisionTarget.email}.
+                </div>
+              )}
+              <button className="btn b-acc" onClick={confirmProvisionLogin} disabled={provisionBusy || Boolean(provisionResult?.setupEmailSent || provisionResult?.temporaryPassword)}>
+                {provisionBusy ? "Creating..." : provisionResult?.setupEmailSent || provisionResult?.temporaryPassword ? "Login Email Sent" : "Create Login & Send Setup Email"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={closeProvisionLogin}>Close</button>
             </div>
@@ -10960,7 +11076,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <span>{passwordResetTarget.email}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                This creates a temporary password for the selected portal user and records the reset in the audit trail. The password is shown once here and copied to the clipboard when the browser allows it.
+                This sends the selected user a secure password reset email and records the reset in the audit trail. Admin does not need to handle the password.
               </div>
               <div className="f"><label>Approval Reference *</label><input value={passwordResetApproval} onChange={e => setPasswordResetApproval(e.target.value)} placeholder="Owner/Admin approval reference" /></div>
               <div className="f"><label>Reason *</label><textarea value={passwordResetReason} onChange={e => setPasswordResetReason(e.target.value)} placeholder="Reason for reset" /></div>
@@ -10968,11 +11084,16 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <div className="card" style={{ marginBottom: ".8rem" }}>
                   <div className="card-title" style={{ marginBottom: ".4rem" }}>Temporary Password</div>
                   <input readOnly value={passwordResetResult.temporaryPassword} onFocus={e => e.target.select()} />
-                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Give this to the user, then ask them to change it from Account Security after sign-in.</div>
+                  <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>Legacy fallback only. The standard path is the emailed reset link.</div>
                 </div>
               )}
-              <button className="btn b-acc" onClick={confirmPasswordReset} disabled={passwordResetBusy || Boolean(passwordResetResult?.temporaryPassword)}>
-                {passwordResetBusy ? "Resetting..." : passwordResetResult?.temporaryPassword ? "Password Reset Issued" : "Issue Temporary Password"}
+              {passwordResetResult?.resetEmailSent && (
+                <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
+                  Password reset email sent to {passwordResetTarget.email}.
+                </div>
+              )}
+              <button className="btn b-acc" onClick={confirmPasswordReset} disabled={passwordResetBusy || Boolean(passwordResetResult?.resetEmailSent || passwordResetResult?.temporaryPassword)}>
+                {passwordResetBusy ? "Sending..." : passwordResetResult?.resetEmailSent || passwordResetResult?.temporaryPassword ? "Reset Email Sent" : "Send Password Reset Email"}
               </button>
               <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={closePasswordReset}>Close</button>
             </div>
@@ -11758,6 +11879,11 @@ export default function App() {
         if (resolved?.role) {
           setSession(resolved);
           setLiveAuthError("");
+          const passwordSetupReason = consumeLivePasswordSetupRequest();
+          if (passwordSetupReason) {
+            setAccountSecurityOpen(true);
+            setSystemNotice(passwordSetupReason === "invite" ? "Account setup confirmed. Set your password before continuing." : "Password reset confirmed. Set your new password before continuing.");
+          }
           return;
         }
         setSession(null);

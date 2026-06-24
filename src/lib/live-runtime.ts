@@ -28,6 +28,7 @@ export const liveRuntimeDomains = {
 
 const allSnapshotKeys = Object.keys(liveRuntimeDomains);
 const LIVE_AUTH_RETURN_PATH_KEY = "motoCoLiveAuthReturnPath";
+const LIVE_PASSWORD_SETUP_REQUIRED_KEY = "motoCoLivePasswordSetupRequired";
 const PRODUCTION_SITE_ORIGIN = "https://motoandcocouriers.vercel.app";
 let liveAuthRedirectPromise = null;
 let liveAuthRedirectCompletedHref = "";
@@ -91,6 +92,26 @@ function liveAuthCallbackUrl(returnPath = "/") {
   return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 }
 
+function markLivePasswordSetupRequired(reason = "password_setup") {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(LIVE_PASSWORD_SETUP_REQUIRED_KEY, String(reason || "password_setup"));
+  } catch {
+    // Best-effort only; the user can still change their password from Account Security.
+  }
+}
+
+export function consumeLivePasswordSetupRequest() {
+  if (typeof window === "undefined") return "";
+  try {
+    const value = window.sessionStorage.getItem(LIVE_PASSWORD_SETUP_REQUIRED_KEY) || "";
+    window.sessionStorage.removeItem(LIVE_PASSWORD_SETUP_REQUIRED_KEY);
+    return value;
+  } catch {
+    return "";
+  }
+}
+
 export function readStoredLiveAuthReturnPath(fallback = "/") {
   if (typeof window === "undefined") return safeLiveAuthReturnPath(fallback);
   try {
@@ -108,6 +129,7 @@ export async function completeLiveAuthRedirect() {
   const url = new URL(window.location.href);
   const next = safeLiveAuthReturnPath(url.searchParams.get("next") || readStoredLiveAuthReturnPath("/"));
   const code = url.searchParams.get("code");
+  const authType = String(url.searchParams.get("type") || "").toLowerCase();
   const authError = url.searchParams.get("error_description") || url.searchParams.get("error") || "";
 
   if (authError) {
@@ -119,6 +141,7 @@ export async function completeLiveAuthRedirect() {
     const href = window.location.href;
     if (liveAuthRedirectPromise) return liveAuthRedirectPromise;
     if (liveAuthRedirectCompletedHref === href) return next;
+    if (authType === "recovery" || authType === "invite") markLivePasswordSetupRequired(authType);
 
     // Supabase can emit SIGNED_IN while this code path is still running. Remove
     // the one-use code immediately and share one exchange promise across callers.
@@ -141,6 +164,9 @@ export async function completeLiveAuthRedirect() {
   const hasAuthHash = /access_token|refresh_token|error/.test(window.location.hash || "");
   if (hasAuthHash && url.pathname.startsWith("/auth/callback")) {
     if (liveAuthRedirectPromise) return liveAuthRedirectPromise;
+    const hashParams = new URLSearchParams(String(window.location.hash || "").replace(/^#/, ""));
+    const hashType = String(hashParams.get("type") || "").toLowerCase();
+    if (hashType === "recovery" || hashType === "invite") markLivePasswordSetupRequired(hashType);
     liveAuthRedirectPromise = (async () => {
       const { error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -251,6 +277,19 @@ export async function requestLivePasswordLogin(email, password) {
   const { error } = await supabase.auth.signInWithPassword({
     email: normaliseEmail(email),
     password: String(password || ""),
+  });
+  if (error) throw error;
+  return true;
+}
+
+export async function requestLivePasswordReset(email, returnPath = "/") {
+  const supabase = client();
+  if (!supabase) throw new Error("Live password reset is not configured.");
+  const resolvedReturnPath = safeLiveAuthReturnPath(returnPath || currentBrowserReturnPath());
+  rememberLiveAuthReturnPath(resolvedReturnPath);
+  const redirectTo = liveAuthCallbackUrl(resolvedReturnPath);
+  const { error } = await supabase.auth.resetPasswordForEmail(normaliseEmail(email), {
+    redirectTo,
   });
   if (error) throw error;
   return true;
