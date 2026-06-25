@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Decisions Register · Moto & Co</title>
+<style>
+:root{--ink:#1a1a2e;--ink-mid:#4a4a6a;--rule:#c8c8dc;--bg:#f7f7fb;--accent:#1B2A4A;--accent-2:#1A7A6E;--warn:#C05000;--pass:#2D7A3A;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:Arial,sans-serif;color:var(--ink);font-size:13px;line-height:1.5;padding:28px}
+.topbar{background:var(--accent);padding:16px 24px;border-radius:4px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-family:Georgia,serif;color:#fff;font-size:16px;}
+.topbar-tag{background:var(--pass);color:#fff;font-size:10px;padding:3px 10px;border-radius:2px;letter-spacing:.06em;}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:24px;}
+.sidebar{}
+.sidebar h3{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#8888aa;margin-bottom:10px;}
+.stat-box{background:#fff;border:1px solid var(--rule);border-radius:4px;padding:14px;margin-bottom:12px;}
+.stat-num{font-size:28px;font-weight:bold;color:var(--pass);}
+.stat-label{font-size:10px;color:#8888aa;margin-top:2px;}
+.intro{background:#fff;border:1px solid var(--rule);border-radius:4px;padding:14px;margin-bottom:18px;font-size:12px;color:var(--ink-mid);line-height:1.7;border-left:4px solid var(--pass);}
+h2{font-family:Georgia,serif;font-size:15px;color:var(--ink);margin-bottom:12px;}
+.tbl{width:100%;border-collapse:collapse;background:#fff;border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);font-size:11px;margin-bottom:28px;}
+.tbl th{background:var(--accent);color:#fff;padding:8px 10px;text-align:left;font-size:10px;letter-spacing:.05em;}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:#f9f9fc;}
+.sop-update-box{background:#fff;border:1px solid var(--rule);border-radius:4px;padding:16px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title">Moto &amp; Co · Decisions Register · Pre-Build Gaps Resolved</div>
+  <div class="topbar-tag">✓ ALL 24 GAPS RESOLVED</div>
+</div>
+<div class="layout">
+<div class="sidebar">
+  <h3>Summary</h3>
+  <div class="stat-box">
+    <div class="stat-num">23</div>
+    <div class="stat-label">Decisions made</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="color:var(--ink-mid);">1</div>
+    <div class="stat-label">Gap removed (non-scenario)</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" style="font-size:18px;color:var(--warn);">2</div>
+    <div class="stat-label">Cross-cutting decisions<br><span style="font-size:10px;">SLA monitoring → external system<br>Multiple Admin users → policy</span></div>
+  </div>
+  <div style="margin-top:16px;padding:12px;background:#e8f5e9;border:1px solid var(--pass);border-radius:4px;">
+    <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--pass);margin-bottom:4px;">Status</div>
+    <div style="font-size:12px;color:var(--pass);font-weight:bold;">Ready for Digiverse build briefing</div>
+    <div style="font-size:10px;color:#4a4a6a;margin-top:4px;">SOPs and journeys need updating before handover</div>
+  </div>
+  <div style="margin-top:16px;">
+    <h3 style="margin-bottom:10px;">Key cross-cutting decisions</h3>
+    <div style="font-size:11px;color:var(--ink-mid);margin-bottom:8px;padding:8px;background:#fff;border:1px solid var(--rule);border-radius:3px;">
+      <strong>SLA monitoring</strong> (Gaps 4, 19) — out of scope for this platform. All Admin response SLAs tracked in HCM/SLA monitoring software. Platform records timestamps only.
+    </div>
+    <div style="font-size:11px;color:var(--ink-mid);padding:8px;background:#fff;border:1px solid var(--rule);border-radius:3px;">
+      <strong>Minimum 2 Admin users</strong> (Gap 23) — policy decision. At least two users must hold the Admin role at all times. This mitigates the single-point-of-failure risk for billing and account activation.
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="intro">
+    All 24 pre-build gaps have been resolved. These decisions are now the authoritative record for Digiverse and for SOP/journey updates. Each decision includes what needs to change in the SOPs and user journeys before handover to Digiverse.
+  </div>
+  <h2>Post-build implementation decisions</h2>
+  <table class="tbl">
+    <tr><th>Date</th><th>Area</th><th>Decision</th><th>Implementation note</th><th>Status</th></tr>
+    <tr>
+      <td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">2026-06-25</td>
+      <td style="font-family:'Courier New',monospace;font-size:10px;">SOP-RUN-04</td>
+      <td style="font-size:11px;color:#4a4a6a;">Bring Forward moves the whole order into today's run when the supplier is already on today's planned route and the complete order is ready to deliver today.</td>
+      <td style="font-size:11px;color:#1a1a2e;">Driver may act without Admin approval if no unscheduled detour is required. The app records complete-order-ready, no-detour, item/count, current run date, and original scheduled run date as audit evidence.</td>
+      <td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">CONFIRMED</span></td>
+    </tr>
+  </table>
+  <h2>Decision log</h2>
+  <table class="tbl">
+    <tr><th>#</th><th>SOP</th><th>Decision title</th><th>Decision</th><th>Rationale / implementation note</th><th>SOP / Journey updates required</th><th>Status</th></tr>
+    <tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">1</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Address validation on data entry</td>
+<td style="font-size:11px;color:#4a4a6a;">Machine validates on data entry. Use Google Maps API (or equivalent) to validate delivery address as SEQ service area before form can be submitted. Not deferred to Admin review.</td>
+<td style="font-size:11px;color:#1a1a2e;">Digiverse to implement Google Maps API address validation on registration form. SEQ service area boundary must be defined as a geofence or postcode list for the API to check against.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — update Step 1 exception to note address validated at data entry via Google Maps API</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Platform sheet — add Google Maps API to Step 1-2 system row</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Runtime sheet — update trigger definition for Step 1</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">2</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Admin notification of new registrations</td>
+<td style="font-size:11px;color:#4a4a6a;">Email notification to Admin.</td>
+<td style="font-size:11px;color:#1a1a2e;">System sends email to Admin on every new registration. No exception queue entry needed for this — email is sufficient.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 3 exception: update to 'Admin notified by email'</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Platform sheet — Step 3 notes: email notification to Admin on account creation</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">3</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Client-facing review SLA</td>
+<td style="font-size:11px;color:#4a4a6a;">3 business days. Client is informed their account is under review and will hear within 3 business days.</td>
+<td style="font-size:11px;color:#1a1a2e;">Confirmation screen and confirmation email to client state '3 business days'. Admin response SLA is also 3 business days (see Gap 4).</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Summary — update Completion Standard</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 4 update trigger/SLA</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Runtime sheet — update SLA threshold for Step 3-4</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-03 — update confirmation screen copy</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">4</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Admin response SLA — new registrations</td>
+<td style="font-size:11px;color:#4a4a6a;">3 business days. SLA monitoring to be handled outside this system — HCM software or SLA monitoring software. Not in runtime.</td>
+<td style="font-size:11px;color:#1a1a2e;">Admin must review within 3 business days of registration. SLA monitoring is out of scope for this platform — tracked in HCM/SLA monitoring software. Platform records timestamps only.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 4 SLA: 3 business days</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Runtime sheet — SLA threshold: 3 business days. Note: monitoring is out of scope for this platform</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">New SOP sheet needed: SLA Register (separate workbook or HCM integration)</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">5</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Admin eligibility checklist</td>
+<td style="font-size:11px;color:#4a4a6a;">Advisory only. Admin uses the checklist as a guide but is not forced to tick each item before activating.</td>
+<td style="font-size:11px;color:#1a1a2e;">Checklist is displayed as a reference — not enforced as mandatory checkboxes. Admin activates or rejects based on their review.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 4 description: clarify checklist is advisory</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-06 — update wireframe to show advisory checklist, no forced ticking</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">6</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Confirmation step before activation</td>
+<td style="font-size:11px;color:#4a4a6a;">No confirmation step. Activation is a direct action — no 'are you sure?' modal.</td>
+<td style="font-size:11px;color:#1a1a2e;">Keep the UI clean — Admin clicks Activate and it executes. Audit trail records the action.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-06 — remove confirmation step from wireframe</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">7</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Client notification on activation</td>
+<td style="font-size:11px;color:#4a4a6a;">No automatic notification on activation. Admin does not send a notification manually either. Client logs in to check status.</td>
+<td style="font-size:11px;color:#1a1a2e;">Client is told on the confirmation screen to check back. No activation email. Client portal shows Active status on next login.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 4 completion: remove reference to client notification</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-08 — update to remove activation email reference</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-03 — update to say 'check back to log in'</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">8</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Rejected client re-registration</td>
+<td style="font-size:11px;color:#4a4a6a;">Yes — rejected clients can re-register. If the same email is used the system permits a new registration attempt.</td>
+<td style="font-size:11px;color:#1a1a2e;">No block on re-registration. Client may have fixed the issue (e.g. moved into service area). New registration creates a new Pending account.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Steps sheet — Step 4 exception: note re-registration is permitted</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-07R — update note on re-registration path</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">9</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Rejection email sender address</td>
+<td style="font-size:11px;color:#4a4a6a;">No-reply address.</td>
+<td style="font-size:11px;color:#1a1a2e;">Rejection email sent from no-reply@motoandco.com.au. Email must include support contact details for queries.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Platform sheet — Step 4 notes: no-reply sender confirmed</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-CRM-001 SCR-07R — update email wireframe</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">10</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">SOP-IAM-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Suspended client portal message</td>
+<td style="font-size:11px;color:#4a4a6a;">Suspension notice — client is told clearly why they cannot access order submission.</td>
+<td style="font-size:11px;color:#1a1a2e;">Suspended clients see a clear suspension notice explaining their account is suspended due to non-payment and who to contact. Not a generic error.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-01 Runtime sheet — update Step 3 gate</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-06 Steps sheet — Step 2 note: suspension notice content defined</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-REQ-01 SCR-01 — update suspended state screen</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">11</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">REQ-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">After cut-off notification channel</td>
+<td style="font-size:11px;color:#4a4a6a;">Both email to Operational Contact AND shown in portal.</td>
+<td style="font-size:11px;color:#1a1a2e;">Client receives email notification and the portal confirmation screen shows the adjusted date.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-REQ-02 Platform sheet — update Step 1-3 notes</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-REQ-01 SCR-03B — update to show both channels</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">12</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">REQ-02</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">No next run date scenario</td>
+<td style="font-size:11px;color:#4a4a6a;">REMOVED — this scenario will not occur. Runs are always scheduled.</td>
+<td style="font-size:11px;color:#1a1a2e;">Gap removed. No client-facing handling needed.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-REQ-01 — remove this gap from validate tab</li></ul></td>
+<td style="text-align:center;"><span style="background:#ccc;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">REMOVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">13</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">REQ-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Date selection in request form</td>
+<td style="font-size:11px;color:#4a4a6a;">Client types a date — but effectively irrelevant because orders are fulfilled on the next available run. No calendar picker needed.</td>
+<td style="font-size:11px;color:#1a1a2e;">Date field is a simple text/date input. The system always assigns the next available run date. The client's typed date is retained for reference only (cut-off logic applies). No calendar of available run dates is shown.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-REQ-01 Steps sheet — Step 2: clarify date field behaviour</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-REQ-01 SCR-02 — update date field to simple input with explanatory text</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">14</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">RUN-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Driver availability — casual pool</td>
+<td style="font-size:11px;color:#4a4a6a;">Casual driver pool. If one driver is unavailable, Admin contacts another from the pool. No system capture of availability confirmation required.</td>
+<td style="font-size:11px;color:#1a1a2e;">Driver availability is managed by Admin via direct contact. System does not need to capture availability confirmation. Run planning module assigns based on who Admin has confirmed as available.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-RUN-01 Steps sheet — Step 5: update to reflect casual pool management</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-RUN-01 Platform sheet — Step 5: confirm no system capture needed</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-RUN-01 SCR-01 — remove availability confirmation button from wireframe</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">15</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">RUN-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Run planning module failure — manual fallback</td>
+<td style="font-size:11px;color:#4a4a6a;">Driver manually records pickups and deliveries during the run. Data is loaded into the system afterwards by Admin.</td>
+<td style="font-size:11px;color:#1a1a2e;">If the nightly run planning module fails, the run still proceeds. Driver records everything manually (paper or phone notes). Admin loads the data into the system after the run. This is the existing fallback.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-RUN-01 Steps sheet — Step 1 exception: document manual fallback process</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-RUN-01 Runtime sheet — update failure condition for Step 1</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">16</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">PUP-02</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">No Pickup reason codes — time constraint</td>
+<td style="font-size:11px;color:#4a4a6a;">Yes — 'time constraint' is a valid reason code. A reason code dropdown is confirmed for the No Pickup tool.</td>
+<td style="font-size:11px;color:#1a1a2e;">No Pickup tool has a reason code dropdown. Confirmed reason codes include: goods not ready, unlabelled, improper packaging, refused by dock staff, goods do not match order, time constraint. If not picked up for any reason it moves to the next run.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-PUP-03 Steps sheet — Step 3: list confirmed reason codes</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-PUP-03 Platform sheet — update reason code list</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-RUN-01 SCR-05 — confirm time constraint appears in dropdown</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">17</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">DEL-04</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Redelivery fee — Admin queue location</td>
+<td style="font-size:11px;color:#4a4a6a;">Exception queue. Redelivery fee approval appears in the Admin exception queue.</td>
+<td style="font-size:11px;color:#1a1a2e;">No separate fee approval queue. Redelivery fee record appears in APP-ADM-005 exception queue for Admin review and approval before being applied to invoice.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-DEL-04 Platform sheet — Step 13 notes: confirm exception queue</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-DEL-04 Runtime sheet — update Step 13 failure condition</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-RUN-01 SCR-08 — update note</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">18</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">DEL-04</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Second delivery attempt timing</td>
+<td style="font-size:11px;color:#4a4a6a;">Next scheduled run only. No same-day second attempt. Goods are retained until the next run.</td>
+<td style="font-size:11px;color:#1a1a2e;">Second delivery attempt always occurs on the next scheduled run. There is no same-day second attempt option. Admin does not need to approve timing — it is automatic.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-DEL-04 Steps sheet — Step 12: update to remove 'same day if Admin approves'</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-DEL-04 Runtime sheet — update Step 12</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-RUN-01 SCR-08 — update note</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">19</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">EXC-SOP-05</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Overdue account Admin SLA monitoring</td>
+<td style="font-size:11px;color:#4a4a6a;">SLA monitoring is out of scope for this platform. To be handled in HCM software or SLA monitoring software.</td>
+<td style="font-size:11px;color:#1a1a2e;">Platform records timestamps. SLA monitoring and escalation are managed outside this system. This applies to all Admin response SLAs across the platform.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-05 Runtime sheet — update SLA threshold note: monitoring out of scope</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">All Runtime sheets with ⚠ SLA gaps — add consistent note: SLA monitoring handled externally</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">20</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">EXC-SOP-06</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Payment arrangement fields</td>
+<td style="font-size:11px;color:#4a4a6a;">Date, amount, contact who agreed, and written evidence reference (e.g. email ref).</td>
+<td style="font-size:11px;color:#1a1a2e;">Payment arrangement record requires: agreed payment date, agreed amount, name and role of contact who agreed, and a reference to written evidence of the arrangement (email subject line, message reference, etc.).</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-06 Steps sheet — Step 4 (B): update description with field list</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-06 Platform sheet — update payment arrangement row</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-EXC-01 SCR-03 — update wireframe fields</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">21</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">EXC-SOP-06</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Reinstatement notification</td>
+<td style="font-size:11px;color:#4a4a6a;">Automatic on Admin action. Admin reinstates after payment confirmed — system sends notification automatically.</td>
+<td style="font-size:11px;color:#1a1a2e;">Reinstatement notification is automatic. When Admin removes the suspension flag, the system sends notification to both Operational Contact and Billing Contact automatically.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-06 Steps sheet — Step 5: update to note automatic notification</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">EXC-SOP-06 Platform sheet — Step 5 notes</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-EXC-01 SCR-05 — update note on notification</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">22</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">BIL-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Billing compilation trigger</td>
+<td style="font-size:11px;color:#4a4a6a;">Phase 1: Admin-triggered. Phase 2 (future): AI/automated scheduling once process is stable.</td>
+<td style="font-size:11px;color:#1a1a2e;">Initially Admin manually triggers the billing compilation at month end. Once the process is proven stable, this will move to automated scheduling. Digiverse to build Admin-triggered first.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-BIL-01 Steps sheet — Step 1: Admin-triggered, note future automation</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-BIL-01 Platform sheet — Step 1 notes</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-BIL-01 SCR-01 — update to show Admin trigger button</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">23</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">BIL-01</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Admin unavailability — invoice escalation</td>
+<td style="font-size:11px;color:#4a4a6a;">Mitigated by ensuring more than one user has Admin role. No single point of failure.</td>
+<td style="font-size:11px;color:#1a1a2e;">Multiple Admin users are maintained. If one Admin is unavailable another can complete the billing review. SOP to note that at least two Admin users must be active at all times.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-BIL-01 Summary — add key dependency: minimum two Admin users must be active</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-IAM-04 Steps sheet — note: Admin role must have minimum two holders at all times</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr><tr>
+<td style="font-family:'Courier New',monospace;font-size:10px;color:#1A7A6E;font-weight:bold;">24</td>
+<td style="font-family:'Courier New',monospace;font-size:10px;">BIL-04</td>
+<td style="font-size:11px;font-weight:bold;color:#1a1a2e;">Invoice dispatch trigger</td>
+<td style="font-size:11px;color:#4a4a6a;">Automatic after Admin confirms invoice is correct. No separate Send button.</td>
+<td style="font-size:11px;color:#1a1a2e;">Admin clicks 'Confirm invoice correct' and dispatch executes automatically. Clean single action — no separate Send step.</td>
+<td><ul style="padding-left:12px;"><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-BIL-04 Steps sheet — Step 3: confirm automatic dispatch on Admin review confirmation</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">SOP-BIL-04 Platform sheet — Step 3 notes</li><li style="font-size:10px;color:#4a4a6a;padding:2px 0;">UJ-BIL-01 SCR-03 — update button label and note</li></ul></td>
+<td style="text-align:center;"><span style="background:#2D7A3A;color:#fff;padding:2px 8px;border-radius:2px;font-size:9px;font-weight:bold;letter-spacing:.05em;">RESOLVED</span></td>
+</tr>
+  </table>
+  <h2>SOP update backlog</h2>
+  <div class="sop-update-box">
+    <div style="font-size:11px;color:var(--ink-mid);margin-bottom:14px;">The following changes need to be made to SOPs and user journeys before the Digiverse build briefing. They are grouped by document.</div>
+    <div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">All Runtime sheets with ⚠ SLA gaps</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(19) All Runtime sheets with ⚠ SLA gaps — add consistent note: SLA monitoring handled externally</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">EXC-SOP-05 Runtime sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(19) EXC-SOP-05 Runtime sheet — update SLA threshold note: monitoring out of scope</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">EXC-SOP-06 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(20) EXC-SOP-06 Platform sheet — update payment arrangement row</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(21) EXC-SOP-06 Platform sheet — Step 5 notes</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">EXC-SOP-06 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(10) EXC-SOP-06 Steps sheet — Step 2 note: suspension notice content defined</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(20) EXC-SOP-06 Steps sheet — Step 4 (B): update description with field list</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(21) EXC-SOP-06 Steps sheet — Step 5: update to note automatic notification</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-BIL-01 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(22) SOP-BIL-01 Platform sheet — Step 1 notes</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-BIL-01 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(22) SOP-BIL-01 Steps sheet — Step 1: Admin-triggered, note future automation</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-BIL-01 Summary</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(23) SOP-BIL-01 Summary — add key dependency: minimum two Admin users must be active</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-BIL-04 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(24) SOP-BIL-04 Platform sheet — Step 3 notes</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-BIL-04 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(24) SOP-BIL-04 Steps sheet — Step 3: confirm automatic dispatch on Admin review confirmation</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-DEL-04 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(17) SOP-DEL-04 Platform sheet — Step 13 notes: confirm exception queue</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-DEL-04 Runtime sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(17) SOP-DEL-04 Runtime sheet — update Step 13 failure condition</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(18) SOP-DEL-04 Runtime sheet — update Step 12</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-DEL-04 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(18) SOP-DEL-04 Steps sheet — Step 12: update to remove 'same day if Admin approves'</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-01</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(4) New SOP sheet needed: SLA Register (separate workbook or HCM integration)</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-01 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(1) SOP-IAM-01 Platform sheet — add Google Maps API to Step 1-2 system row</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(2) SOP-IAM-01 Platform sheet — Step 3 notes: email notification to Admin on account creation</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(9) SOP-IAM-01 Platform sheet — Step 4 notes: no-reply sender confirmed</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-01 Runtime sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(1) SOP-IAM-01 Runtime sheet — update trigger definition for Step 1</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(3) SOP-IAM-01 Runtime sheet — update SLA threshold for Step 3-4</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(4) SOP-IAM-01 Runtime sheet — SLA threshold: 3 business days. Note: monitoring is out of scope for this platform</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(10) SOP-IAM-01 Runtime sheet — update Step 3 gate</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-01 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(1) SOP-IAM-01 Steps sheet — update Step 1 exception to note address validated at data entry via Google Maps API</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(2) SOP-IAM-01 Steps sheet — Step 3 exception: update to 'Admin notified by email'</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(3) SOP-IAM-01 Steps sheet — Step 4 update trigger/SLA</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(4) SOP-IAM-01 Steps sheet — Step 4 SLA: 3 business days</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(5) SOP-IAM-01 Steps sheet — Step 4 description: clarify checklist is advisory</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(7) SOP-IAM-01 Steps sheet — Step 4 completion: remove reference to client notification</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(8) SOP-IAM-01 Steps sheet — Step 4 exception: note re-registration is permitted</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-01 Summary</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(3) SOP-IAM-01 Summary — update Completion Standard</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-IAM-04 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(23) SOP-IAM-04 Steps sheet — note: Admin role must have minimum two holders at all times</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-PUP-03 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(16) SOP-PUP-03 Platform sheet — update reason code list</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-PUP-03 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(16) SOP-PUP-03 Steps sheet — Step 3: list confirmed reason codes</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-REQ-01 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(13) SOP-REQ-01 Steps sheet — Step 2: clarify date field behaviour</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-REQ-02 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(11) SOP-REQ-02 Platform sheet — update Step 1-3 notes</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-RUN-01 Platform sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(14) SOP-RUN-01 Platform sheet — Step 5: confirm no system capture needed</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-RUN-01 Runtime sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(15) SOP-RUN-01 Runtime sheet — update failure condition for Step 1</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">SOP-RUN-01 Steps sheet</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(14) SOP-RUN-01 Steps sheet — Step 5: update to reflect casual pool management</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(15) SOP-RUN-01 Steps sheet — Step 1 exception: document manual fallback process</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-BIL-01 SCR-01</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(22) UJ-BIL-01 SCR-01 — update to show Admin trigger button</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-BIL-01 SCR-03</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(24) UJ-BIL-01 SCR-03 — update button label and note</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-CRM-001 SCR-03</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(3) UJ-CRM-001 SCR-03 — update confirmation screen copy</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(7) UJ-CRM-001 SCR-03 — update to say 'check back to log in'</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-CRM-001 SCR-06</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(5) UJ-CRM-001 SCR-06 — update wireframe to show advisory checklist, no forced ticking</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(6) UJ-CRM-001 SCR-06 — remove confirmation step from wireframe</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-CRM-001 SCR-07R</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(8) UJ-CRM-001 SCR-07R — update note on re-registration path</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(9) UJ-CRM-001 SCR-07R — update email wireframe</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-CRM-001 SCR-08</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(7) UJ-CRM-001 SCR-08 — update to remove activation email reference</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-EXC-01 SCR-03</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(20) UJ-EXC-01 SCR-03 — update wireframe fields</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-EXC-01 SCR-05</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(21) UJ-EXC-01 SCR-05 — update note on notification</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-REQ-01</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(12) UJ-REQ-01 — remove this gap from validate tab</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-REQ-01 SCR-01</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(10) UJ-REQ-01 SCR-01 — update suspended state screen</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-REQ-01 SCR-02</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(13) UJ-REQ-01 SCR-02 — update date field to simple input with explanatory text</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-REQ-01 SCR-03B</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(11) UJ-REQ-01 SCR-03B — update to show both channels</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-RUN-01 SCR-01</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(14) UJ-RUN-01 SCR-01 — remove availability confirmation button from wireframe</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-RUN-01 SCR-05</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(16) UJ-RUN-01 SCR-05 — confirm time constraint appears in dropdown</li></ul>
+</div><div style="margin-bottom:16px;">
+<div style="font-family:'Courier New',monospace;font-size:11px;font-weight:bold;color:#1B2A4A;margin-bottom:6px;">UJ-RUN-01 SCR-08</div>
+<ul style="padding-left:14px;"><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(17) UJ-RUN-01 SCR-08 — update note</li><li style="font-size:11px;color:#4a4a6a;padding:3px 0;border-bottom:1px solid #eee;">(18) UJ-RUN-01 SCR-08 — update note</li></ul>
+</div>
+  </div>
+</div>
+</div>
+</body>
+</html>

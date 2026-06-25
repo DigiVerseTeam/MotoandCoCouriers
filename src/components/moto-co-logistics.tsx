@@ -3817,20 +3817,35 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const [selectedId, setSelectedId] = useState("");
   const [activePickupId, setActivePickupId] = useState("");
   const [pickupDrafts, setPickupDrafts] = useState({});
+  const [activeBringForwardId, setActiveBringForwardId] = useState("");
+  const [bringForwardDrafts, setBringForwardDrafts] = useState({});
   const [editingSignoffItems, setEditingSignoffItems] = useState(false);
   const [receiverName, setReceiverName] = useState("");
   const [sig, setSig] = useState(null);
   const [notice, setNotice] = useState("");
 
+  const today = todayBrisbane();
   const assignedOrders = orders.filter(order => matchesDriverOrder(order, user) && !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status));
-  const todayOrders = assignedOrders.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === todayBrisbane());
+  const todayOrders = assignedOrders.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === today);
   const runOrders = (todayOrders.length ? todayOrders : assignedOrders).slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999));
   const unassignedDispatchable = orders.filter(order => ["Pending", "Brought Forward"].includes(order.status || "Pending") && !order.driverId);
-  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === todayBrisbane());
+  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === today);
   const nextUnassignedRunDate = unassignedDispatchable
     .map(order => (order.actualRunDate || order.date || "").slice(0, 10))
     .filter(Boolean)
     .sort()[0] || "";
+  const todayRouteSuppliers = new Set(todayOrders.map(order => order.vendor || "Supplier not recorded"));
+  const upcomingOrders = orders
+    .filter(order => {
+      const status = order.status || "Pending";
+      const runDate = (order.actualRunDate || order.runDate || order.date || "").slice(0, 10);
+      return ["Pending", "Brought Forward"].includes(status)
+        && !pickupAlreadyCollected(order)
+        && runDate > today
+        && (matchesDriverOrder(order, user) || !order.driverId);
+    })
+    .sort((a, b) => String(a.actualRunDate || a.date).localeCompare(String(b.actualRunDate || b.date)) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id).localeCompare(String(b.id)));
+  const bringForwardEligibleCount = upcomingOrders.filter(order => todayRouteSuppliers.has(order.vendor || "Supplier not recorded")).length;
   const pickupOrders = runOrders.filter(order => (order.status || "Pending") === "Pending" && !pickupAlreadyCollected(order));
   const enRouteOrders = runOrders.filter(order => order.status === "En Route" || pickupAlreadyCollected(order));
   const signoffOrders = enRouteOrders.length ? enRouteOrders : [];
@@ -3875,9 +3890,81 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     setPickupDrafts(prev => ({ ...prev, [order.id]: counts }));
   }
 
+  function bringForwardDraftForOrder(order) {
+    return bringForwardDrafts[order.id] || { counts: pickupCountsForOrder(order), completeOrderReady: false, noDetour: false };
+  }
+
+  function setBringForwardDraftForOrder(order, patch) {
+    setBringForwardDrafts(prev => ({
+      ...prev,
+      [order.id]: { ...bringForwardDraftForOrder(order), ...patch },
+    }));
+  }
+
+  function todayRouteOrderForSupplier(supplierName) {
+    return todayOrders.find(order => (order.vendor || "Supplier not recorded") === supplierName) || todayOrders[0] || null;
+  }
+
+  function orderWithBringForwardBreakdown(order, breakdown) {
+    const supplier = order.vendor || "Supplier not recorded";
+    const routeOrder = todayRouteOrderForSupplier(supplier);
+    const base = orderWithPickupBreakdown(order, breakdown, user);
+    const originalRunDate = order.actualRunDate || order.runDate || order.date || "";
+    const routeDriver = driverAssignmentFields({
+      ...user,
+      id: user.driverRecordId || user.driverId || user.id,
+      name: user.name || user.displayName || user.driverName,
+      email: user.email || user.driverEmail || user.loginEmail,
+    });
+    const driverId = base.driverId || routeOrder?.driverId || routeDriver.driverId || user.id || "";
+    const vehicleName = routeOrder?.vehicleName || order.vehicleName || "";
+    const maxRunSequence = Math.max(0, ...todayOrders.map(item => Number(item.runSequence || 0)).filter(Number.isFinite));
+    return {
+      ...base,
+      status: "En Route",
+      actualRunDate: today,
+      date: today,
+      runDate: today,
+      driverId,
+      assignedDriverId: base.assignedDriverId || routeOrder?.assignedDriverId || driverId,
+      driverRecordId: base.driverRecordId || routeOrder?.driverRecordId || driverId,
+      driverProfileId: base.driverProfileId || routeOrder?.driverProfileId || user.profileId || "",
+      driverActorId: base.driverActorId || routeOrder?.driverActorId || user.actorId || "",
+      driverEmail: base.driverEmail || routeOrder?.driverEmail || user.email || "",
+      driverName: base.driverName || routeOrder?.driverName || user.name || "",
+      vehicleId: routeOrder?.vehicleId || order.vehicleId || "",
+      vehicleName,
+      runId: routeOrder?.runId || order.runId || (driverId ? runIdFor(today, driverId, vehicleName || "vehicle") : ""),
+      runSequence: order.runSequence || maxRunSequence + 1,
+      supplierSequence: routeOrder?.supplierSequence || order.supplierSequence || 9999,
+      deliveryZone: deliveryZone(order.dropAddress),
+      bringForwardFlag: true,
+      bringForwardReason: "Complete order ready at supplier; driver brought it into today's run.",
+      bringForwardCollectedDate: today,
+      bringForwardMovedToRunDate: today,
+      bringForwardIntendedRunDate: originalRunDate,
+      bringForwardNoDetourConfirmed: true,
+      bringForwardCompleteOrderReadyConfirmed: true,
+      bringForwardDeliveryTodayConfirmed: true,
+      bringForwardPolicyRef: "SOP-RUN-04 / Driver bring-forward decision / 2026-06-25",
+      pickupGoodsAcceptancePolicyRef: "Policy #15 / POL-OPS-015 / SOP-RUN-04",
+      pickupStandardsPolicyRef: "SOP-RUN-04 / Policy #15 / Policy #16 / APP-DRV-002",
+      driverOutcomeNote: `Brought forward from ${fmtFullDate(originalRunDate)} into today's run ${fmtFullDate(today)}. Supplier already on route; no unscheduled detour.`,
+    };
+  }
+
   function startPickup(order) {
     setActivePickupId(order.id);
     setPickupDrafts(prev => ({ ...prev, [order.id]: prev[order.id] || pickupCountsForOrder(order) }));
+    setNotice("");
+  }
+
+  function startBringForward(order) {
+    setActiveBringForwardId(order.id);
+    setBringForwardDrafts(prev => ({
+      ...prev,
+      [order.id]: prev[order.id] || { counts: pickupCountsForOrder(order), completeOrderReady: false, noDetour: false },
+    }));
     setNotice("");
   }
 
@@ -3899,6 +3986,40 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     setNotice(result?.error
       ? `${order.conNote || order.id} is saved on this device, but live sync failed. Stay logged in and try again.`
       : `${order.conNote || order.id} counted and moved to Sign-Off.`);
+  }
+
+  async function finaliseBringForward(order, breakdown) {
+    const supplier = order.vendor || "Supplier not recorded";
+    const draft = bringForwardDraftForOrder(order);
+    if (!todayRouteSuppliers.has(supplier)) {
+      setNotice(`${supplier} is not on today's route. Admin needs to schedule this one.`);
+      return;
+    }
+    if (!draft.completeOrderReady) {
+      setNotice("Confirm the complete order is ready before bringing it into today's run.");
+      return;
+    }
+    if (!draft.noDetour) {
+      setNotice("Confirm there is no unscheduled detour before bringing this order forward.");
+      return;
+    }
+    if (breakdown.totalItems <= 0) {
+      setNotice("Count at least one item before bringing the order into today's run.");
+      return;
+    }
+    const updated = orderWithBringForwardBreakdown(order, breakdown);
+    setNotice(`Saving ${order.conNote || order.id} into today's run...`);
+    const result = await onUpdateOrder(updated);
+    setActiveBringForwardId("");
+    setBringForwardDrafts(prev => {
+      const next = { ...prev };
+      delete next[order.id];
+      return next;
+    });
+    setSelectedId(order.id);
+    setNotice(result?.error
+      ? `${order.conNote || order.id} is moved into today's run on this device, but live sync failed. Stay logged in and try again.`
+      : `${order.conNote || order.id} brought into today's run and moved to Sign-Off.`);
   }
 
   function editSelectedItems() {
@@ -3981,6 +4102,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
 
   const tabs = [
     { key: "run", label: "Today's Run" },
+    { key: "upcoming", label: `Upcoming (${upcomingOrders.length})` },
     { key: "signoff", label: "Sign-Off" },
     { key: "pricing", label: "Pricing" },
   ];
@@ -4031,6 +4153,78 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
             {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => (
               <DriverRunCard key={order.id} order={order} suppliers={suppliers} priceRules={priceRules} enroute />
             ))}
+          </>
+        )}
+
+        {tab === "upcoming" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Upcoming <span>Runs</span></div>
+                <div className="ux-subtitle">Bring forward only when the supplier is already on today's route and the complete order is ready</div>
+              </div>
+              <div className="ux-run-stats">
+                <div className="ux-run-stat"><strong>{upcomingOrders.length}</strong><span>Upcoming</span></div>
+                <div className="ux-run-stat"><strong style={{ color: "#18733c" }}>{bringForwardEligibleCount}</strong><span>Can Bring In</span></div>
+              </div>
+            </div>
+            {upcomingOrders.length === 0 ? (
+              <div className="ux-card"><div className="ux-empty">No future pickups scheduled for this driver.</div></div>
+            ) : upcomingOrders.map(order => {
+              const supplier = order.vendor || "Supplier not recorded";
+              const canBringForward = todayRouteSuppliers.has(supplier);
+              const draft = bringForwardDraftForOrder(order);
+              const runDate = order.actualRunDate || order.runDate || order.date || "";
+              return (
+                <div className="ux-run-card" key={`upcoming-${order.id}`}>
+                  <div className="ux-run-top">
+                    <div>
+                      <div className="ux-run-con">{order.conNote || order.id}</div>
+                      <div className="ux-run-vendor">{supplier}</div>
+                      <div className="ux-order-meta"><span className="ux-badge">{orderPriority(order)}</span> Scheduled run {fmtFullDate(runDate)}</div>
+                    </div>
+                    <span className={`ux-badge ${canBringForward ? "b-done" : "b-pending"}`}>{canBringForward ? "On Today's Route" : "Future Run"}</span>
+                  </div>
+                  <div className="ux-order-meta">
+                    Pickup: {supplierByName(suppliers, order.vendor)?.address || order.pickupAddress || "Supplier address not recorded"}
+                  </div>
+                  <div className="ux-address-block">
+                    <small>Deliver to - Gold Coast</small>
+                    <strong>{order.clientName || "Customer"}</strong>
+                    <div>{order.dropAddress || "(No address - update your profile)"}</div>
+                  </div>
+                  {!canBringForward ? (
+                    <div className="ux-order-meta" style={{ marginTop: ".75rem" }}>
+                      Admin has scheduled this for {fmtFullDate(runDate)}. Driver bring-forward is locked because this supplier is not on today's route.
+                    </div>
+                  ) : activeBringForwardId === order.id ? (
+                    <>
+                      <div className="ux-address-block" style={{ marginTop: ".75rem" }}>
+                        <small>Bring-forward controls</small>
+                        <label style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", marginTop: ".45rem" }}>
+                          <input type="checkbox" checked={draft.completeOrderReady} onChange={e => setBringForwardDraftForOrder(order, { completeOrderReady: e.target.checked })} style={{ width: "auto", marginTop: ".15rem" }} />
+                          <span>Complete order is ready to deliver today</span>
+                        </label>
+                        <label style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", marginTop: ".45rem" }}>
+                          <input type="checkbox" checked={draft.noDetour} onChange={e => setBringForwardDraftForOrder(order, { noDetour: e.target.checked })} style={{ width: "auto", marginTop: ".15rem" }} />
+                          <span>No unscheduled detour is required</span>
+                        </label>
+                      </div>
+                      <PickupItemCounter
+                        counts={draft.counts}
+                        priceRules={priceRules}
+                        onChange={counts => setBringForwardDraftForOrder(order, { counts })}
+                        onFinalise={breakdown => finaliseBringForward(order, breakdown)}
+                        onCancel={() => setActiveBringForwardId("")}
+                        finaliseLabel="Bring Into Today & Move to Sign-Off"
+                      />
+                    </>
+                  ) : (
+                    <button className="ux-btn primary" style={{ marginTop: ".85rem" }} onClick={() => startBringForward(order)}>Bring Into Today's Run</button>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
 
@@ -5057,7 +5251,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
   const [supplierStopCloseoutDraft, setSupplierStopCloseoutDraft] = useState({ correctDock: false, customerListReviewed: false, noAdhocRecords: false, dockContactEngaged: false, leftDock: false, note: "" });
   const [deliverySignoffDraft, setDeliverySignoffDraft] = useState({ addressConfirmed: false, goodsMatched: false, authorisedReceiver: false, handoverConfirmed: false, priceReviewed: false, deviceSupervised: false });
   const [outcomeTarget, setOutcomeTarget] = useState(null);
-  const [outcomeDraft, setOutcomeDraft] = useState({ type: "", reason: "", nextRunDate: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10, priceRuleId: "", itemQty: 1, noDetour: false, labelled: false, packaged: false });
+  const [outcomeDraft, setOutcomeDraft] = useState({ type: "", reason: "", nextRunDate: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10, priceRuleId: "", itemQty: 1, noDetour: false, labelled: false, packaged: false, completeOrderReady: false });
   const [workflowNotice, setWorkflowNotice] = useState("");
 
   const driverRunOrders = orders.filter(o => o.driverId === user.id);
@@ -5362,6 +5556,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
       noDetour: false,
       labelled: false,
       packaged: false,
+      completeOrderReady: false,
     });
     setSel(null);
     setStep(1);
@@ -5446,12 +5641,13 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
       noDetour: false,
       labelled: false,
       packaged: false,
+      completeOrderReady: false,
     });
   }
 
   function closeOutcome() {
     setOutcomeTarget(null);
-    setOutcomeDraft({ type: "", reason: "", nextRunDate: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10, priceRuleId: "", itemQty: 1, noDetour: false, labelled: false, packaged: false });
+    setOutcomeDraft({ type: "", reason: "", nextRunDate: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10, priceRuleId: "", itemQty: 1, noDetour: false, labelled: false, packaged: false, completeOrderReady: false });
   }
 
   function submitOutcome() {
@@ -5510,9 +5706,20 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
       const supplier = outcomeTarget.vendor || "Supplier not recorded";
       const collectedDate = currentRunDateForSupplier(supplier);
       const intendedRunDate = outcomeTarget.actualRunDate || outcomeTarget.date;
+      const routeOrder = active.find(order => (order.vendor || "Supplier not recorded") === supplier) || active[0] || null;
+      const assignedDriver = driverAssignmentFields({
+        ...user,
+        id: user.driverRecordId || user.driverId || user.id,
+        name: user.name || user.displayName || user.driverName,
+        email: user.email || user.driverEmail || user.loginEmail,
+      });
+      const driverId = routeOrder?.driverId || assignedDriver.driverId || user.id || "";
+      const vehicleName = routeOrder?.vehicleName || outcomeTarget.vehicleName || "";
+      const maxRunSequence = Math.max(0, ...active.map(item => Number(item.runSequence || 0)).filter(Number.isFinite));
       if (!supplierNamesOnCurrentRoute.has(supplier)) return showWorkflowNotice("SOP-RUN-04 allows bring-forward only when the supplier is already on today's planned route.");
       if (!intendedRunDate || intendedRunDate <= collectedDate) return showWorkflowNotice("SOP-RUN-04 Bring Forward requires a future pickup from a later intended run date.");
       if (!selectedOutcomeRule) return showWorkflowNotice("Item type is required for a brought-forward pickup.");
+      if (!outcomeDraft.completeOrderReady) return showWorkflowNotice("Confirm the complete order is ready before moving it into today's run.");
       if (!outcomeDraft.noDetour) return showWorkflowNotice("Confirm this bring-forward does not require an unscheduled detour.");
       if (!outcomeDraft.labelled || !outcomeDraft.packaged) return showWorkflowNotice("Brought-forward goods must meet labelling and packaging acceptance standards.");
       const minQty = priceRuleMinQty(selectedOutcomeRule);
@@ -5520,11 +5727,14 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
       const calculatedPrice = outcomePickupPrice();
       onUpdateOrder({
         ...outcomeTarget,
-        status: "Brought Forward",
+        status: "En Route",
         pickupOutcome: "Brought Forward",
         pickupNote: reason,
         pickupOutcomeAt: isoNow(),
-        pickupDriverId: user.id,
+        pickupDriverId: driverId,
+        pickupDriverProfileId: assignedDriver.driverProfileId || user.profileId || "",
+        pickupDriverActorId: assignedDriver.driverActorId || user.actorId || "",
+        pickupDriverEmail: assignedDriver.driverEmail || user.email || "",
         pickupPriceRuleId: selectedOutcomeRule.id,
         pickupItemType: selectedOutcomeRule.label,
         pickupItemQty: quantity,
@@ -5542,19 +5752,29 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
         bringForwardReason: reason,
         bringForwardCollectedDate: collectedDate,
         bringForwardIntendedRunDate: intendedRunDate,
+        bringForwardMovedToRunDate: collectedDate,
         bringForwardNoDetourConfirmed: true,
         bringForwardAcceptanceConfirmed: true,
-        actualRunDate: intendedRunDate,
-        date: intendedRunDate,
-        driverId: null,
-        driverName: "",
-        vehicleId: null,
-        vehicleName: "",
-        runId: null,
-        assignedAt: null,
-        runSequence: null,
-        supplierSequence: null,
-        bringForwardResetSource: "sop_run04_original_run_compile_required",
+        bringForwardCompleteOrderReadyConfirmed: true,
+        bringForwardDeliveryTodayConfirmed: true,
+        bringForwardPolicyRef: "SOP-RUN-04 / Driver bring-forward decision / 2026-06-25",
+        actualRunDate: collectedDate,
+        date: collectedDate,
+        runDate: collectedDate,
+        driverId,
+        assignedDriverId: routeOrder?.assignedDriverId || assignedDriver.assignedDriverId || driverId,
+        driverRecordId: routeOrder?.driverRecordId || assignedDriver.driverRecordId || driverId,
+        driverProfileId: routeOrder?.driverProfileId || assignedDriver.driverProfileId || user.profileId || "",
+        driverActorId: routeOrder?.driverActorId || assignedDriver.driverActorId || user.actorId || "",
+        driverEmail: routeOrder?.driverEmail || assignedDriver.driverEmail || user.email || "",
+        driverName: routeOrder?.driverName || assignedDriver.driverName || user.name || "",
+        vehicleId: routeOrder?.vehicleId || outcomeTarget.vehicleId || "",
+        vehicleName,
+        runId: routeOrder?.runId || outcomeTarget.runId || (driverId ? runIdFor(collectedDate, driverId, vehicleName || "vehicle") : ""),
+        assignedAt: outcomeTarget.assignedAt || isoNow(),
+        runSequence: outcomeTarget.runSequence || maxRunSequence + 1,
+        supplierSequence: routeOrder?.supplierSequence || outcomeTarget.supplierSequence || 9999,
+        deliveryZone: deliveryZone(outcomeTarget.dropAddress),
         driverOutcomeNote: handlingNote,
         price: calculatedPrice,
       });
@@ -5823,17 +6043,17 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
                       <hr className="dvd" />
                       <div className="card-title" style={{ fontSize: ".9rem", marginBottom: ".45rem" }}>SOP-RUN-04 Future Pickups Ready Today</div>
                       <div style={{ fontSize: ".78rem", color: T.mu, marginBottom: ".6rem" }}>
-                        Bring-forward is only available because this supplier is already on today's planned route. It does not change the intended delivery run date.
+                        Bring-forward is only available because this supplier is already on today's planned route. If the complete order is ready, the driver moves the whole order into today's run.
                       </div>
                       {groupBringForwardCandidates.map(o => (
                         <div key={`bring-forward-${o.id}`} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".65rem", marginTop: ".65rem" }}>
                           <div className="card-head">
                             <div className="card-title" style={{ fontSize: ".9rem" }}>{o.id} - {o.clientName}</div>
-                            <span className="badge b-pending">Intended run {fmt(o.actualRunDate || o.date)}</span>
+                            <span className="badge b-pending">Original run {fmt(o.actualRunDate || o.date)}</span>
                           </div>
                           <div className="meta"><span>{o.conNote}</span><span>{o.dropAddress}</span><span>No detour allowed</span></div>
                           {o.notes && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>{o.notes}</div>}
-                          <button className="btn b-ghost b-sm" style={{ marginTop: ".55rem" }} onClick={() => openOutcome(o, "Bring Forward")}>Record Brought Forward Pickup</button>
+                          <button className="btn b-ghost b-sm" style={{ marginTop: ".55rem" }} onClick={() => openOutcome(o, "Bring Forward")}>Bring Into Today's Run</button>
                         </div>
                       ))}
                     </>
@@ -5852,17 +6072,17 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
                   <span className="badge b-pending">{group.orders.length} future pickup{group.orders.length === 1 ? "" : "s"}</span>
                 </div>
                 <div style={{ fontSize: ".78rem", color: T.mu, marginBottom: ".6rem" }}>
-                  This supplier is already on the active run. Only collect these future pickups if the goods are ready now, labelled, packaged, and no unscheduled detour is required.
+                  This supplier is already on the active run. Only bring these future pickups into today if the complete order is ready now, labelled, packaged, and no unscheduled detour is required.
                 </div>
                 {group.orders.map(o => (
                   <div key={`bring-forward-only-${o.id}`} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".65rem", marginTop: ".65rem" }}>
                     <div className="card-head">
                       <div className="card-title" style={{ fontSize: ".9rem" }}>{o.id} - {o.clientName}</div>
-                      <span className="badge b-pending">Intended run {fmt(o.actualRunDate || o.date)}</span>
+                      <span className="badge b-pending">Original run {fmt(o.actualRunDate || o.date)}</span>
                     </div>
                     <div className="meta"><span>{o.conNote}</span><span>{o.dropAddress}</span><span>No detour allowed</span></div>
                     {o.notes && <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".35rem" }}>{o.notes}</div>}
-                    <button className="btn b-ghost b-sm" style={{ marginTop: ".55rem" }} onClick={() => openOutcome(o, "Bring Forward")}>Record Brought Forward Pickup</button>
+                    <button className="btn b-ghost b-sm" style={{ marginTop: ".55rem" }} onClick={() => openOutcome(o, "Bring Forward")}>Bring Into Today's Run</button>
                   </div>
                 ))}
               </div>
@@ -6053,7 +6273,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
                   ? "Capture the per-customer APP-DRV-002 No Pickup record. Policy #15 / SOP-PUP-03 / Policy #16 / Policy #27 blocks billing when goods are not ready, unlabelled or mismatched, improperly packaged, refused by supplier, wrong items are presented, time constraints prevent collection, or a supplier-premises WHS hazard prevents safe entry."
                   : outcomeDraft.type === "Failed Delivery"
                     ? "Capture the SOP-DEL-04 driver outcome and send the exception to Admin. Goods must not be left at an unconfirmed address or without receiver acceptance. Policy #8: two attempts maximum, Admin review before any redelivery fee."
-                    : "SOP-RUN-04 records a future pickup collected early only because this supplier is already on today's planned route. Delivery remains scheduled for the original intended run date."}
+                    : "SOP-RUN-04 moves a future pickup into today's run only when this supplier is already on today's planned route and the complete order is ready to deliver today."}
               </p>
               {outcomeDraft.type === "No Pickup" && (
                 <>
@@ -6100,9 +6320,13 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
                   </div>
                   <div className="meta" style={{ marginBottom: ".7rem" }}>
                     <span>Collected on current route {fmt(currentRunDateForSupplier(outcomeTarget.vendor || "Supplier not recorded"))}</span>
-                    <span>Intended delivery run {fmt(outcomeTarget.actualRunDate || outcomeTarget.date)}</span>
+                    <span>Original scheduled run {fmt(outcomeTarget.actualRunDate || outcomeTarget.date)}</span>
                     <span>Calculated pickup price ${outcomePickupPrice().toFixed(2)}</span>
                   </div>
+                  <label style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", fontSize: ".82rem", color: T.tx, margin: ".45rem 0" }}>
+                    <input type="checkbox" checked={outcomeDraft.completeOrderReady} onChange={e => setOutcomeDraft(p => ({ ...p, completeOrderReady: e.target.checked }))} style={{ width: "auto", marginTop: ".15rem" }} />
+                    <span>Complete order is ready to deliver today</span>
+                  </label>
                   <label style={{ display: "flex", gap: ".55rem", alignItems: "flex-start", fontSize: ".82rem", color: T.tx, margin: ".45rem 0" }}>
                     <input type="checkbox" checked={outcomeDraft.noDetour} onChange={e => setOutcomeDraft(p => ({ ...p, noDetour: e.target.checked }))} style={{ width: "auto", marginTop: ".15rem" }} />
                     <span>No unscheduled detour is required</span>
@@ -12419,6 +12643,24 @@ export default function App() {
         message: `${upd.vendor} pickup has been confirmed by ${upd.driverName || "Driver"} for run ${fmtFullDate(upd.actualRunDate || upd.date)}. Item evidence: ${itemEvidence}.`,
         eventRef: upd.pickupConfirmedAt || upd.pickupOutcomeAt || "",
         createdBy: "driver",
+      });
+    }
+
+    if (!previous?.bringForwardFlag && upd.bringForwardFlag) {
+      const originalRun = upd.bringForwardIntendedRunDate || previous?.actualRunDate || previous?.date || "";
+      const movedRun = upd.bringForwardMovedToRunDate || upd.actualRunDate || upd.date || "";
+      const originalRunText = originalRun ? fmtFullDate(originalRun) : "not recorded";
+      const movedRunText = movedRun ? fmtFullDate(movedRun) : "today's run";
+      createOperationalNotice({
+        clientId: upd.clientId,
+        clientName: upd.clientName,
+        orderId: upd.id,
+        noticeType: "bring_forward",
+        subject: `Brought into today's run - ${upd.id}`,
+        message: `${upd.id} was moved into today's run ${movedRunText} under SOP-RUN-04 because the complete order was ready at ${upd.vendor} and the supplier was already on the planned route. Original scheduled run was ${originalRunText}. No unscheduled detour confirmed. Item evidence: ${upd.pickupCountSummary || upd.pickupItemType || "not recorded"}.`,
+        eventRef: upd.pickupOutcomeAt || movedRun || "",
+        createdBy: "driver",
+        policyRef: "SOP-RUN-04 / UJ-CRM-001A / notification provider gap",
       });
     }
 

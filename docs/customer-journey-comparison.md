@@ -175,7 +175,7 @@ Not built yet:
 - Whether Admin can directly apply approved price changes in production remains open because source material and user direction need final reconciliation.
 - Live Supabase execution for pricing governance flags remains open because the MCP project is authenticated but live migration/RLS execution has not been run.
 - Driver offline/upload retry rules are not confirmed.
-- SOP-RUN-04 Bring Forward now records early collection of a future pickup only where the supplier is already on today's route, keeps the intended delivery run date unchanged, and records local operational update evidence; production notification handling remains open.
+- SOP-RUN-04 Bring Forward now records a future pickup moved into today's run only where the supplier is already on today's route and the complete order is ready to deliver today; the original intended run date is retained as audit evidence, and production notification handling remains open.
 - Failed Delivery has local Policy #8 attempt/evidence, Admin fee-review, waiver, and approved-fee billing behavior, but final production reason codes and offline retry handling remain open.
 - Supplier pickup standards and CAP-MCL-001 approval-gate evidence are locally implemented, but actual named supplier dock contacts, live supplier-health automation, and the exact scoring algorithm beyond CAP-MCL-001 thresholds remain open.
 - Policy #27 WHS/fatigue is locally implemented for active Driver/Admin hazard reporting and supplier follow-up, but WHSQ notification procedure, production WHS owner, and full fatigue framework activation remain open.

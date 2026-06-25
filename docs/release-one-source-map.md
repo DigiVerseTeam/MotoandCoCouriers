@@ -216,7 +216,7 @@ Local runtime state:
 
 - Driver pickup confirmation now requires Policy #15 item-specific acceptance evidence and final dock-decision/no-under-protest confirmation before `Picked Up` can be recorded.
 - Driver No Pickup records now carry Policy #15 / Policy #16 source evidence, final dock decision evidence, no-billable-row evidence, and APP-ADM-005 exception routing.
-- SOP-RUN-04 brought-forward pickup records also carry Policy #15 goods-acceptance evidence while retaining the original intended run date.
+- SOP-RUN-04 brought-forward pickup records also carry Policy #15 goods-acceptance evidence and, where the complete order is ready to deliver, move the whole order into the current run while retaining the original intended run date as audit evidence.
 - Supabase draft migration `202606190017_goods_acceptance_policy15.sql` adds matching goods-acceptance confirmation, final-decision, refused-goods, and policy-reference fields.
 
 Open gaps:
@@ -315,22 +315,22 @@ Source:
 
 Confirmed rules:
 
-- Bring-forward means collecting goods for a future pickup today because the supplier is already on today's planned route.
+- Bring-forward means moving a complete future pickup into today's run because the supplier is already on today's planned route and the complete order is ready to deliver today.
 - The driver must not make an unscheduled detour for a bring-forward.
 - Bring-forward is a distinct pickup outcome, not a standard `Picked Up` outcome.
 - The driver records item type and quantity as normal.
 - Pickup date is today/current route date.
-- Intended delivery run date remains the original future run date.
+- Delivery run date becomes today/current route date; the original future run date remains audit evidence.
 - Goods must be correctly labelled and packaged before the driver accepts them.
 - The record must clearly distinguish brought-forward goods to avoid billing confusion.
 
 Local runtime state:
 
-- Driver supplier stops now show a `SOP-RUN-04 Future Pickups Ready Today` section only for future unassigned pickups at suppliers already on the current planned route.
+- Driver supplier stops and the live Driver Upcoming tab show future pickups only as bring-forward eligible when the supplier is already on the current planned route.
 - The current-run customer pickup rows no longer expose Bring Forward as a way to postpone an unready pickup.
-- The Bring Forward modal records item type, quantity, calculated price, no-unscheduled-detour confirmation, labelling confirmation, packaging confirmation, collected date, intended run date, and handling note.
-- The brought-forward order remains unassigned for Admin compilation on its original intended run date, then appears as delivery-ready because the pickup evidence has already been captured.
-- Local operational updates say the future pickup was collected early and that the intended delivery run remains unchanged.
+- The Bring Forward flow records item type, quantity, calculated price, complete-order-ready confirmation, no-unscheduled-detour confirmation, labelling confirmation, packaging confirmation, collected date/current run date, original intended run date, and handling note.
+- The brought-forward order is assigned to today's driver/run, moves to `En Route`, and appears in Sign-Off for delivery today.
+- Local operational updates say the future pickup was moved into today's run, original scheduled date retained as evidence, and no unscheduled detour was confirmed.
 - Browser smoke on 2026-06-19 confirmed the Driver dashboard shows the Link International `SOP-RUN-04 Future Pickups Ready Today` action, opens the brought-forward capture modal, blocks incomplete capture with `Outcome reason is required.`, accepts reason plus no-detour/labelling/packaging evidence, removes the candidate after capture, and returns the browser to clean seeded `/booking` state after reset.
 
 Supabase draft state:
