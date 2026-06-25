@@ -1208,6 +1208,10 @@ function isDay8NoticeDue(invoice, today = todayBrisbane()) {
 function pickupAlreadyCollected(order) {
   return ["Picked Up", "Brought Forward"].includes(order?.pickupOutcome);
 }
+const DRIVER_PICKUP_READY_STATUSES = new Set(["Pending", "Scheduled", "Received - Scheduled", "Received - Awaiting Dispatch", "Cut-off Adjusted", "Schedule Adjusted", "Brought Forward"]);
+function orderIsDriverPickupReady(order) {
+  return DRIVER_PICKUP_READY_STATUSES.has(order?.status || "Pending") && !pickupAlreadyCollected(order);
+}
 function orderGoodsCollected(order) {
   return Boolean(
     pickupAlreadyCollected(order) ||
@@ -3065,7 +3069,7 @@ function orderRunDate(order) {
 }
 
 function orderIsOpenForDispatch(order) {
-  return ["Pending", "Brought Forward"].includes(order?.status || "Pending");
+  return DRIVER_PICKUP_READY_STATUSES.has(order?.status || "Pending");
 }
 
 function orderIsFutureRun(order) {
@@ -3825,28 +3829,32 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const [notice, setNotice] = useState("");
 
   const today = todayBrisbane();
-  const assignedOrders = orders.filter(order => matchesDriverOrder(order, user) && !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status));
-  const todayOrders = assignedOrders.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === today);
-  const runOrders = (todayOrders.length ? todayOrders : assignedOrders).slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999));
-  const unassignedDispatchable = orders.filter(order => ["Pending", "Brought Forward"].includes(order.status || "Pending") && !order.driverId);
-  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.date || "").slice(0, 10) === today);
+  const driverVisibleOpenOrders = orders.filter(order => !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status || "Pending"));
+  const assignedOrders = driverVisibleOpenOrders.filter(order => matchesDriverOrder(order, user));
+  const driverPickupCandidates = driverVisibleOpenOrders.filter(order =>
+    orderIsDriverPickupReady(order) && (matchesDriverOrder(order, user) || !order.driverId)
+  );
+  const todayAssignedOrders = assignedOrders.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
+  const todayPickupCandidates = driverPickupCandidates.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
+  const todayOrders = [...new Map([...todayAssignedOrders, ...todayPickupCandidates].map(order => [order.id || order.conNote, order])).values()];
+  const runOrders = todayOrders.slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id).localeCompare(String(b.id)));
+  const unassignedDispatchable = orders.filter(order => orderIsDriverPickupReady(order) && !order.driverId);
+  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
   const nextUnassignedRunDate = unassignedDispatchable
-    .map(order => (order.actualRunDate || order.date || "").slice(0, 10))
+    .map(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10))
     .filter(Boolean)
     .sort()[0] || "";
   const todayRouteSuppliers = new Set(todayOrders.map(order => order.vendor || "Supplier not recorded"));
   const upcomingOrders = orders
     .filter(order => {
-      const status = order.status || "Pending";
       const runDate = (order.actualRunDate || order.runDate || order.date || "").slice(0, 10);
-      return ["Pending", "Brought Forward"].includes(status)
-        && !pickupAlreadyCollected(order)
+      return orderIsDriverPickupReady(order)
         && runDate > today
         && (matchesDriverOrder(order, user) || !order.driverId);
     })
     .sort((a, b) => String(a.actualRunDate || a.date).localeCompare(String(b.actualRunDate || b.date)) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id).localeCompare(String(b.id)));
   const bringForwardEligibleCount = upcomingOrders.filter(order => todayRouteSuppliers.has(order.vendor || "Supplier not recorded")).length;
-  const pickupOrders = runOrders.filter(order => (order.status || "Pending") === "Pending" && !pickupAlreadyCollected(order));
+  const pickupOrders = runOrders.filter(order => orderIsDriverPickupReady(order));
   const enRouteOrders = runOrders.filter(order => order.status === "En Route" || pickupAlreadyCollected(order));
   const signoffOrders = enRouteOrders.length ? enRouteOrders : [];
   const selectedOrder = signoffOrders.find(order => order.id === selectedId) || signoffOrders[0] || null;
@@ -3864,9 +3872,9 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   });
   const asapCount = pickupOrders.filter(order => orderPriority(order) === "ASAP").length;
   const selectedBreakdown = selectedOrder ? pickupBreakdownForCounts(pickupCountsForOrder(selectedOrder), priceRules) : pickupBreakdownForCounts(blankPickupCounts(), priceRules);
-  const emptyPickupMessage = assignedOrders.length === 0 && unassignedToday.length > 0
+  const emptyPickupMessage = pickupOrders.length === 0 && assignedOrders.length === 0 && unassignedToday.length > 0
     ? `${unassignedToday.length} pickup request${unassignedToday.length === 1 ? "" : "s"} waiting for Admin dispatch. They will appear here after Admin assigns the run to ${user.name || "this driver"}.`
-    : assignedOrders.length === 0 && nextUnassignedRunDate
+    : pickupOrders.length === 0 && assignedOrders.length === 0 && nextUnassignedRunDate
       ? `${unassignedDispatchable.length} pickup request${unassignedDispatchable.length === 1 ? "" : "s"} waiting for Admin dispatch. Next scheduled run is ${fmtFullDate(nextUnassignedRunDate)}.`
       : "No pickups assigned to this driver yet.";
 
@@ -4126,7 +4134,7 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               </div>
             </div>
             {asapCount > 0 && <div className="ux-alert">{asapCount} ASAP order{asapCount === 1 ? "" : "s"} - priority pickup required.</div>}
-            {assignedOrders.length === 0 && unassignedDispatchable.length > 0 && <div className="ux-alert">{emptyPickupMessage}</div>}
+            {pickupOrders.length === 0 && assignedOrders.length === 0 && unassignedDispatchable.length > 0 && <div className="ux-alert">{emptyPickupMessage}</div>}
             <div className="ux-driver-tools">
               <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search client or workshop..." style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }} />
               <select value={vendorFilter} onChange={e => setVendorFilter(e.target.value)} style={{ border: "1px solid #d5cfc3", padding: ".75rem", font: "inherit" }}>
@@ -5254,18 +5262,18 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
   const [outcomeDraft, setOutcomeDraft] = useState({ type: "", reason: "", nextRunDate: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10, priceRuleId: "", itemQty: 1, noDetour: false, labelled: false, packaged: false, completeOrderReady: false });
   const [workflowNotice, setWorkflowNotice] = useState("");
 
-  const driverRunOrders = orders.filter(o => o.driverId === user.id);
+  const driverRunOrders = orders.filter(o => matchesDriverOrder(o, user));
   const driverOrderIds = new Set(driverRunOrders.map(o => o.id));
   const driverSequence = order => Number(order.runSequence || 9999);
-  const active = orders.filter(o => o.driverId === user.id && ["Pending", "En Route"].includes(o.status)).sort((a, b) => driverSequence(a) - driverSequence(b));
+  const active = orders.filter(o => matchesDriverOrder(o, user) && (orderIsDriverPickupReady(o) || o.status === "En Route")).sort((a, b) => driverSequence(a) - driverSequence(b));
   const activeRunIds = [...new Set(active.map(order => order.runId).filter(Boolean))];
   const activeVehicles = [...new Set(active.map(order => order.vehicleName).filter(Boolean))];
   const activeRunDates = [...new Set(active.map(order => order.actualRunDate || order.date).filter(Boolean))];
-  const pickupStops = orders.filter(o => o.driverId === user.id && o.status === "Pending" && !pickupAlreadyCollected(o)).sort((a, b) => driverSequence(a) - driverSequence(b));
-  const deliveryOrders = orders.filter(o => o.driverId === user.id && (o.status === "En Route" || (o.status === "Pending" && pickupAlreadyCollected(o)))).sort((a, b) => driverSequence(a) - driverSequence(b));
+  const pickupStops = orders.filter(o => matchesDriverOrder(o, user) && orderIsDriverPickupReady(o)).sort((a, b) => driverSequence(a) - driverSequence(b));
+  const deliveryOrders = orders.filter(o => matchesDriverOrder(o, user) && (o.status === "En Route" || pickupAlreadyCollected(o))).sort((a, b) => driverSequence(a) - driverSequence(b));
   const deliveryStops = groupDeliveryStops(deliveryOrders);
   const supplierStopScopeOrders = orders
-    .filter(o => o.driverId === user.id && o.runId && ["Pending", "No Pickup"].includes(o.status))
+    .filter(o => matchesDriverOrder(o, user) && o.runId && (orderIsDriverPickupReady(o) || o.status === "No Pickup"))
     .sort((a, b) => driverSequence(a) - driverSequence(b));
   const supplierGroups = Object.values(supplierStopScopeOrders.reduce((groups, order) => {
     const key = order.vendor || "Supplier not recorded";
@@ -5283,7 +5291,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
       const currentRunDate = currentRunDateForSupplier(supplier);
       return supplierNamesOnCurrentRoute.has(supplier)
         && !order.driverId
-        && order.status === "Pending"
+        && orderIsDriverPickupReady(order)
         && !pickupAlreadyCollected(order)
         && intendedRunDate
         && currentRunDate
@@ -6033,8 +6041,8 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
                         </div>
                       )}
                       <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".55rem" }}>
-                        {o.status === "Pending" && !pickupAlreadyCollected(o) && <button className="btn b-teal b-sm" onClick={() => confirmPickup(o)}>Capture Items / Picked Up</button>}
-                        {o.status === "Pending" && !pickupAlreadyCollected(o) && <button className="btn b-ghost b-sm" onClick={() => openOutcome(o, "No Pickup")}>No Pickup</button>}
+                        {orderIsDriverPickupReady(o) && <button className="btn b-teal b-sm" onClick={() => confirmPickup(o)}>Capture Items / Picked Up</button>}
+                        {orderIsDriverPickupReady(o) && <button className="btn b-ghost b-sm" onClick={() => openOutcome(o, "No Pickup")}>No Pickup</button>}
                       </div>
                     </div>
                   ))}
