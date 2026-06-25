@@ -12123,7 +12123,7 @@ function mergeLiveOrdersWithLocalPending(liveOrders = [], localOrders = []) {
   for (const order of localOrders || []) {
     const status = order?.status || "Pending";
     const recentlySubmitted = Boolean(order?.submittedAt || order?.createdAt);
-    const dispatchable = ["Pending", "Brought Forward", "En Route"].includes(status);
+    const dispatchable = orderIsDriverPickupReady(order) || ["En Route", "Picked Up"].includes(status);
     const alreadySeen = seenIds.has(String(order?.id || "")) || seenKeys.has(keyFor(order));
     if (!alreadySeen && recentlySubmitted && dispatchable) merged.unshift(order);
   }

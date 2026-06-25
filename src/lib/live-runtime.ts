@@ -399,41 +399,17 @@ function priceRuleFromRow(row) {
 }
 
 export async function loadLiveRuntimeSnapshot() {
-  const supabase = client();
   const snapshot = emptySnapshot();
-  if (!supabase) return snapshot;
-
-  const { data: records, error } = await supabase
-    .from("runtime_records")
-    .select("record_type, local_id, payload, owner_actor_id, driver_profile_id, updated_at")
-    .order("updated_at", { ascending: false });
-
-  if (error) throw error;
-
-  const typeToKey = Object.fromEntries(Object.entries(liveRuntimeDomains).map(([key, type]) => [type, key]));
-  for (const record of records || []) {
-    const key = typeToKey[record.record_type];
-    if (!key) continue;
-    snapshot[key].push({
-      ...(record.payload || {}),
-      id: record.payload?.id || record.local_id,
-      actorId: record.payload?.actorId || record.owner_actor_id || "",
-      profileId: record.payload?.profileId || record.driver_profile_id || "",
-      liveUpdatedAt: record.updated_at,
-    });
-  }
-
-  const { data: priceRows } = await supabase
-    .from("price_rules")
-    .select("id, service_variant, label, item_type, tyre_count_min, tyre_count_max, weight_band, rate_cents, rate_mode, effective_from, effective_to, status, change_log_id")
-    .eq("status", "active")
-    .order("effective_from", { ascending: true });
-
-  if (!snapshot.priceRules.length && priceRows?.length) {
-    snapshot.priceRules = priceRows.map(priceRuleFromRow);
-  }
-
-  return snapshot;
+  const token = await liveAccessToken();
+  const response = await fetch("/api/runtime-records", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || `Runtime snapshot failed (${response.status}).`);
+  return { ...snapshot, ...(payload?.snapshot || {}) };
 }
 
 function ownerActorForRow(row, appSession) {

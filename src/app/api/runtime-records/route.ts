@@ -66,6 +66,14 @@ function isUuid(value: unknown) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function normaliseText(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function compactValues(values: unknown[] = []) {
+  return values.map((value) => String(value || "").trim()).filter(Boolean);
+}
+
 function runtimeRecordId(row: Record<string, unknown>) {
   const id = row?.id || row?.localId || row?.local_id || row?.code || row?.email;
   return id ? String(id) : `runtime-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -92,6 +100,131 @@ function driverProfileForRow(row: Record<string, unknown>, callerRole = "", call
     callerRole === "driver" ? callerProfileId : "",
   ];
   return candidates.find(isUuid) as string | undefined || null;
+}
+
+function emptySnapshot() {
+  return Object.fromEntries(Object.keys(runtimeDomains).map((key) => [key, []]));
+}
+
+function priceRuleFromRow(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    serviceVariant: row.service_variant,
+    label: row.label,
+    itemType: row.item_type,
+    tyreCountMin: row.tyre_count_min,
+    tyreCountMax: row.tyre_count_max,
+    weightBand: row.weight_band,
+    rateCents: row.rate_cents,
+    rateMode: row.rate_mode,
+    effectiveFrom: row.effective_from,
+    effectiveTo: row.effective_to,
+    status: row.status || "active",
+    changeLogId: row.change_log_id,
+  };
+}
+
+function callerIdentityValues(caller: any) {
+  return new Set(compactValues([
+    caller?.profile?.id,
+    caller?.profile?.actor_id,
+    caller?.profile?.account_id,
+    caller?.profile?.driver_id,
+    caller?.profile?.email,
+    caller?.profile?.display_name,
+  ]));
+}
+
+function payloadIdentityValues(payload: Record<string, unknown>, keys: string[]) {
+  return compactValues(keys.map((key) => payload[key]));
+}
+
+function rowMatchesClientScope(row: Record<string, unknown>, payload: Record<string, unknown>, caller: any) {
+  const callerIds = callerIdentityValues(caller);
+  const rowValues = compactValues([row.owner_actor_id]);
+  const payloadValues = payloadIdentityValues(payload, [
+    "actorId",
+    "accountActorId",
+    "account_actor_id",
+    "clientActorId",
+    "client_actor_id",
+    "clientId",
+    "accountId",
+    "profileId",
+    "operationalProfileId",
+    "billingProfileId",
+  ]);
+  if ([...rowValues, ...payloadValues].some((value) => callerIds.has(value))) return true;
+
+  const callerEmail = normaliseText(caller?.profile?.email);
+  const emails = [
+    payload.email,
+    payload.clientEmail,
+    payload.operationalEmail,
+    payload.billingEmail,
+    (payload.operationalContact as Record<string, unknown> | undefined)?.email,
+    (payload.billingContact as Record<string, unknown> | undefined)?.email,
+  ].map(normaliseText).filter(Boolean);
+  return Boolean(callerEmail && emails.includes(callerEmail));
+}
+
+function rowMatchesDriverScope(row: Record<string, unknown>, payload: Record<string, unknown>, caller: any) {
+  const callerIds = callerIdentityValues(caller);
+  const rowValues = compactValues([row.driver_profile_id]);
+  const payloadValues = payloadIdentityValues(payload, [
+    "driverId",
+    "assignedDriverId",
+    "driverRecordId",
+    "driverProfileId",
+    "driver_profile_id",
+    "profileId",
+    "driverActorId",
+    "driver_actor_id",
+    "pickupDriverId",
+    "pickupDriverProfileId",
+    "pickupDriverActorId",
+  ]);
+  if ([...rowValues, ...payloadValues].some((value) => callerIds.has(value))) return true;
+
+  const callerEmail = normaliseText(caller?.profile?.email);
+  const emails = [payload.driverEmail, payload.pickupDriverEmail, payload.email].map(normaliseText).filter(Boolean);
+  if (callerEmail && emails.includes(callerEmail)) return true;
+
+  const callerName = normaliseText(caller?.profile?.display_name);
+  const driverNames = [payload.driverName, payload.name, payload.displayName].map(normaliseText).filter(Boolean);
+  return Boolean(callerName && driverNames.includes(callerName));
+}
+
+function payloadIsUnassignedDriverPickupReady(payload: Record<string, unknown>) {
+  const status = String(payload.status || "Pending");
+  const pickupOutcome = String(payload.pickupOutcome || "");
+  const driverId = String(payload.driverId || payload.assignedDriverId || payload.driverRecordId || "").trim();
+  const terminal = ["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(status);
+  const pickupCollected = ["Picked Up", "Brought Forward"].includes(pickupOutcome);
+  const pickupReady = ["Pending", "Scheduled", "Received - Scheduled", "Received - Awaiting Dispatch", "Cut-off Adjusted", "Schedule Adjusted", "Brought Forward"].includes(status);
+  return !terminal && !pickupCollected && pickupReady && !driverId;
+}
+
+function canReadRuntimeRecord(domainKey: string, row: Record<string, unknown>, payload: Record<string, unknown>, caller: any) {
+  if (caller.roles?.has("admin") || caller.roles?.has("super_admin")) return true;
+  if (["suppliers", "priceRules"].includes(domainKey)) return true;
+
+  if (caller.roles?.has("driver")) {
+    if (domainKey === "orders") return rowMatchesDriverScope(row, payload, caller) || payloadIsUnassignedDriverPickupReady(payload);
+    if (domainKey === "drivers") return rowMatchesDriverScope(row, payload, caller);
+    if (domainKey === "vehicles") return true;
+    if (["proofs", "exceptions", "runClosures"].includes(domainKey)) return rowMatchesDriverScope(row, payload, caller);
+  }
+
+  if (caller.roles?.has("client") && ["clients", "orders", "exceptions", "operationalNotices"].includes(domainKey)) {
+    return rowMatchesClientScope(row, payload, caller);
+  }
+
+  if (caller.roles?.has("billing") && ["clients", "invoices", "billingNotices", "exceptions"].includes(domainKey)) {
+    return rowMatchesClientScope(row, payload, caller);
+  }
+
+  return false;
 }
 
 async function callerContext(request: NextRequest, supabase: AdminSupabaseClient) {
@@ -126,6 +259,52 @@ async function callerContext(request: NextRequest, supabase: AdminSupabaseClient
   if (roles.has("super_admin")) roles.add("admin");
 
   return { profile, roles };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = serviceClient();
+    if (!supabase) return json(500, { error: "Server-side runtime sync is not configured." });
+
+    const caller = await callerContext(request, supabase);
+    if ("error" in caller) return caller.error;
+
+    const snapshot = emptySnapshot() as Record<string, unknown[]>;
+    const typeToKey = Object.fromEntries(Object.entries(runtimeDomains).map(([key, type]) => [type, key]));
+    const { data: records, error } = await supabase
+      .from("runtime_records")
+      .select("record_type, local_id, payload, owner_actor_id, driver_profile_id, updated_at")
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+
+    for (const record of records || []) {
+      const domainKey = typeToKey[record.record_type];
+      if (!domainKey) continue;
+      const payload = (record.payload || {}) as Record<string, unknown>;
+      if (!canReadRuntimeRecord(domainKey, record, payload, caller)) continue;
+      snapshot[domainKey].push({
+        ...payload,
+        id: payload.id || record.local_id,
+        actorId: payload.actorId || record.owner_actor_id || "",
+        profileId: payload.profileId || record.driver_profile_id || "",
+        liveUpdatedAt: record.updated_at,
+      });
+    }
+
+    const { data: priceRows, error: priceError } = await supabase
+      .from("price_rules")
+      .select("id, service_variant, label, item_type, tyre_count_min, tyre_count_max, weight_band, rate_cents, rate_mode, effective_from, effective_to, status, change_log_id")
+      .eq("status", "active")
+      .order("effective_from", { ascending: true });
+    if (priceError) throw priceError;
+    if (!snapshot.priceRules.length && priceRows?.length) {
+      snapshot.priceRules = priceRows.map(priceRuleFromRow);
+    }
+
+    return json(200, { snapshot });
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : "Runtime snapshot failed." });
+  }
 }
 
 export async function POST(request: NextRequest) {
