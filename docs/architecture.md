@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-06-20
+Last updated: 2026-07-02
 
 ## Confirmed stack direction
 
@@ -16,16 +16,17 @@ Last updated: 2026-06-20
 - Product routes currently load the logistics software shell rather than documentation pages.
 - A public website route exists at `/website`. It uses confirmed brand assets and placeholder-safe content only.
 - Supabase migrations exist under `supabase/migrations`.
-- The deployed Vercel app has the live Supabase runtime bridge available for production-labelled sessions. The first Super Admin is bootstrapped; approved launch master data, non-admin launch role records, and actor workflow evidence are still required before it can be treated as fully live-backed.
-- Supabase MCP is registered and OAuth authenticated for project ref `fhrqfrhqopicekaiibyj`; newly added MCP tools may require a fresh Codex session before they are callable in-thread.
-- Git is available through `C:\Program Files\Git\cmd\git.exe`; plain `git` is not currently available on PATH in the local shell used by Codex.
-- GitHub repository `DigiVerseTeam/MotoandCoCouriers` is connected; V1 is merged to `main`, and the old build is archived on `archive/old-netlify-vite-build-2026-06-19`.
-- Vercel project `digi-verse/motoandcocouriers` is connected to GitHub and deployed at `https://motoandcocouriers.vercel.app`.
+- The active production portal is deployed at `https://motoandcocouriers.vercel.app`.
+- The app now uses a live runtime path for production testing, with Supabase/Auth/runtime records plus a browser local outbox for failed/offline driver writes.
+- Driver offline behaviour is governed by `SOP-OPS-01`: local device updates are not live until the same device reconnects and sync succeeds.
+- Supabase project ref `fhrqfrhqopicekaiibyj` is the active V1 runtime target, but region/data residency, full migration state, RLS, Storage, and monitoring evidence still require formal UAT.
+- Normal `git` is not currently available on PATH in the local shell used by Codex, and this local folder is not confirmed as a Git repository.
+- GitHub connector access can see `DigiVerseTeam/MotoandCoCouriers` with repo permissions, but the local workspace is not yet safely connected through Git/source-control handoff.
 - Node.js is available.
 - `npm.ps1` is blocked by PowerShell execution policy, but `npm.cmd` works.
 - `next.config.mjs` supports `NEXT_DIST_DIR`; local preflight uses `.next-preflight-build` and draft CI uses `.next-ci` so verification does not depend on a locked or stale default `.next` directory.
 - `npm.cmd run verify:launch` is a read-only launch-readiness report for Git CLI, Supabase CLI, Vercel CLI, required platform values, environment pairing, and local Git repository initialisation.
-- `npm.cmd run verify:production` is the strict production readiness gate for environment values and local Git/Supabase/Vercel tooling. It passed with production values supplied on 2026-06-19.
+- `npm.cmd run verify:production` is the strict production readiness gate and is expected to fail until GitHub, Supabase, Vercel, local Git, and live-tooling blockers are resolved.
 - Existing workspace files are business, brand, SOP, capability, and policy documents.
 
 ## App structure
@@ -61,7 +62,7 @@ Local draft:
 
 - `.github/workflows/runtime-ci.yml` runs `npm ci`, `npm run verify:requirements`, `npm run verify:platform`, `npm run verify:migrations`, `npm run typecheck`, and `npm run build` with `NEXT_DIST_DIR=.next-ci`; `npm run typecheck` generates Next route metadata before running TypeScript.
 - This workflow has not run in GitHub because local Git availability and branch/PR handoff are not complete.
-- Supabase and Vercel production ownership are confirmed. CI still needs live run evidence and branch-protection/release ownership decisions.
+- Supabase checks and Vercel preview/deploy jobs are not added until the live project, credentials, and deployment ownership are confirmed.
 
 ## Supabase
 
@@ -69,14 +70,17 @@ Confirmed:
 
 - Production-first V1 path is approved by user direction on 2026-06-19.
 - Local and preview builds must not connect to production Supabase.
+- Project ref `fhrqfrhqopicekaiibyj` is the active V1 runtime target.
+- Production testing uses live Auth/runtime records, with server runtime APIs and a local driver outbox for offline retry.
 
 TBD:
 
 - Supabase project owner.
 - Region.
-- Production project ref `fhrqfrhqopicekaiibyj` confirmation, project URL/keys, and secret ownership.
+- Production URL/key/secret ownership and rotation procedure.
 - Auth providers.
 - Live Row Level Security execution and testing. A first-pass policy migration exists from BOAS Sheet 05, but it is not production-proven.
+- Live Storage policy execution and POD proof-object persistence.
 - Whether tracking links are public, tokenised, authenticated, or mixed.
 
 Confirmed Supabase requirements:
@@ -86,7 +90,6 @@ Confirmed Supabase requirements:
 - Suppliers must be stored in an administrator-managed table.
 - Customers/workshops must be stored in a CRM-controlled table or tables.
 - Pricing rules must be stored in a `price_rules` table.
-- BOAS v1.9 / `SOP-IAM-03` requires a two-tier Super Admin/Admin model: first Super Admin is bootstrapped server-side, Super Admin creates Admin users, Admin creates Client Ops/Client Billing/Driver users, pending profiles do not pass RLS role checks, and the browser must never receive the `service_role` key. Production now has `gerrard@otimi.com.au` bootstrapped as the first Super Admin under the 2026-06-20 user approval reference.
 - Policy #24 revenue reconciliation must be stored in Admin-managed financial reconciliation tables, not hard-coded reporting text.
 - Policy #20 AI draft governance is stored as Admin-managed `ai_draft_reviews` evidence only; live AI provider, model, prompt registry, and outbound send transport are not part of the confirmed architecture yet.
 - Policy #21 / Policy #7 data-use governance is stored as Admin-managed `data_use_reviews` evidence for operational access, exports, Digiverse production access, third-party sharing, marketing use, blocked acceptable-use decisions, breach escalation, and APP-PRV-004 audit.
@@ -96,7 +99,7 @@ Confirmed Supabase requirements:
 - POD records are retained for 7 years from delivery date.
 - Delivery proof storage paths use `deliveries/{delivery_id}/...` in the private `delivery-proof` bucket, with assigned-driver/Admin upload and linked-role read policies represented in local migrations. `SOP-DEL-01` grouped delivery stops add a delivery-stop group layer so one proof can complete multiple work items for the same account/address while preserving proof-driven `SOP-DEL-05` completion.
 - Audit log must be append-only, cover all PII actions, and be tamper-evident.
-- `npm.cmd run verify:migrations` statically checks the local migrations for required source-backed guardrail markers. The active logistics migrations are applied to production Supabase; real actor Auth/RLS and Storage upload tests remain open.
+- `npm.cmd run verify:migrations` statically checks the local draft migrations for required source-backed guardrail markers. Live migration execution and RLS/Storage policy testing remain blocked until the project is connected.
 
 Confirmed release-one data areas based on source documents, brand guide, and user confirmations:
 
@@ -155,17 +158,16 @@ Confirmed:
 
 - Production-first V1 path is approved by user direction on 2026-06-19.
 - Preview deployments must not connect to production Supabase.
-- Vercel team/account: `DigiVerse` / `digi-verse`.
-- Vercel project: `motoandcocouriers`.
-- Production domain: `https://motoandcocouriers.vercel.app`.
-- Website and app are deployed as one Vercel project for V1.
+- Production portal URL: `https://motoandcocouriers.vercel.app`.
 
 TBD:
 
+- Vercel team/account.
 - Preview domain.
 - Environment variable ownership.
 - Deployment protection requirements.
 - Analytics and monitoring requirements.
+- Whether the website and app are one Vercel project or split projects.
 
 Confirmed deployment rule:
 
@@ -177,17 +179,17 @@ Current environment labels:
 
 - `NEXT_PUBLIC_APP_ENV`: `local`, `preview`, or `production`.
 - `NEXT_PUBLIC_SUPABASE_ENV`: `local`, `preview`, or `production`.
-- Supabase project URL, region, production publishable/server keys, and migration execution are confirmed. Auth identity binding, end-to-end RLS/Storage workflow verification, and secret ownership remain open.
+- Unknown project URL, region, and secret ownership remain open; the guard only prevents the confirmed unsafe pairing.
 - `docs/platform-env-contract.md` records the GitHub, Supabase, and Vercel values required before connection.
 - `npm.cmd run verify:platform` reports the current environment contract without creating projects or connecting external services.
 
 ## Next build recommendation
 
-1. Keep the local software runtime as the product baseline.
-2. Split the large local component into role modules once behavior stabilises.
-3. Wire the confirmed actor workflows to the live Supabase data objects and Auth identities.
-4. Add public website routes without replacing the software shell.
-5. Complete Supabase production connection, then redeploy and repeat live workflow verification against the Vercel production URL.
+1. Keep the production V1 portal as the product baseline while documentation catches up.
+2. Stabilise and UAT the live Supabase/Auth/RLS/Storage/runtime path.
+3. Test `SOP-OPS-01` on the actual driver iPad/device before relying on offline field operation.
+4. Split the large local component into role modules once behavior stabilises.
+5. Complete safe GitHub branch/PR handoff without overwriting the old build on `main`.
 
 ## Non-negotiable documentation rule
 

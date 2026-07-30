@@ -125,6 +125,6 @@ The following are business or policy decisions, not values to hide in `.env`:
 
 - Notification provider and customer/admin delivery channels.
 - Public tracking token model and customer-visible tracking statuses.
-- Zoho/export/manual accounting path, payment source of truth, and credit-note/corrected-invoice handoff.
+- Payment source of truth, external invoice generation provider, payment reconciliation, and credit-note/corrected-invoice handoff.
 - Privacy Owner and retention destruction approval workflow.
 - Approved public legal copy, public sitemap/copy, and final brand hierarchy.

@@ -1,6 +1,6 @@
 # Launch Checklist
 
-Last updated: 2026-06-20
+Last updated: 2026-06-19
 
 This checklist is staged around confirmed source material and known platform direction. It is not a final project plan.
 
@@ -47,8 +47,6 @@ This checklist is staged around confirmed source material and known platform dir
 ## Runtime release
 
 - [x] Confirm user roles.
-- [x] Add BOAS v1.9/SOP-IAM-03 two-tier Super Admin/Admin provisioning model.
-- [x] Bootstrap first Super Admin from approved display name, email, and approval reference.
 - [ ] Confirm booking workflow fields and rules.
 - [ ] Confirm tracking statuses.
 - [x] Confirm POD requirements.
@@ -60,31 +58,22 @@ This checklist is staged around confirmed source material and known platform dir
 ## Supabase
 
 - [ ] Confirm Supabase project owner.
-- [x] Confirm region.
+- [ ] Confirm region.
 - [ ] Confirm environments.
 - [ ] Confirm auth model.
 - [x] Draft release-one database entities.
 - [x] Add static Supabase migration guardrail verification.
-- [x] Apply active logistics migrations to production Supabase.
-- [x] Load source-backed Policy #9 pricing seed.
-- [x] Add live Supabase runtime bridge and API table privileges.
-- [x] Add server-side SOP-IAM-03 user provisioning route for Admin-managed launch users.
-- [x] Enter/import approved V1 pilot production master data and role records.
-- [ ] Enter/import remaining full launch production master data and role records.
-- [x] Run live actor journey tests for V1 pilot records.
-- [x] Complete Supabase Auth role binding for first Super Admin.
-- [x] Complete Supabase Auth role binding for pilot Driver, Client Ops, and Client Billing.
 - [x] Confirm storage needs for POD assets.
-- [x] Confirm Row Level Security model for launch roles.
+- [ ] Confirm Row Level Security model.
 - [ ] Confirm backup and retention requirements.
 
 ## GitHub
 
-- [x] Install or expose Git locally.
-- [x] Confirm repository owner.
-- [x] Confirm repository name.
-- [x] Initialise repository.
-- [x] Commit documentation baseline.
+- [ ] Install or expose Git locally.
+- [ ] Confirm repository owner.
+- [ ] Confirm repository name.
+- [ ] Initialise repository.
+- [ ] Commit documentation baseline.
 - [ ] Add branch protection or review rules if required.
 - [x] Add CI once app scaffold exists.
 - [x] Add read-only Git/GitHub readiness report.
@@ -92,16 +81,15 @@ This checklist is staged around confirmed source material and known platform dir
 
 ## Vercel
 
-- [x] Confirm Vercel account/team.
-- [x] Confirm production domain.
+- [ ] Confirm Vercel account/team.
+- [ ] Confirm production domain.
 - [x] Confirm preview deployment policy.
 - [x] Add app-side guard blocking preview/local builds from production-labelled Supabase.
 - [x] Add environment variable contract/reporting.
 - [x] Add read-only Vercel readiness report.
 - [x] Add strict production gate coverage for missing Vercel readiness.
-- [x] Confirm remaining Supabase-backed runtime environment variables.
-- [x] Connect GitHub repository.
-- [x] Deploy production Vercel app shell.
-- [x] Connect Supabase variables.
+- [ ] Confirm environment variables.
+- [ ] Connect GitHub repository.
+- [ ] Connect Supabase variables.
 - [ ] Deploy preview.
 - [ ] Promote production after approval.

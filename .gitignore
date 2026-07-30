@@ -1,6 +1,5 @@
 .next/
 .next-ci/
-.next-ui-local/
 .next-preflight/
 .next-preflight-build*/
 .next-verify/
@@ -11,7 +10,6 @@ dist/
 .env
 .env*.local
 *.tsbuildinfo
-.tmp-dev-*.log
 
 # Local source archives stay out of the software repo unless explicitly approved.
 *.zip
@@ -22,8 +20,4 @@ dist/
 !public/**/*.png
 
 .vercel
-supabase/.temp/
-
-# Private launch master data imports contain PII and must stay local.
-data/*.json
-private-production-master-data*.json
+.env*

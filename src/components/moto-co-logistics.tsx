@@ -1,9 +1,10 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { Component, useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { nextAvailableRunDate, resolveActualRunDate } from "@/lib/date-rules";
+import { jsPDF } from "jspdf";
+import { nextAvailableRunDate } from "@/lib/date-rules";
 import {
   completeLiveAuthRedirect,
   consumeLivePasswordSetupRequest,
@@ -138,7 +139,9 @@ const css = `
   .ux-logo img{width:118px;height:auto;display:block;filter:brightness(0) invert(1)}
   .ux-logo-sub{font-size:.55rem;letter-spacing:.32em;text-transform:uppercase;color:rgba(255,255,255,.72);font-weight:800}
   .ux-tabs{display:flex;gap:.35rem;align-items:stretch;justify-content:center;flex:1}
+  .ux-tabs.admin-tabs{justify-content:flex-start;overflow-x:auto;scrollbar-width:thin}
   .ux-tab{border:0;background:transparent;color:rgba(255,255,255,.72);padding:.75rem .8rem;font-size:.74rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;border-bottom:3px solid transparent;line-height:1}
+  .ux-tabs.admin-tabs .ux-tab{flex:0 0 auto;white-space:nowrap}
   .ux-tab:hover,.ux-tab.active{color:#fff;border-bottom-color:#fff;background:rgba(255,255,255,.12)}
   .ux-nav-right{display:flex;align-items:center;gap:.7rem;min-width:220px;justify-content:flex-end}
   .ux-user{text-align:right;line-height:1.15;text-transform:uppercase}
@@ -148,6 +151,7 @@ const css = `
   .ux-nav-out{cursor:pointer}
   .ux-main{width:min(100%,1040px);margin:0 auto;padding:2.2rem 1.4rem 4rem}
   .ux-main.wide{width:min(100%,1120px)}
+  .ux-main.admin-main{width:min(100%,1240px)}
   .ux-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;border-bottom:2px solid #d2cabb;padding-bottom:1rem;margin-bottom:1.35rem}
   .ux-title{font-size:2.1rem;line-height:1;text-transform:uppercase;font-weight:900;letter-spacing:0;color:#0f0f0f}
   .ux-title span{color:#c8102e}
@@ -181,12 +185,22 @@ const css = `
   .ux-dot{width:11px;height:11px;border-radius:50%;display:inline-block;margin-right:.45rem;background:#c8102e}
   .ux-dot.green{background:#36b66d}
   .ux-alert{border:1px solid rgba(200,16,46,.35);background:#fdf0f0;color:#c8102e;padding:.85rem 1rem;margin-bottom:1rem;font-size:.85rem}
+  .ux-notice{border:1px solid rgba(24,115,60,.35);background:#eef8f2;color:#18733c;padding:.85rem 1rem;margin-bottom:1rem;font-size:.85rem}
+  .ux-filter-panel{background:#fff;border:1px solid #d5cfc3;border-radius:2px;padding:1rem;margin-bottom:1rem}
+  .ux-filter-grid{display:grid;grid-template-columns:1.45fr .8fr .8fr auto;gap:.7rem;align-items:end}
+  .ux-filter-grid .ux-field{margin-bottom:0}
+  .ux-month-group{margin-top:.9rem}
+  .ux-month-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.95rem 0 .5rem;color:#c8102e;font-size:.72rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+  .ux-month-count{color:#7a7060;font-size:.68rem;letter-spacing:.08em}
   .ux-order-list{display:flex;flex-direction:column;gap:.5rem}
   .ux-order-row{background:#fff;border:1px solid #d5cfc3;border-left:3px solid #c8102e;border-radius:2px;padding:1rem;display:grid;grid-template-columns:76px 1fr auto;gap:1rem;align-items:center}
   .ux-order-id{font-size:1.15rem;font-weight:900;color:#c8102e}
   .ux-order-title{font-weight:900;text-transform:uppercase;font-size:.82rem}
   .ux-order-meta{font-size:.76rem;color:#7a7060;margin-top:.25rem}
   .ux-order-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}
+  .ux-order-confirm{grid-column:1/-1;border:1px solid #c8102e;background:rgba(200,16,46,.06);padding:.85rem;display:grid;gap:.65rem}
+  .ux-order-confirm p{margin:0;color:#1a1a1a;font-size:.86rem;line-height:1.4}
+  .ux-order-confirm-actions{display:flex;gap:.5rem;flex-wrap:wrap}
   .ux-badge{display:inline-flex;align-items:center;gap:.32rem;border:1px solid #c8102e;color:#c8102e;background:#fff;padding:.22rem .55rem;border-radius:2px;font-size:.66rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
   .ux-badge.done{border-color:#2d5a27;color:#2d5a27}
   .ux-badge.enroute{border-color:#b8860b;color:#8f6800}
@@ -231,7 +245,7 @@ const css = `
     .ux-main{padding:1.2rem .85rem 3rem}
     .ux-heading{align-items:flex-start;flex-direction:column}
     .ux-title{font-size:1.7rem}
-    .ux-stats,.ux-vendor-grid,.ux-grid-2,.ux-priority{grid-template-columns:1fr}
+    .ux-stats,.ux-vendor-grid,.ux-grid-2,.ux-priority,.ux-filter-grid{grid-template-columns:1fr}
     .ux-order-row{grid-template-columns:1fr;gap:.45rem}
     .ux-order-actions{justify-content:flex-start}
     .ux-driver-tools{grid-template-columns:1fr}
@@ -254,6 +268,28 @@ function PolicyNotice({ title = "Workflow Rule", children, onDismiss, system = f
       {onDismiss && <button className="policy-notice-close" onClick={onDismiss}>Close</button>}
     </div>
   );
+}
+
+function friendlyLiveSyncIssue(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  if (!message) return "Live sync is waiting for a retry.";
+  if (message.includes("row-level security") || message.includes("database policy")) {
+    return "Live sync is blocked by production access rules. The change is saved on this device for retry.";
+  }
+  if (message.includes("atob") || message.includes("not correctly encoded")) {
+    return "Live sync could not package the saved update. The change is saved on this device for retry.";
+  }
+  if (message.includes("failed to fetch") || message.includes("network") || message.includes("internet") || message.includes("offline")) {
+    return "No stable internet connection. The change is saved on this device for retry.";
+  }
+  return "Live sync is waiting for a retry. The change is saved on this device.";
+}
+
+function portalNoticeTitle(message = "") {
+  const text = String(message || "").toLowerCase();
+  if (text.includes("confirmed") || text.includes("completed") || text.includes("synced")) return "Portal Update";
+  if (text.includes("saved on this device") || text.includes("sync") || text.includes("internet") || text.includes("queued")) return "Saved Locally";
+  return "Action Needs Attention";
 }
 
 function routeIntentFromPath(pathname = "/") {
@@ -452,13 +488,15 @@ const CRM_OBLIGATION_DIRECTIONS = ["We owe them", "They owe us", "Mutual"];
 const CRM_OBLIGATION_STATUSES = ["Active", "Fulfilled", "Overdue", "Disputed", "Terminated"];
 
 const seedPriceRules = [
-  { id: "price-tyre-1", serviceVariant: "SVC-MCL-001-T", label: "1 tyre", itemType: "tyre", tyreCountMin: 1, tyreCountMax: 1, rateCents: 2500, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 25, method: "fixed", status: "Active" },
-  { id: "price-tyre-2", serviceVariant: "SVC-MCL-001-T", label: "2 tyres", itemType: "tyre", tyreCountMin: 2, tyreCountMax: 2, rateCents: 4000, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 40, method: "fixed", status: "Active" },
-  { id: "price-tyre-3", serviceVariant: "SVC-MCL-001-T", label: "3 tyres", itemType: "tyre", tyreCountMin: 3, tyreCountMax: 3, rateCents: 5500, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 55, method: "fixed", status: "Active" },
-  { id: "price-tyre-4-plus", serviceVariant: "SVC-MCL-001-T", label: "4 or more tyres", itemType: "tyre", tyreCountMin: 4, rateCents: 1200, rateMode: "per_item", effectiveFrom: "2026-06-01", amount: 12, method: "perItem", minQty: 4, status: "Active" },
-  { id: "price-parts-lt-5", serviceVariant: "SVC-MCL-001-P", label: "Less than 5 kg", itemType: "parts", weightBand: "lt_5kg", rateCents: 1500, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 15, method: "fixed", status: "Active" },
-  { id: "price-parts-5-15", serviceVariant: "SVC-MCL-001-P", label: "5 kg to 15 kg", itemType: "parts", weightBand: "5_to_15kg", rateCents: 2200, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 22, method: "fixed", status: "Active" },
-  { id: "price-parts-gt-15", serviceVariant: "SVC-MCL-001-P", label: "More than 15 kg", itemType: "parts", weightBand: "gt_15kg", rateCents: 3500, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 35, method: "fixed", status: "Active" },
+  { id: "price-tyre-1", serviceVariant: "SVC-MCL-001-T", label: "1 tyre", itemType: "tyre", tyreCountMin: 1, tyreCountMax: 1, rateCents: 1850, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 18.5, method: "fixed", status: "Active" },
+  { id: "price-tyre-2", serviceVariant: "SVC-MCL-001-T", label: "2 tyres", itemType: "tyre", tyreCountMin: 2, tyreCountMax: 2, rateCents: 2400, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 24, method: "fixed", status: "Active" },
+  { id: "price-tyre-3", serviceVariant: "SVC-MCL-001-T", label: "3 tyres", itemType: "tyre", tyreCountMin: 3, tyreCountMax: 3, rateCents: 3300, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 33, method: "fixed", status: "Active" },
+  { id: "price-tyre-4-plus", serviceVariant: "SVC-MCL-001-T", label: "4 or more tyres", itemType: "tyre", tyreCountMin: 4, rateCents: 1230, rateMode: "per_item", effectiveFrom: "2026-06-01", amount: 12.3, method: "perItem", minQty: 4, status: "Active" },
+  { id: "price-parts-lt-5", serviceVariant: "SVC-MCL-001-P", label: "Up to 5 kg", itemType: "parts", weightBand: "up_to_5kg", rateCents: 1720, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 17.2, method: "fixed", status: "Active" },
+  { id: "price-parts-5-15", serviceVariant: "SVC-MCL-001-P", label: "5 kg to 10 kg", itemType: "parts", weightBand: "5_to_10kg", rateCents: 2100, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 21, method: "fixed", status: "Active" },
+  { id: "price-parts-gt-15", serviceVariant: "SVC-MCL-001-P", label: "10 kg+", itemType: "parts", weightBand: "10kg_plus", rateCents: 2500, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 25, method: "fixed", status: "Active", handlingApprovalRequired: true },
+  { id: "price-return-supplier", serviceVariant: "RETURN_SUPPLIER", label: "Return to Supplier (pre-labelled)", itemType: "return", rateCents: 600, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 6, method: "fixed", status: "Active" },
+  { id: "price-out-of-zone", serviceVariant: "OUT_OF_ZONE", label: "Out-of-Zone Delivery", itemType: "surcharge", rateCents: 1000, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 10, method: "fixed", status: "Active" },
   { id: "price-redelivery", serviceVariant: "REDELIVERY", label: "After 2nd failed attempt", itemType: "redelivery", rateCents: 1000, rateMode: "flat", effectiveFrom: "2026-06-01", amount: 10, method: "fixed", status: "Active" },
 ].map(rule => ({
   ...rule,
@@ -470,13 +508,13 @@ const seedPriceRules = [
 
 // ─── SEED DATA ───────────────────────────────────────────────────────────────
 const seedOrders = [
-  { id: "MC-001", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-4821", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Call on arrival", status: "En Route", pickupOutcome: "Picked Up", pickupPriceRuleId: "price-tyre-2", pickupItemType: "2 tyres", pickupItemQty: 2, pickupCalculatedPrice: 40, requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: 40, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
-  { id: "MC-004", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-DEL01", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-DEL-01 grouped delivery-stop fixture; same account and address as MC-001.", status: "En Route", pickupOutcome: "Picked Up", pickupPriceRuleId: "price-parts-lt-5", pickupItemType: "Less than 5 kg", pickupItemQty: 1, pickupWeightBand: "lt_5kg", pickupCalculatedPrice: 15, requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: 15, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
+  { id: "MC-001", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-4821", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Call on arrival", status: "En Route", pickupOutcome: "Picked Up", pickupPriceRuleId: "price-tyre-2", pickupItemType: "2 tyres", pickupItemQty: 2, pickupCalculatedPrice: 24, requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: 24, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
+  { id: "MC-004", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-DEL01", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-DEL-01 grouped delivery-stop fixture; same account and address as MC-001.", status: "En Route", pickupOutcome: "Picked Up", pickupPriceRuleId: "price-parts-lt-5", pickupItemType: "Up to 5 kg", pickupItemQty: 1, pickupWeightBand: "up_to_5kg", pickupCalculatedPrice: 17.2, requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: 17.2, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
   { id: "MC-006", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-PUP02", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-PUP-02 fixture: assigned current-run supplier pickup requiring per-customer outcome and supplier-stop closeout before delivery start.", status: "Pending", requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-14-d1-MCO-001", assignedAt: "2026-05-14T00:00:00.000Z", price: null, recvName: "", sig: "", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
   { id: "MC-005", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "Link International", conNote: "LI-RUN04", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Local SOP-RUN-04 fixture: future pickup eligible to bring forward only because Link International is already on today's planned route.", status: "Pending", requestedDate: "2026-05-19", actualRunDate: "2026-05-19", date: "2026-05-19", driverId: null, price: null, recvName: "", sig: "" },
   { id: "MC-002", clientId: "c2", clientName: "Moto Madness", vendor: "Gas Imports", conNote: "GI-9923", dropAddress: "8 Griffith St, Coolangatta QLD", notes: "", status: "Pending", requestedDate: "2026-05-14", actualRunDate: "2026-05-14", date: "2026-05-14", driverId: null, price: null, recvName: "", sig: "" },
-  { id: "MC-003", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-3311", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Heavy boxes", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-003"), price: 35, recvName: "Jake T", sig: "data:image/png;base64,sign", proofId: "proof-seed-1", invoiceId: "INV-SEED-001", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
-  { id: "MC-UNMATCHED-001", clientId: "unknown-account", clientName: "SOP-EXC-03 Verification Fixture", vendor: "Whites Powersports", conNote: "WP-UNMATCHED-01", dropAddress: "44 Verification Ave, Southport QLD", notes: "Local fixture: delivered proof-linked job with intentionally unknown account_id to verify SOP-EXC-03 billing exclusion and Admin correction.", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-UNMATCHED-001"), price: 22, recvName: "Casey V", sig: "data:image/png;base64,sign-unmatched", proofId: "proof-seed-unmatched-1", itemType: "5 kg to 15 kg", itemQty: 1, weightBand: "5_to_15kg", priceRuleId: "price-parts-5-15", deliveryCompletionSource: "SOP-DEL-05 / delivery_proof insert", deliveryCompletedBy: "system", deliveryCompletedAt: "2026-05-13T04:15:00.000Z", billingReady: true, billingReadyAt: "2026-05-13T04:15:00.000Z", billingReadySource: "SOP-DEL-05", billingAccountMatchStatus: "unmatched_fixture", billingAccountMatchSource: "SOP-EXC-03 local verification fixture", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
+  { id: "MC-003", clientId: "c1", clientName: "Gold Coast Cycles", vendor: "A1 Accessories", conNote: "A1-3311", dropAddress: "22 Ferry Rd, Southport QLD", notes: "Heavy boxes", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-003"), price: 25, recvName: "Jake T", sig: "data:image/png;base64,sign", proofId: "proof-seed-1", invoiceId: "INV-SEED-001", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
+  { id: "MC-UNMATCHED-001", clientId: "unknown-account", clientName: "SOP-EXC-03 Verification Fixture", vendor: "Whites Powersports", conNote: "WP-UNMATCHED-01", dropAddress: "44 Verification Ave, Southport QLD", notes: "Local fixture: delivered proof-linked job with intentionally unknown account_id to verify SOP-EXC-03 billing exclusion and Admin correction.", status: "Delivered", requestedDate: "2026-05-13", actualRunDate: "2026-05-13", date: "2026-05-13", driverId: "d1", driverName: "Damo Reeves", vehicleId: "act-veh-001", vehicleName: "MCO-001", runId: "RUN-2026-05-13-d1-MCO-001", assignedAt: "2026-05-13T00:00:00.000Z", deliveryId: stableLocalDeliveryId("MC-UNMATCHED-001"), price: 21, recvName: "Casey V", sig: "data:image/png;base64,sign-unmatched", proofId: "proof-seed-unmatched-1", itemType: "5 kg to 10 kg", itemQty: 1, weightBand: "5_to_10kg", priceRuleId: "price-parts-5-15", deliveryCompletionSource: "SOP-DEL-05 / delivery_proof insert", deliveryCompletedBy: "system", deliveryCompletedAt: "2026-05-13T04:15:00.000Z", billingReady: true, billingReadyAt: "2026-05-13T04:15:00.000Z", billingReadySource: "SOP-DEL-05", billingAccountMatchStatus: "unmatched_fixture", billingAccountMatchSource: "SOP-EXC-03 local verification fixture", vehicleRegistrationCurrent: true, vehicleInsuranceCurrent: true, vehicleRegistrationExpiry: "2027-06-18", vehicleInsuranceExpiry: "2027-06-18", vehicleComplianceCheckedAt: "2026-06-18T00:00:00.000Z", vehicleComplianceCheckedBy: "Admin", vehicleComplianceSource: "vehicle_register_local", vehicleComplianceNote: "Seed vehicle register APP-FLT-001 local check" },
 ];
 
 const seedOrderIds = new Set(seedOrders.map(order => String(order.id)));
@@ -622,6 +660,7 @@ const KEY_AI_DRAFTS = "mc_ai_drafts";
 const KEY_DATA_BREACH_INCIDENTS = "mc_data_breach_incidents";
 const KEY_DATA_USE_RECORDS = "mc_data_use_records";
 const KEY_PRIVACY_REQUESTS = "mc_privacy_requests";
+const KEY_LIVE_OUTBOX = "mc_live_sync_outbox";
 const LOCAL_DEMO_STORAGE_KEYS = [
   KEY_ORDERS,
   KEY_CLIENTS,
@@ -645,6 +684,7 @@ const LOCAL_DEMO_STORAGE_KEYS = [
   KEY_DATA_BREACH_INCIDENTS,
   KEY_DATA_USE_RECORDS,
   KEY_PRIVACY_REQUESTS,
+  KEY_LIVE_OUTBOX,
 ];
 const LOCAL_OTP_EXPIRY_MS = 5 * 60 * 1000;
 const LOCAL_OTP_MAX_ATTEMPTS = 3;
@@ -655,17 +695,129 @@ const AUDIT_HASH_ALGORITHM = "local-fnv1a-v1";
 
 function load(key, fallback) {
   try {
-    const v = sessionStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
+    if (typeof window === "undefined") return fallback;
+    const persistent = window.localStorage?.getItem(key);
+    if (persistent) {
+      const parsed = JSON.parse(persistent);
+      if (Array.isArray(fallback) && !Array.isArray(parsed)) {
+        window.localStorage?.removeItem(key);
+        return fallback;
+      }
+      if (Array.isArray(fallback)) return parsed.filter(row => row && typeof row === "object");
+      return parsed;
+    }
+    const sessionOnly = window.sessionStorage?.getItem(key);
+    if (sessionOnly) {
+      window.localStorage?.setItem(key, sessionOnly);
+      const parsed = JSON.parse(sessionOnly);
+      if (Array.isArray(fallback) && !Array.isArray(parsed)) {
+        window.localStorage?.removeItem(key);
+        window.sessionStorage?.removeItem(key);
+        return fallback;
+      }
+      if (Array.isArray(fallback)) return parsed.filter(row => row && typeof row === "object");
+      return parsed;
+    }
+    return fallback;
   } catch { return fallback; }
 }
+function rows(value) {
+  return Array.isArray(value) ? value.filter(row => row && typeof row === "object") : [];
+}
 function save(key, val) {
-  try { sessionStorage.setItem(key, JSON.stringify(val)); } catch {}
+  try {
+    if (typeof window === "undefined") return;
+    const serialised = JSON.stringify(val);
+    window.localStorage?.setItem(key, serialised);
+    window.sessionStorage?.setItem(key, serialised);
+  } catch {}
 }
 function clearLocalDemoState() {
   try {
-    LOCAL_DEMO_STORAGE_KEYS.forEach(key => sessionStorage.removeItem(key));
+    LOCAL_DEMO_STORAGE_KEYS.forEach(key => {
+      window.localStorage?.removeItem(key);
+      window.sessionStorage?.removeItem(key);
+    });
   } catch {}
+}
+function backupAndClearLocalPortalState() {
+  try {
+    if (typeof window !== "undefined") {
+      const backup = {};
+      LOCAL_DEMO_STORAGE_KEYS.forEach(key => {
+        backup[key] = {
+          local: window.localStorage?.getItem(key) || "",
+          session: window.sessionStorage?.getItem(key) || "",
+        };
+      });
+      window.localStorage?.setItem(`mc_portal_recovery_backup_${Date.now()}`, JSON.stringify(backup));
+    }
+  } catch {}
+  clearLocalDemoState();
+}
+
+class PortalErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { crashed: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { crashed: true, message: error?.message || "" };
+  }
+
+  componentDidCatch(error) {
+    console.error("Moto & Co portal render failed", error);
+    try {
+      const key = "mc_portal_recovery_auto_attempted";
+      if (window.sessionStorage?.getItem(key)) return;
+      window.sessionStorage?.setItem(key, new Date().toISOString());
+      window.setTimeout(async () => {
+        backupAndClearLocalPortalState();
+        try {
+          await signOutLiveRuntime();
+        } catch {}
+        window.location.replace("/login?recovered=1");
+      }, 250);
+    } catch {}
+  }
+
+  render() {
+    if (!this.state.crashed) return this.props.children;
+    return (
+      <div className="login-wrap">
+        <style>{css}</style>
+        <div className="login-card">
+          <div className="login-logo">
+            <img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" />
+            <p>Portal recovery</p>
+          </div>
+          <div className="err" style={{ textAlign: "left" }}>
+            This device has saved portal data that could not be loaded. We are resetting the local device cache and reopening login.
+          </div>
+          {this.state.message && (
+            <div className="card" style={{ fontSize: ".78rem", color: T.mu, wordBreak: "break-word" }}>
+              Recovery detail: {this.state.message}
+            </div>
+          )}
+          <button className="btn b-acc" onClick={() => window.location.reload()}>Reload Portal</button>
+          <button
+            className="btn b-ghost"
+            style={{ marginTop: ".6rem" }}
+            onClick={async () => {
+              backupAndClearLocalPortalState();
+              try {
+                await signOutLiveRuntime();
+              } catch {}
+              window.location.replace("/login");
+            }}
+          >
+            Clear Saved Device Data
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────────────────────────
@@ -801,8 +953,166 @@ function normaliseDeliveryProof(proof, orders = []) {
   };
 }
 
+function deliveryProofForOrder(order, proofs = []) {
+  if (!order) return null;
+  const orderProofIds = [order.proofId, order.deliveryProofId].filter(Boolean).map(String);
+  return (proofs || []).find(proof => {
+    const proofOrderIds = [proof.orderId, ...(Array.isArray(proof.groupOrderIds) ? proof.groupOrderIds : [])].filter(Boolean).map(String);
+    return orderProofIds.includes(String(proof.id || "")) ||
+      proofOrderIds.includes(String(order.id || "")) ||
+      (order.deliveryId && proof.deliveryId === order.deliveryId) ||
+      (order.deliveryStopKey && proof.deliveryStopKey === order.deliveryStopKey);
+  }) || null;
+}
+
+function pdfText(value, fallback = "Not recorded") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function pdfDateTime(value) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return pdfText(value);
+  return date.toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function pdfDate(value) {
+  if (!value) return "Not recorded";
+  return fmtFullDate(isoDate(value));
+}
+
+function pdfFileName(value) {
+  return String(value || "processed-con-note")
+    .replace(/[^a-z0-9-_]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "processed-con-note";
+}
+
+function processedConNoteItemSummary(order, proof) {
+  return proof?.itemSummary ||
+    order?.pickupCountSummary ||
+    order?.pickupItemType ||
+    order?.itemType ||
+    (order?.itemQty ? `Items x ${order.itemQty}` : "Item count recorded at pickup");
+}
+
+function downloadProcessedConNotePdf(order, proof = null, options = {}) {
+  if (!order || typeof window === "undefined") return;
+  const proofRecord = proof || deliveryProofForOrder(order, options.proofs || []);
+  const signatureDataUrl = proofRecord?.signatureUrl || order.sig || "";
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 42;
+  let y = 44;
+
+  const addPageIfNeeded = (height = 24) => {
+    if (y + height < pageHeight - margin) return;
+    doc.addPage();
+    y = margin;
+  };
+  const addRule = () => {
+    addPageIfNeeded(18);
+    doc.setDrawColor(210, 204, 191);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 16;
+  };
+  const addPair = (label, value) => {
+    addPageIfNeeded(38);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(95, 83, 68);
+    doc.text(String(label || "").toUpperCase(), margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    const wrapped = doc.splitTextToSize(pdfText(value), pageWidth - margin * 2);
+    doc.text(wrapped, margin, y + 13);
+    y += 18 + wrapped.length * 12;
+  };
+
+  doc.setProperties({
+    title: `Processed con note ${order.conNote || order.id}`,
+    subject: "Moto & Co Couriers delivery proof",
+    creator: "Moto & Co Couriers Portal",
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(200, 16, 46);
+  doc.text("moto&co couriers", margin, y);
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Processed con note / delivery proof", margin, y + 18);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(95, 83, 68);
+  doc.text(`Generated ${pdfDateTime(new Date().toISOString())}`, pageWidth - margin, y + 18, { align: "right" });
+  y += 42;
+  addRule();
+
+  addPair("Con note", order.conNote || order.id);
+  addPair("Order ID", order.id);
+  addPair("Customer", order.clientName);
+  addPair("Supplier", order.vendor);
+  addPair("Delivery address", order.dropAddress);
+  addPair("Run date", order.actualRunDate || order.runDate || order.date);
+  addPair("Delivered", order.deliveredAt || proofRecord?.deliveredAt || proofRecord?.capturedAt ? pdfDateTime(order.deliveredAt || proofRecord?.deliveredAt || proofRecord?.capturedAt) : "Not recorded");
+  addPair("Driver", order.driverName || proofRecord?.driverName || proofRecord?.driverId);
+  addPair("Vehicle", order.vehicleName);
+  addPair("Items counted at pickup", processedConNoteItemSummary(order, proofRecord));
+  addPair("Charge ex GST", order.price || proofRecord?.price ? `$${Number(order.price || proofRecord?.price || 0).toFixed(2)}` : "Not recorded");
+
+  addRule();
+  addPair("Receiver name", order.recvName || proofRecord?.receiverName);
+  addPair("POD proof ID", order.proofId || proofRecord?.id);
+  addPair("Private storage path", proofStorageLabel(proofRecord || { signaturePath: order.signaturePath, storage: order.storage }));
+  addPair("Retention", proofRecord?.retentionUntil ? `Retain until ${pdfDate(proofRecord.retentionUntil)}` : "Policy #5 - 7 years from delivery date");
+
+  addRule();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(200, 16, 46);
+  doc.text("Receiver signature", margin, y);
+  y += 14;
+  if (String(signatureDataUrl || "").startsWith("data:image/")) {
+    try {
+      addPageIfNeeded(100);
+      const imageType = String(signatureDataUrl).includes("image/jpeg") ? "JPEG" : "PNG";
+      doc.setDrawColor(185, 185, 195);
+      doc.rect(margin, y, pageWidth - margin * 2, 86);
+      doc.addImage(signatureDataUrl, imageType, margin + 12, y + 10, pageWidth - margin * 2 - 24, 62, undefined, "FAST");
+      y += 104;
+    } catch (error) {
+      addPair("Signature image", "Signature image is stored in the private proof record but could not be embedded in this PDF.");
+    }
+  } else {
+    addPair("Signature image", "Signature image is stored in the private proof record or unavailable in this local browser session.");
+  }
+
+  addRule();
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(95, 83, 68);
+  doc.text("This document is generated from the Moto & Co Couriers portal proof record. Receiver name and signature are required before Delivered status can be set.", margin, y);
+
+  const filename = pdfFileName(`${order.conNote || order.id}-${order.clientName || "client"}-POD`);
+  doc.save(`${filename}.pdf`);
+}
+
 function invoiceIsApproved(invoice) {
   return Boolean(invoice?.invoiceApprovedAt || invoice?.invoiceApprovalStatus === "Approved");
+}
+
+function invoiceDispatchIsLocalOnly(invoice) {
+  return Boolean(invoice?.dispatchRecordedAt && invoice?.dispatchChannel === "local_record_only" && invoice?.dispatchExternalStatus === "provider_not_configured");
+}
+
+function invoiceStatusLabel(invoice) {
+  if (!invoice) return "Draft";
+  if (invoice.status === "Sent" && invoiceDispatchIsLocalOnly(invoice)) return "Approved - Not Emailed";
+  return invoice.status || "Draft";
 }
 
 function normaliseInvoice(invoice) {
@@ -829,14 +1139,339 @@ function normaliseInvoice(invoice) {
   };
 }
 
+function invoiceMoneyText(value) {
+  return `$${Number(value || 0).toFixed(2)}`;
+}
+
+function invoiceLineDetail(line, order, proof) {
+  if (line?.lineType === "redelivery_fee") return line.description || "Policy #8 redelivery fee";
+  return line?.description || processedConNoteItemSummary(order, proof);
+}
+
+function invoiceLineDate(line, order, proof, invoice) {
+  return order?.deliveredAt || proof?.deliveredAt || proof?.capturedAt || order?.actualRunDate || order?.date || invoice?.createdAt || "";
+}
+
+function invoiceLineReceiver(order, proof) {
+  return order?.recvName || proof?.receiverName || "Not recorded";
+}
+
+function invoiceCustomerAddress(client, invoice) {
+  return clientDeliveryAddress(client) || invoice?.deliveryAddress || invoice?.address || "Not recorded";
+}
+
+function invoicePdfTitle(invoice) {
+  return invoice?.period ? `EOM Invoice - ${invoicePeriodLabel(invoice.period)}` : `Invoice ${invoice?.id || ""}`.trim();
+}
+
+function downloadInvoicePdf(invoice, options = {}) {
+  if (!invoice || typeof window === "undefined") return;
+  const client = options.client || {};
+  const orders = options.orders || [];
+  const proofs = options.proofs || [];
+  const lines = invoice.lines || [];
+  const subtotal = Number(invoice.subtotal ?? lines.reduce((sum, line) => sum + Number(line.amount || 0), 0));
+  const gst = Number(invoice.gst ?? Math.round(subtotal * 0.1 * 100) / 100);
+  const total = Number(invoice.total ?? subtotal + gst);
+  const issueDate = invoice.createdAt || invoice.invoiceDate || new Date().toISOString();
+  const dueDate = invoice.dueDate || addDays(isoDate(issueDate), 7);
+  const clientName = invoice.clientName || client.name || "Customer account";
+  const billingEmail = invoice.billingEmail || client.billingContact?.email || client.email || "Not recorded";
+  const address = invoiceCustomerAddress(client, invoice);
+  const phone = clientPhone(client) || "Not recorded";
+  const vendors = [...new Set(lines.map(line => line.vendor).filter(Boolean))].join(", ") || (client.vendors || []).join(", ") || "Not recorded";
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 42;
+  let y = 44;
+
+  const addPageIfNeeded = (height = 24) => {
+    if (y + height < pageHeight - margin) return;
+    doc.addPage();
+    y = margin;
+  };
+  const addRule = (gap = 14) => {
+    addPageIfNeeded(gap + 2);
+    doc.setDrawColor(210, 204, 191);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += gap;
+  };
+  const measureMeta = (value, width) => {
+    const wrapped = doc.splitTextToSize(pdfText(value), width);
+    return 15 + wrapped.length * 10;
+  };
+  const addMetaAt = (label, value, x, rowY, width) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(95, 83, 68);
+    doc.text(String(label || "").toUpperCase(), x, rowY);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const wrapped = doc.splitTextToSize(pdfText(value), width);
+    doc.text(wrapped, x, rowY + 13);
+    return 15 + wrapped.length * 10;
+  };
+  const addAmountRow = (label, value, strong = false) => {
+    addPageIfNeeded(20);
+    doc.setFont("helvetica", strong ? "bold" : "normal");
+    doc.setFontSize(strong ? 13 : 9);
+    doc.setTextColor(strong ? 200 : 0, strong ? 16 : 0, strong ? 46 : 0);
+    doc.text(label, margin, y);
+    doc.text(invoiceMoneyText(value), pageWidth - margin, y, { align: "right" });
+    y += strong ? 20 : 16;
+  };
+
+  doc.setProperties({
+    title: `${invoicePdfTitle(invoice)} - ${clientName}`,
+    subject: "Moto & Co Couriers invoice",
+    creator: "Moto & Co Couriers Portal",
+  });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(200, 16, 46);
+  doc.text("moto&co couriers", margin, y);
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Invoice", pageWidth - margin, y, { align: "right" });
+  y += 20;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(95, 83, 68);
+  doc.text("Parts people", margin, y);
+  doc.text(invoice.id || "Invoice ID not recorded", pageWidth - margin, y, { align: "right" });
+  y += 26;
+  addRule();
+
+  const panelX = margin;
+  const panelY = y;
+  const panelWidth = pageWidth - margin * 2;
+  const panelPad = 14;
+  const columnGap = 24;
+  const leftWidth = 250;
+  const rightWidth = panelWidth - panelPad * 2 - leftWidth - columnGap;
+  const leftX = panelX + panelPad;
+  const rightX = leftX + leftWidth + columnGap;
+  const topY = panelY + 22;
+  const clientHeight = measureMeta(clientName, leftWidth);
+  const addressY = topY + clientHeight + 14;
+  const addressHeight = measureMeta(address, leftWidth);
+  const invoiceHeight = measureMeta(invoicePdfTitle(invoice), rightWidth);
+  const emailY = topY + invoiceHeight + 14;
+  const emailHeight = measureMeta(billingEmail, rightWidth);
+  const phoneY = emailY + emailHeight + 14;
+  const phoneHeight = measureMeta(phone, rightWidth);
+  const vendorsY = topY + Math.max(
+    clientHeight + addressHeight + 14,
+    invoiceHeight + emailHeight + phoneHeight + 28
+  ) + 18;
+  const vendorHeight = measureMeta(vendors, panelWidth - panelPad * 2);
+  const panelHeight = Math.max(150, vendorsY - panelY + vendorHeight + 18);
+
+  doc.setFillColor(245, 241, 234);
+  doc.rect(panelX, panelY, panelWidth, panelHeight, "F");
+  addMetaAt("Client", clientName, leftX, topY, leftWidth);
+  addMetaAt("Delivery address", address, leftX, addressY, leftWidth);
+  addMetaAt("Invoice", invoicePdfTitle(invoice), rightX, topY, rightWidth);
+  addMetaAt("Billing email", billingEmail, rightX, emailY, rightWidth);
+  addMetaAt("Phone", phone, rightX, phoneY, rightWidth);
+  addMetaAt("Vendors", vendors, leftX, vendorsY, panelWidth - panelPad * 2);
+  y = panelY + panelHeight + 18;
+
+  addRule();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(95, 83, 68);
+  doc.text("ISSUED", margin, y);
+  doc.text("DUE", margin + 120, y);
+  doc.text("STATUS", margin + 240, y);
+  doc.text("TERMS", margin + 360, y);
+  y += 13;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text(pdfDate(issueDate), margin, y);
+  doc.text(pdfDate(dueDate), margin + 120, y);
+  doc.text(invoiceStatusLabel(invoice), margin + 240, y);
+  doc.text("7 days", margin + 360, y);
+  y += 24;
+
+  addRule();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(200, 16, 46);
+  doc.text("Delivery history", margin, y);
+  y += 20;
+
+  lines.forEach((line, index) => {
+    const order = orders.find(row => row.id === line.orderId);
+    const proof = order ? deliveryProofForOrder(order, proofs) : proofs.find(row => row.id === line.proofId);
+    const conNote = order?.conNote || line.conNote || line.orderId || `Line ${index + 1}`;
+    const supplier = line.vendor || order?.vendor || "Supplier not recorded";
+    const detail = invoiceLineDetail(line, order, proof);
+    const date = invoiceLineDate(line, order, proof, invoice);
+    const receiver = invoiceLineReceiver(order, proof);
+    addPageIfNeeded(62);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${conNote} - ${supplier}`, margin, y);
+    doc.setTextColor(200, 16, 46);
+    doc.text(invoiceMoneyText(line.amount), pageWidth - margin, y, { align: "right" });
+    y += 13;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(95, 83, 68);
+    const source = line.sourceInvoiceId ? `Source ${line.sourceInvoiceId}; ` : "";
+    const detailText = `${pdfDate(date)} - ${source}${detail}`;
+    const wrapped = doc.splitTextToSize(detailText, pageWidth - margin * 2 - 80);
+    doc.text(wrapped, margin, y);
+    y += wrapped.length * 10 + 2;
+    doc.text(`Signed by ${receiver}`, margin, y);
+    y += 15;
+    doc.setDrawColor(230, 224, 214);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 14;
+  });
+
+  addRule(10);
+  addAmountRow("Subtotal ex GST", subtotal);
+  addAmountRow("GST (10%)", gst);
+  addRule(18);
+  addAmountRow("Total inc GST", total, true);
+
+  y += 10;
+  doc.setFillColor(200, 16, 46);
+  doc.rect(margin, y, pageWidth - margin * 2, 36, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Download generated from Moto & Co Couriers billing records. Email this PDF to the client manually.", pageWidth / 2, y + 22, { align: "center" });
+
+  const filename = pdfFileName(`${invoice.id || "invoice"}-${clientName}`);
+  doc.save(`${filename}.pdf`);
+}
+
 function invoiceFinancialPeriod(invoice) {
   return isoDate(invoice?.createdAt || invoice?.sentAt || invoice?.dispatchRecordedAt || invoice?.invoiceDate || invoice?.date || todayBrisbane()).slice(0, 7);
+}
+
+function invoicePeriodLabel(period) {
+  const [year, month] = String(period || "").split("-");
+  if (!year || !month) return period || "Unscheduled";
+  return new Date(`${year}-${month}-01T00:00:00Z`).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function invoiceSortValue(invoice) {
+  return new Date(invoice?.createdAt || invoice?.sentAt || invoice?.dispatchRecordedAt || invoice?.invoiceDate || invoice?.date || 0).getTime() || 0;
+}
+
+function invoiceMoneySum(invoices = [], field = "total") {
+  return (invoices || []).reduce((sum, invoice) => sum + Number(invoice?.[field] || 0), 0);
+}
+
+function buildInvoiceAccountGroups(invoices = [], clients = []) {
+  const clientById = new Map((clients || []).map(client => [client.id, client]));
+  const groups = new Map();
+  for (const invoice of invoices || []) {
+    const client = clientById.get(invoice.clientId) || (clients || []).find(row => row.name === invoice.clientName);
+    const key = client?.id || invoice.clientId || invoice.billingEmail || invoice.clientName || "unmatched-account";
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        client,
+        accountName: client?.name || invoice.clientName || "Unmatched Account",
+        billingEmail: invoice.billingEmail || client?.billingContact?.email || client?.email || "Not recorded",
+        invoices: [],
+      });
+    }
+    const group = groups.get(key);
+    if (!group.billingEmail || group.billingEmail === "Not recorded") {
+      group.billingEmail = invoice.billingEmail || client?.billingContact?.email || client?.email || "Not recorded";
+    }
+    group.invoices.push(invoice);
+  }
+  return Array.from(groups.values())
+    .map(group => {
+      const monthMap = group.invoices.reduce((map, invoice) => {
+        const period = invoiceFinancialPeriod(invoice);
+        if (!map.has(period)) map.set(period, []);
+        map.get(period).push(invoice);
+        return map;
+      }, new Map());
+      const months = Array.from(monthMap.entries())
+        .map(([period, rows]) => {
+          const monthInvoices = rows.slice().sort((a, b) => invoiceSortValue(b) - invoiceSortValue(a));
+          const paidInvoices = monthInvoices.filter(invoice => invoice.status === "Paid");
+          const overdueInvoices = monthInvoices.filter(invoice => invoice.status === "Overdue");
+          const openInvoices = monthInvoices.filter(invoice => invoice.status !== "Paid");
+          return {
+            period,
+            label: invoicePeriodLabel(period),
+            invoices: monthInvoices,
+            invoiceCount: monthInvoices.length,
+            paidCount: paidInvoices.length,
+            overdueCount: overdueInvoices.length,
+            openCount: openInvoices.length,
+            total: invoiceMoneySum(monthInvoices),
+            paidTotal: invoiceMoneySum(paidInvoices),
+            unpaidTotal: invoiceMoneySum(openInvoices),
+            overdueTotal: invoiceMoneySum(overdueInvoices),
+          };
+        })
+        .sort((a, b) => b.period.localeCompare(a.period));
+      const paidInvoices = group.invoices.filter(invoice => invoice.status === "Paid");
+      const overdueInvoices = group.invoices.filter(invoice => invoice.status === "Overdue");
+      const openInvoices = group.invoices.filter(invoice => invoice.status !== "Paid");
+      return {
+        ...group,
+        months,
+        invoiceCount: group.invoices.length,
+        total: invoiceMoneySum(group.invoices),
+        paidTotal: invoiceMoneySum(paidInvoices),
+        unpaidTotal: invoiceMoneySum(openInvoices),
+        overdueTotal: invoiceMoneySum(overdueInvoices),
+      };
+    })
+    .sort((a, b) => a.accountName.localeCompare(b.accountName));
 }
 
 function periodMonthEnd(period) {
   const [year, month] = String(period || todayBrisbane().slice(0, 7)).split("-").map(Number);
   const d = new Date(Date.UTC(year, month, 0));
   return d.toISOString().slice(0, 10);
+}
+
+function monthInvoicePdfRecord(account, month) {
+  const monthEnd = periodMonthEnd(month.period);
+  const lines = (month.invoices || []).flatMap(invoice =>
+    (invoice.lines || []).map(line => ({
+      ...line,
+      sourceInvoiceId: invoice.id,
+      sourceInvoiceStatus: invoice.status,
+    }))
+  );
+  const subtotal = Math.round(invoiceMoneySum(month.invoices, "subtotal") * 100) / 100;
+  const gst = Math.round(invoiceMoneySum(month.invoices, "gst") * 100) / 100;
+  const total = Math.round(invoiceMoneySum(month.invoices, "total") * 100) / 100;
+  return {
+    id: `EOM-${month.period}-${pdfFileName(account.accountName || account.key)}`,
+    clientId: account.client?.id || account.key,
+    clientName: account.accountName,
+    billingEmail: account.billingEmail,
+    status: month.unpaidTotal > 0 ? "Open" : "Paid",
+    period: month.period,
+    createdAt: `${monthEnd}T00:00:00`,
+    dueDate: addDays(monthEnd, 7),
+    subtotal,
+    gst,
+    total,
+    lines,
+    sourceInvoiceIds: (month.invoices || []).map(invoice => invoice.id),
+    invoiceCount: month.invoiceCount,
+  };
 }
 
 function financialReconciliationDueDate(period) {
@@ -1143,6 +1778,57 @@ function normalisePolicy18Dispute(input, defaults = {}) {
 function isPolicy18Dispute(exception) {
   return ["Delivery Dispute", "Billing Dispute"].includes(exception?.type);
 }
+function exceptionIsOpen(exception) {
+  return (exception?.status || "Open") !== "Closed";
+}
+function exceptionKeyValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+function exceptionPrimaryReference(exception) {
+  return exception?.disputedOrderId
+    || exception?.invoiceLineOrderId
+    || exception?.invoiceId
+    || exception?.runDate
+    || exception?.priceRuleId
+    || exception?.supplierId
+    || exception?.orderId
+    || exception?.proofId
+    || exception?.id
+    || "";
+}
+function exceptionDuplicateKey(exception) {
+  const type = exception?.type || "";
+  if (!type) return "";
+  const orderId = exceptionKeyValue(exception.orderId);
+  const invoiceId = exceptionKeyValue(exception.invoiceId || exception.orderId);
+  const disputedOrderId = exceptionKeyValue(exception.disputedOrderId || exception.orderId);
+  const invoiceLineOrderId = exceptionKeyValue(exception.invoiceLineOrderId || exception.disputedOrderId);
+  if (type === "Delivery Dispute") return disputedOrderId ? `delivery-dispute:${disputedOrderId}` : "";
+  if (type === "Billing Dispute") return invoiceId ? `billing-dispute:${invoiceId}:${invoiceLineOrderId || "invoice"}` : "";
+  if (type === "Cancellation Request") return orderId ? `cancellation-request:${orderId}` : "";
+  if (type === "Supplier Setup") return orderId ? `supplier-setup:${orderId}` : "";
+  if (type === "Unmatched Billing Account") return orderId ? `unmatched-billing-account:${orderId}` : "";
+  if (type === "Notification Failure") {
+    const noticeKey = exceptionKeyValue(exception.notificationFailureKey)
+      || exceptionKeyValue(`${exception.noticeTable || ""}:${exception.noticeId || ""}`)
+      || orderId;
+    return noticeKey ? `notification-failure:${noticeKey}` : "";
+  }
+  if (type === "Failed Delivery") return orderId ? `failed-delivery:${orderId}` : "";
+  if (type === "Run Planning Exception") {
+    const runDate = exceptionKeyValue(exception.runDate || exception.orderId);
+    return runDate ? `run-planning:${runDate}` : "";
+  }
+  if (type === "Pricing Master Data Review") {
+    const priceRuleId = exceptionKeyValue(exception.priceRuleId || exception.orderId);
+    return priceRuleId ? `pricing-master-data:${priceRuleId}` : "";
+  }
+  if (type === "Supplier Master Data Review" || type === "Supplier Pickup Standards Review" || type === "WHS Hazard") {
+    const supplierId = exceptionKeyValue(exception.supplierId || exception.supplierName || exception.orderId);
+    return supplierId ? `${exceptionKeyValue(type)}:${supplierId}` : "";
+  }
+  return orderId ? `${exceptionKeyValue(type)}:${orderId}` : "";
+}
 const POLICY18_DELIVERY_FINDINGS = [
   { value: "proof_confirms_completed", label: "Proof confirms delivery completed", remedyType: "none" },
   { value: "delivery_error_no_cost_remedy", label: "Delivery error confirmed - no-cost remedy required", remedyType: "no_cost_delivery_remedy" },
@@ -1395,7 +2081,7 @@ function sequenceRunOrders(orders = []) {
   });
 }
 function runPlanningCompileDueDate(runDate) {
-  return addDays(runDate, -1);
+  return runDate;
 }
 function runPlanningMonitorRows(orders = [], exceptions = [], today = todayBrisbane()) {
   const runDates = [...new Set(
@@ -1407,15 +2093,15 @@ function runPlanningMonitorRows(orders = [], exceptions = [], today = todayBrisb
   return runDates.map(runDate => {
     const runOrders = (orders || []).filter(order => (order.actualRunDate || order.date || order.requestedDate) === runDate && order.status !== "Cancelled");
     const dispatchableOrders = runOrders.filter(order => !["Delivered"].includes(order.status));
-    const unassignedOrders = dispatchableOrders.filter(order => ["Pending", "Brought Forward"].includes(order.status) && !order.driverId);
-    const assignedOrders = dispatchableOrders.filter(order => order.driverId || order.vehicleName || order.runId);
+    const unassignedOrders = dispatchableOrders.filter(order => orderNeedsDriverCreatedRun(order));
+    const assignedOrders = dispatchableOrders.filter(order => !orderNeedsDriverCreatedRun(order) && (order.driverId || order.vehicleName || order.runId));
     const namedAssignmentOrders = assignedOrders.filter(order => order.driverId && order.vehicleName && order.runId);
     const fleetPassOrders = namedAssignmentOrders.filter(order => order.vehicleRegistrationCurrent && order.vehicleInsuranceCurrent);
     const adminInterventionOrders = dispatchableOrders.filter(order => order.dispatchMode === "manual_single_stop_assignment" || order.dispatchMode === "local_run_compiler" || order.runCompiledBy === "Admin");
     const compileDueDate = runPlanningCompileDueDate(runDate);
     const openException = (exceptions || []).find(exception => exception.type === "Run Planning Exception" && exception.orderId === runDate && exception.status !== "Closed");
     const reasons = [];
-    if (today > compileDueDate && unassignedOrders.length > 0) reasons.push(`Night-before compilation overdue for ${unassignedOrders.length} unassigned stop(s)`);
+    if (today >= compileDueDate && unassignedOrders.length > 0) reasons.push(`Driver-created daily run pending for ${unassignedOrders.length} ready stop(s)`);
     if (assignedOrders.length > 0 && namedAssignmentOrders.length < assignedOrders.length) reasons.push("Named driver, named vehicle, or run ID missing on assigned stop(s)");
     if (namedAssignmentOrders.length > 0 && fleetPassOrders.length < namedAssignmentOrders.length) reasons.push("Fleet compliance evidence missing on assigned stop(s)");
     if (dispatchableOrders.length === 0) reasons.push("No dispatchable stops for this run date");
@@ -1441,21 +2127,13 @@ function rateLabel(numerator, denominator) {
 }
 function applyCutoff(requestedDate) {
   const today = todayBrisbane();
-  const schedule = resolveActualRunDate(requestedDate);
-  const afterCutoff = requestedDate === today && brisbaneMinutes() >= (12 * 60 + 30);
   const requestedIsPast = requestedDate < today;
-  const scheduleAdjustmentReason = requestedIsPast
-    ? "requested_date_past"
-    : afterCutoff
-      ? "after_cutoff"
-      : schedule.scheduleAdjusted
-        ? "non_run_day"
-        : "none";
+  const actualRunDate = requestedIsPast ? today : requestedDate;
   return {
-    cutoffApplied: schedule.cutOffApplied,
-    scheduleAdjusted: schedule.scheduleAdjusted,
-    actualRunDate: schedule.actualRunDate,
-    scheduleAdjustmentReason,
+    cutoffApplied: false,
+    scheduleAdjusted: requestedIsPast,
+    actualRunDate,
+    scheduleAdjustmentReason: requestedIsPast ? "requested_date_past" : "driver_created_run",
   };
 }
 function activeSuppliers(suppliers) {
@@ -2049,9 +2727,10 @@ function privacyRequestStatusBadgeClass(status) {
 }
 function runDateAdjustmentLabel(reason) {
   const labels = {
-    after_cutoff: "12:30pm Brisbane cut-off applied",
+    after_cutoff: "Older 12:30pm cut-off rule applied before v2.0 daily-run change",
     requested_date_past: "Requested date was in the past",
-    non_run_day: "Moved to next Tuesday/Thursday run",
+    non_run_day: "Older Tuesday/Thursday auto-schedule rule applied before v2.0 daily-run change",
+    driver_created_run: "Received for driver-created daily run",
   };
   return labels[reason] || "Schedule adjusted";
 }
@@ -2219,10 +2898,43 @@ function priceRuleBand(rule) {
     const max = rule.tyreCountMax || "";
     return max ? `${min}-${max} tyres` : `${min}+ tyres`;
   }
-  if (rule.weightBand === "lt_5kg") return "Less than 5 kg";
-  if (rule.weightBand === "5_to_15kg") return "5 kg to 15 kg";
-  if (rule.weightBand === "gt_15kg") return "More than 15 kg";
+  if (["up_to_5kg", "lt_5kg", "0_to_5kg"].includes(rule.weightBand)) return "Up to 5 kg";
+  if (["5_to_10kg", "5_to_15kg"].includes(rule.weightBand)) return "5 kg to 10 kg";
+  if (["10kg_plus", "10_plus", "gt_15kg"].includes(rule.weightBand)) return "10 kg+";
   return rule.itemType || "Not classified";
+}
+function isInitialStandardPriceRule(rule = {}) {
+  const changeLog = String(rule.changeLogId || rule.change_log_id || "");
+  const source = String(rule.sourceRef || rule.source_ref || "");
+  const approval = String(rule.ownerApprovalRef || rule.owner_approval_ref || "");
+  return !changeLog ||
+    changeLog.includes("policy-9-initial") ||
+    /^00000000-0000-4000-9000-000000000(10[1-9]|110)$/.test(changeLog) ||
+    source.includes("Policy #9") ||
+    approval.toLowerCase().includes("initial approved");
+}
+function currentStandardPriceRule(seed, rule = {}) {
+  return {
+    ...rule,
+    serviceVariant: seed.serviceVariant,
+    label: seed.label,
+    itemType: seed.itemType,
+    tyreCountMin: seed.tyreCountMin,
+    tyreCountMax: seed.tyreCountMax,
+    weightBand: seed.weightBand,
+    rateCents: seed.rateCents,
+    rateMode: seed.rateMode,
+    effectiveFrom: rule.effectiveFrom || seed.effectiveFrom,
+    effectiveTo: rule.effectiveTo,
+    status: rule.status || seed.status,
+    amount: seed.amount,
+    method: seed.method,
+    minQty: seed.minQty,
+    handlingApprovalRequired: seed.handlingApprovalRequired,
+    changeLogId: rule.changeLogId || seed.changeLogId,
+    ownerApprovalRef: rule.ownerApprovalRef || seed.ownerApprovalRef,
+    sourceRef: rule.sourceRef || seed.sourceRef,
+  };
 }
 function normalisePriceRule(rule) {
   const label = String(rule.label || "").toLowerCase();
@@ -2233,16 +2945,25 @@ function normalisePriceRule(rule) {
     "4+ tyres": "price-tyre-4-plus",
     "4 or more tyres": "price-tyre-4-plus",
     "parts <5kg": "price-parts-lt-5",
+    "parts up to 5kg": "price-parts-lt-5",
     "parts 5-15kg": "price-parts-5-15",
+    "parts 5-10kg": "price-parts-5-15",
     "parts 15kg+": "price-parts-gt-15",
+    "parts 10kg+": "price-parts-gt-15",
     "less than 5 kg": "price-parts-lt-5",
+    "up to 5 kg": "price-parts-lt-5",
     "5 kg to 15 kg": "price-parts-5-15",
+    "5 kg to 10 kg": "price-parts-5-15",
     "more than 15 kg": "price-parts-gt-15",
+    "10 kg+": "price-parts-gt-15",
+    "return to supplier (pre-labelled)": "price-return-supplier",
+    "return to supplier": "price-return-supplier",
+    "out-of-zone delivery": "price-out-of-zone",
   };
   const seed = seedPriceRules.find(s => s.id === rule.id || s.id === legacyIdByLabel[label] || s.label.toLowerCase() === label);
-  const merged = seed ? { ...seed, ...rule } : rule;
-  const itemType = merged.itemType || (merged.weightBand || label.includes("parts") ? "parts" : label.includes("redelivery") ? "redelivery" : "tyre");
-  const serviceVariant = merged.serviceVariant || (itemType === "parts" ? "SVC-MCL-001-P" : itemType === "redelivery" ? "REDELIVERY" : "SVC-MCL-001-T");
+  const merged = seed && isInitialStandardPriceRule(rule) ? currentStandardPriceRule(seed, rule) : seed ? { ...seed, ...rule } : rule;
+  const itemType = merged.itemType || (merged.weightBand || label.includes("parts") ? "parts" : label.includes("return") ? "return" : label.includes("zone") || label.includes("surcharge") ? "surcharge" : label.includes("redelivery") ? "redelivery" : "tyre");
+  const serviceVariant = merged.serviceVariant || (itemType === "parts" ? "SVC-MCL-001-P" : itemType === "return" ? "RETURN_SUPPLIER" : itemType === "surcharge" ? "OUT_OF_ZONE" : itemType === "redelivery" ? "REDELIVERY" : "SVC-MCL-001-T");
   const rateCents = priceRuleRateCents(merged);
   return {
     ...merged,
@@ -2836,7 +3557,7 @@ function PendingActivationPortal({ user, suppliers, onLogout }) {
   );
 }
 
-function InvoicePreviewModal({ invoice, client, notices = [], onClose, onRaiseQuery }) {
+function InvoicePreviewModal({ invoice, client, notices = [], onClose, onRaiseQuery, onDownloadPdf }) {
   const lines = invoice?.lines || [];
   const subtotal = Number(invoice?.subtotal ?? lines.reduce((sum, line) => sum + Number(line.amount || 0), 0));
   const gst = Number(invoice?.gst ?? Math.round(subtotal * 0.1 * 100) / 100);
@@ -2857,7 +3578,7 @@ function InvoicePreviewModal({ invoice, client, notices = [], onClose, onRaiseQu
               <div className="card-title">{invoice.clientName || client?.name || "Customer account"}</div>
               <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".25rem" }}>{client?.address || "Delivery address not recorded"}</div>
             </div>
-            <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoice.status}</span>
+            <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoiceStatusLabel(invoice)}</span>
           </div>
           <div className="meta" style={{ marginTop: ".6rem" }}>
             <span>Billing: {invoice.billingEmail || client?.billingContact?.email || client?.email || "Not recorded"}</span>
@@ -2906,7 +3627,7 @@ function InvoicePreviewModal({ invoice, client, notices = [], onClose, onRaiseQu
           )}
           {invoice.dispatchRecordedAt && (
             <div style={{ fontSize: ".82rem", color: T.mu, marginTop: ".6rem" }}>
-              Dispatch record: {invoice.dispatchChannel === "local_record_only" ? "local record only" : invoice.dispatchChannel}; recipient {invoice.dispatchRecipient || invoice.billingEmail}; external status {invoice.dispatchExternalStatus || "not recorded"}; note {invoice.dispatchNote || "not recorded"}.
+              Local invoice dispatch evidence recorded for {invoice.dispatchRecipient || invoice.billingEmail}. No invoice email was sent because production invoice email/PDF delivery is not configured. Note: {invoice.dispatchNote || "not recorded"}.
             </div>
           )}
           {invoiceNotices.map(notice => (
@@ -2917,6 +3638,7 @@ function InvoicePreviewModal({ invoice, client, notices = [], onClose, onRaiseQu
         </div>
 
         <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
+          {onDownloadPdf && <button className="btn b-acc" onClick={() => onDownloadPdf(invoice)}>Download Invoice PDF</button>}
           {onRaiseQuery && <button className="btn b-ghost" onClick={() => onRaiseQuery(invoice)}>Raise Billing Query</button>}
           <button className="btn b-acc" onClick={onClose}>Close Preview</button>
         </div>
@@ -3068,6 +3790,18 @@ function orderRunDate(order) {
   return order?.actualRunDate || order?.runDate || order?.date || order?.requestedDate || "";
 }
 
+function orderMonthKey(order) {
+  const date = orderRunDate(order) || orderReceivedDate(order);
+  return date ? String(date).slice(0, 7) : "unscheduled";
+}
+
+function orderMonthLabel(monthKey) {
+  if (!monthKey || monthKey === "unscheduled") return "Unscheduled";
+  const [year, month] = String(monthKey).split("-");
+  if (!year || !month) return monthKey;
+  return new Date(`${year}-${month}-01T00:00:00Z`).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
 function orderIsOpenForDispatch(order) {
   return DRIVER_PICKUP_READY_STATUSES.has(order?.status || "Pending");
 }
@@ -3119,6 +3853,23 @@ function matchesClientOrder(order, user) {
   return String(order?.clientName || "").toLowerCase() === String(user?.name || user?.businessName || "").toLowerCase();
 }
 
+function clientOperationalNoticeRows(operationalNotices = [], orders = [], user = {}) {
+  const clientOrders = (orders || []).filter(order => matchesClientOrder(order, user));
+  const orderIds = new Set(clientOrders.map(order => String(order.id || "")).filter(Boolean));
+  const clientIds = new Set([user?.id, user?.accountId, user?.clientId, user?.account_actor_id].filter(Boolean).map(String));
+  const clientNames = new Set([user?.name, user?.businessName].map(normaliseMatchText).filter(Boolean));
+
+  return (operationalNotices || [])
+    .filter(notice => {
+      if (notice?.clientId && clientIds.has(String(notice.clientId))) return true;
+      if (notice?.orderId && orderIds.has(String(notice.orderId))) return true;
+      const noticeClientName = normaliseMatchText(notice?.clientName || "");
+      return Boolean(noticeClientName && clientNames.has(noticeClientName));
+    })
+    .slice()
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
 function normaliseIdentityEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -3129,12 +3880,21 @@ function compactIdentityValues(values = []) {
 
 function driverAssignmentFields(driver = {}) {
   const driverId = driver.id || driver.driverRecordId || driver.driverId || driver.assignedDriverId || "";
+  const driverCode = driver.driverCode || driver.assignedDriverCode || driver.actorCode || driver.code || "";
+  const driverActorCode = driver.driverActorCode || driver.driver_actor_code || driver.actorCode || driver.code || "";
+  const driverContactId = driver.driverContactId || driver.driver_contact_id || driver.contactId || "";
   return {
     driverId,
     assignedDriverId: driver.assignedDriverId || driverId,
     driverRecordId: driver.driverRecordId || driverId,
     driverProfileId: driver.profileId || driver.driverProfileId || driver.driver_profile_id || "",
     driverActorId: driver.actorId || driver.driverActorId || driver.actor_id || "",
+    driverCode,
+    assignedDriverCode: driver.assignedDriverCode || driverCode,
+    driverActorCode,
+    driver_actor_code: driverActorCode,
+    driverContactId,
+    driver_contact_id: driverContactId,
     driverEmail: normaliseIdentityEmail(driver.email || driver.driverEmail || driver.loginEmail || ""),
     driverName: driver.name || driver.displayName || driver.driverName || "",
   };
@@ -3167,9 +3927,19 @@ function orderDriverIdentityValues(order = {}) {
     order.driver_profile_id,
     order.driverActorId,
     order.driver_actor_id,
+    order.driverCode,
+    order.assignedDriverCode,
+    order.driverActorCode,
+    order.driver_actor_code,
+    order.driverContactId,
+    order.driver_contact_id,
     order.pickupDriverId,
     order.pickupDriverProfileId,
     order.pickupDriverActorId,
+    order.pickupDriverCode,
+    order.pickupDriverActorCode,
+    order.pickup_driver_actor_code,
+    order.pickupDriverContactId,
   ]);
 }
 
@@ -3177,23 +3947,90 @@ function matchesDriverOrder(order, user) {
   const userIds = new Set(driverUserIdentityValues(user));
   if (orderDriverIdentityValues(order).some(value => userIds.has(value))) return true;
 
-  const orderEmails = [order?.driverEmail, order?.pickupDriverEmail].map(normaliseIdentityEmail).filter(Boolean);
+  const orderEmails = [order?.driverEmail, order?.assignedDriverEmail, order?.pickupDriverEmail].map(normaliseIdentityEmail).filter(Boolean);
   const userEmails = [user?.email, user?.driverEmail, user?.loginEmail].map(normaliseIdentityEmail).filter(Boolean);
   if (orderEmails.some(value => userEmails.includes(value))) return true;
 
-  const orderDriverName = normaliseMatchText(order?.driverName || "");
+  const orderDriverNames = [order?.driverName, order?.assignedDriverName, order?.pickupDriverName].map(normaliseMatchText).filter(Boolean);
   const userNames = [user?.name, user?.displayName, user?.driverName].map(normaliseMatchText).filter(Boolean);
-  return Boolean(orderDriverName && userNames.includes(orderDriverName));
+  return orderDriverNames.some(name => userNames.includes(name));
+}
+
+function driverRunDateValue(order = {}) {
+  return String(order?.actualRunDate || order?.runDate || order?.date || order?.requestedDate || "").slice(0, 10);
+}
+
+function orderVisibilityKey(order = {}) {
+  return order?.id || order?.conNote || `${order?.clientName || "client"}-${order?.vendor || "supplier"}-${order?.dropAddress || "address"}`;
+}
+
+function orderHasCompiledDriverRun(order = {}) {
+  return Boolean(String(order?.runId || order?.runCompiledAt || order?.runCompiledBy || "").trim());
+}
+
+function orderNeedsDriverCreatedRun(order = {}) {
+  return orderIsDriverPickupReady(order) && !orderHasCompiledDriverRun(order);
+}
+
+function clearDriverRunAssignmentFields(order = {}) {
+  return {
+    ...order,
+    driverId: null,
+    assignedDriverId: null,
+    driverRecordId: null,
+    driverProfileId: null,
+    driver_profile_id: null,
+    driverActorId: null,
+    driver_actor_id: null,
+    driverCode: "",
+    assignedDriverCode: "",
+    driverActorCode: "",
+    driver_actor_code: "",
+    driverContactId: null,
+    driver_contact_id: null,
+    driverEmail: "",
+    assignedDriverEmail: "",
+    pickupDriverEmail: "",
+    driverName: null,
+    assignedDriverName: null,
+    pickupDriverName: null,
+    pickupDriverId: null,
+    pickupDriverProfileId: null,
+    pickupDriverActorId: null,
+    pickupDriverCode: "",
+    pickupDriverActorCode: "",
+    pickup_driver_actor_code: "",
+    pickupDriverContactId: null,
+    vehicleId: null,
+    vehicleName: "",
+    runId: null,
+    assignedAt: null,
+    runDate: null,
+    runCompiledAt: null,
+    runCompiledBy: "",
+    runSequence: null,
+    supplierSequence: null,
+    deliveryZone: "",
+    vehicleRegistrationCurrent: false,
+    vehicleInsuranceCurrent: false,
+    vehicleRegistrationExpiry: "",
+    vehicleInsuranceExpiry: "",
+    vehicleComplianceCheckedAt: "",
+    vehicleComplianceCheckedBy: "",
+    vehicleComplianceNote: "",
+    vehicleComplianceSource: "",
+  };
 }
 
 function ExperienceNav({ role, user, tabs, activeTab, onTab, onLogout }) {
+  const roleKey = String(role || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
     <div className="ux-nav">
       <div className="ux-logo">
         <img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" />
         <div className="ux-logo-sub">Parts people</div>
       </div>
-      <div className="ux-tabs">
+      <div className={`ux-tabs ${roleKey}-tabs`}>
         {tabs.map(tab => (
           <button key={tab.key} className={`ux-tab${activeTab === tab.key ? " active" : ""}`} onClick={() => onTab(tab.key)}>
             {tab.label}
@@ -3212,12 +4049,22 @@ function ExperienceNav({ role, user, tabs, activeTab, onTab, onLogout }) {
   );
 }
 
-function ExperienceOrderRow({ order, onCancel, onDispute }) {
+function ExperienceOrderRow({ order, proof, onCancel, onDispute, cancelReviewRequested = false, disputeRequested = false }) {
+  const [confirmAction, setConfirmAction] = useState("");
   const canCancel = onCancel && cancellationState(order).canSelfCancel;
   const canRequestReview = onCancel && cancellationState(order).canRequestAdminReview;
   const deliveredLike = ["Delivered", "Failed Delivery", "No Pickup"].includes(order.status);
+  const canDownloadProof = order.status === "Delivered" && (proof || order.proofId || order.sig);
   const scheduledRun = orderRunDate(order);
   const displayStatus = clientFacingOrderStatus(order);
+  const requestCancelReview = () => {
+    onCancel(order, "Client cancellation review requested");
+    setConfirmAction("");
+  };
+  const requestDispute = () => {
+    onDispute(order);
+    setConfirmAction("");
+  };
   return (
     <div className="ux-order-row">
       <div className="ux-order-id">{orderDisplayId(order)}</div>
@@ -3235,15 +4082,35 @@ function ExperienceOrderRow({ order, onCancel, onDispute }) {
         <span className={`ux-badge ${statusBadgeClass(displayStatus)}`}>{displayStatus}</span>
         <span className="ux-muted" style={{ fontSize: ".74rem" }}>{orderSubmittedLabel(order)}</span>
         {canCancel && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client self-service before Policy #14 cut-off")}>Cancel</button>}
-        {canRequestReview && <button className="ux-btn secondary" onClick={() => onCancel(order, "Client cancellation review requested")}>Review</button>}
-        {deliveredLike && onDispute && <button className="ux-btn secondary" onClick={() => onDispute(order)}>Dispute</button>}
+        {canRequestReview && (cancelReviewRequested
+          ? <button className="ux-btn success" type="button">Cancel Review Sent</button>
+          : <button className="ux-btn secondary" onClick={() => setConfirmAction("cancel_review")}>Request Cancel Review</button>)}
+        {canDownloadProof && <button className="ux-btn secondary" onClick={() => downloadProcessedConNotePdf(order, proof)}>Download POD</button>}
+        {deliveredLike && onDispute && (disputeRequested
+          ? <button className="ux-btn success" type="button">Dispute Sent</button>
+          : <button className="ux-btn secondary" onClick={() => setConfirmAction("dispute")}>Dispute</button>)}
       </div>
+      {confirmAction && (
+        <div className="ux-order-confirm">
+          <p>
+            {confirmAction === "cancel_review"
+              ? "Send this order to Admin for cancellation review? The order will not be cancelled automatically."
+              : "Send this delivery dispute to Admin? Admin will investigate the delivery proof and order record."}
+          </p>
+          <div className="ux-order-confirm-actions">
+            <button className="ux-btn primary" type="button" onClick={confirmAction === "cancel_review" ? requestCancelReview : requestDispute}>
+              {confirmAction === "cancel_review" ? "Send Review Request" : "Send Dispute"}
+            </button>
+            <button className="ux-btn secondary" type="button" onClick={() => setConfirmAction("")}>Keep Order As Is</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNotices, operationalNotices = [], proofs = [], exceptions = [], initialView = "dashboard", startNewPickup = false, onNewOrder, onCancelOrder, onCancellationRequest, onDispute, onBillingDispute, onSupplierSetupRequest, onUpdateClient, onLogout }) {
-  const firstTab = startNewPickup ? "new" : "dashboard";
+  const firstTab = startNewPickup ? "new" : ["orders", "tracking"].includes(initialView) ? "orders" : "dashboard";
   const [tab, setTab] = useState(firstTab);
   const [conNote, setConNote] = useState("");
   const [vendor, setVendor] = useState("");
@@ -3252,6 +4119,11 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
   const [submittedTime, setSubmittedTime] = useState(() => new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }));
   const [notes, setNotes] = useState("");
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderMonthFilter, setOrderMonthFilter] = useState("all");
+  const [visibleOrderLimit, setVisibleOrderLimit] = useState(30);
   const [supplierRequestNames, setSupplierRequestNames] = useState([]);
   const [supplierRequestNote, setSupplierRequestNote] = useState("");
   const [profileDraft, setProfileDraft] = useState(() => ({
@@ -3265,6 +4137,7 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
   const activeSupplierList = activeSuppliers(suppliers);
   const linkedSuppliers = activeSupplierList.filter(supplier => (user.vendors || []).includes(supplier.name));
   const clientOrders = orders.filter(order => matchesClientOrder(order, user)).slice().sort((a, b) => String(b.submittedAt || b.createdAt || b.date || "").localeCompare(String(a.submittedAt || a.createdAt || a.date || "")));
+  const myOperationalNotices = clientOperationalNoticeRows(operationalNotices, orders, user);
   const accountStatus = user.status || "Active";
   const canRequest = accountStatus === "Active" && (user.courierEligible ?? true);
   const total = clientOrders.length;
@@ -3272,11 +4145,20 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
   const enRoute = clientOrders.filter(order => ["En Route", "Picked Up"].includes(order.status)).length;
   const delivered = clientOrders.filter(order => order.status === "Delivered").length;
   const deliveryAddress = clientDeliveryAddress(user);
+  const orderMonthOptions = [...new Set(clientOrders.map(orderMonthKey))].sort((a, b) => {
+    if (a === "unscheduled") return 1;
+    if (b === "unscheduled") return -1;
+    return b.localeCompare(a);
+  });
 
   useEffect(() => {
     if (startNewPickup) setTab("new");
-    else if (initialView === "tracking" || initialView === "orders") setTab("dashboard");
+    else if (initialView === "tracking" || initialView === "orders") setTab("orders");
   }, [startNewPickup, initialView, user.id]);
+
+  useEffect(() => {
+    setVisibleOrderLimit(30);
+  }, [orderSearch, orderStatusFilter, orderMonthFilter, user.id]);
 
   function resetOrderForm() {
     setConNote("");
@@ -3286,16 +4168,17 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
     setSubmittedTime(new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }));
     setNotes("");
     setErr("");
+    setNotice("");
   }
 
   function submitOrder() {
     const cleanConNote = conNote.trim();
-    if (!canRequest) { setErr(`Account ${accountStatus}. New pickup requests are not available.`); return; }
-    if (!cleanConNote) { setErr("Con Note Number is required."); return; }
-    if (!/^[a-z0-9][a-z0-9 _/-]{2,}$/i.test(cleanConNote)) { setErr("Con Note Number needs at least three letters or numbers."); return; }
-    if (!vendor) { setErr("Select one of your approved vendors."); return; }
+    if (!canRequest) { setErr(`Account ${accountStatus}. New pickup requests are not available.`); setNotice(""); return; }
+    if (!cleanConNote) { setErr("Con Note Number is required."); setNotice(""); return; }
+    if (!/^[a-z0-9][a-z0-9 _/-]{2,}$/i.test(cleanConNote)) { setErr("Con Note Number needs at least three letters or numbers."); setNotice(""); return; }
+    if (!vendor) { setErr("Select one of your approved vendors."); setNotice(""); return; }
     const supplier = supplierByName(linkedSuppliers, vendor);
-    if (!supplier) { setErr("That vendor is not linked to this customer profile. Update Vendors or contact Admin."); return; }
+    if (!supplier) { setErr("That vendor is not linked to this customer profile. Update Vendors or contact Admin."); setNotice(""); return; }
     const schedule = applyCutoff(requestedDate);
     onNewOrder({
       id: uid(),
@@ -3324,6 +4207,7 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
       sig: "",
     });
     resetOrderForm();
+    setNotice(`Pickup request received for ${cleanConNote}.`);
     setTab("orders");
   }
 
@@ -3332,14 +4216,87 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
     if (state.canSelfCancel) {
       onCancelOrder(order, reason);
       setErr("");
+      setNotice(`${order.conNote || order.id} has been cancelled.`);
       return;
     }
     if (state.canRequestAdminReview) {
+      if (orderHasCancellationReview(order)) {
+        setErr("");
+        setNotice(`Cancellation review is already recorded for ${order.conNote || order.id}.`);
+        return;
+      }
       onCancellationRequest(order, reason);
       setErr("");
+      setNotice(`Cancellation review requested for ${order.conNote || order.id}. Admin will review it.`);
       return;
     }
     setErr(state.reason);
+    setNotice("");
+  }
+
+  function orderHasCancellationReview(order) {
+    return (exceptions || []).some(item =>
+      item.type === "Cancellation Request" &&
+      String(item.orderId || "") === String(order.id || "")
+    ) || (operationalNotices || []).some(notice =>
+      notice.noticeType === "cancellation_requested" &&
+      String(notice.orderId || "") === String(order.id || "")
+    );
+  }
+
+  function orderHasDeliveryDispute(order) {
+    return (exceptions || []).some(item =>
+      item.type === "Delivery Dispute" &&
+      [item.orderId, item.disputedOrderId].some(value => String(value || "") === String(order.id || ""))
+    ) || (operationalNotices || []).some(notice =>
+      notice.noticeType === "dispute_received" &&
+      String(notice.orderId || "") === String(order.id || "")
+    );
+  }
+
+  function orderMatchesStatusFilter(order) {
+    if (orderStatusFilter === "all") return true;
+    if (orderStatusFilter === "scheduled") return ["Pending", "Submitted", "Scheduled", "Cut-off Adjusted", "Brought Forward"].includes(order.status || "Pending") || clientFacingOrderStatus(order).includes("Received");
+    if (orderStatusFilter === "enroute") return ["En Route", "Picked Up"].includes(order.status);
+    if (orderStatusFilter === "delivered") return order.status === "Delivered";
+    if (orderStatusFilter === "disputed") return orderHasDeliveryDispute(order);
+    return true;
+  }
+
+  const orderSearchText = orderSearch.trim().toLowerCase();
+  const filteredClientOrders = clientOrders.filter(order => {
+    const monthOk = orderMonthFilter === "all" || orderMonthKey(order) === orderMonthFilter;
+    const statusOk = orderMatchesStatusFilter(order);
+    const searchOk = !orderSearchText || [
+      order.id,
+      order.conNote,
+      order.vendor,
+      order.status,
+      clientFacingOrderStatus(order),
+      order.dropAddress,
+      order.notes,
+      orderRunDate(order),
+      orderReceivedDate(order),
+    ].some(value => String(value || "").toLowerCase().includes(orderSearchText));
+    return monthOk && statusOk && searchOk;
+  });
+  const visibleClientOrders = filteredClientOrders.slice(0, visibleOrderLimit);
+  const groupedVisibleOrders = visibleClientOrders.reduce((groups, order) => {
+    const key = orderMonthKey(order);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(order);
+    return groups;
+  }, new Map());
+
+  function requestDeliveryDispute(order) {
+    if (orderHasDeliveryDispute(order)) {
+      setErr("");
+      setNotice(`Dispute is already recorded for ${order.conNote || order.id}.`);
+      return;
+    }
+    onDispute(order);
+    setErr("");
+    setNotice(`Dispute sent for ${order.conNote || order.id}. Admin will investigate it.`);
   }
 
   function toggleSupplierRequest(name) {
@@ -3348,11 +4305,12 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
 
   function submitSupplierRequest() {
     const note = supplierRequestNote.trim();
-    if (supplierRequestNames.length === 0 && !note) { setErr("Select a supplier or add a note for Admin."); return; }
+    if (supplierRequestNames.length === 0 && !note) { setErr("Select a supplier or add a note for Admin."); setNotice(""); return; }
     onSupplierSetupRequest(user, { supplierNames: supplierRequestNames, note });
     setSupplierRequestNames([]);
     setSupplierRequestNote("");
     setErr("");
+    setNotice("Supplier setup request sent to Admin.");
   }
 
   function saveProfile() {
@@ -3368,11 +4326,13 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
       auditDetail: `${clientBusinessName(user)} profile updated from client portal`,
     });
     setErr("");
+    setNotice("Profile saved.");
   }
 
   const tabs = [
     { key: "dashboard", label: "Dashboard" },
     { key: "orders", label: "My Orders" },
+    { key: "updates", label: `Updates (${myOperationalNotices.length})` },
     { key: "new", label: "New Order" },
     { key: "vendors", label: "Vendors" },
     { key: "profile", label: "Profile" },
@@ -3384,9 +4344,10 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
 
   return (
     <div className="ux-shell">
-      <ExperienceNav role="CLIENT" user={user} tabs={tabs} activeTab={tab} onTab={next => { setTab(next); setErr(""); }} onLogout={onLogout} />
+      <ExperienceNav role="CLIENT" user={user} tabs={tabs} activeTab={tab} onTab={next => { setTab(next); setErr(""); setNotice(""); }} onLogout={onLogout} />
       <main className="ux-main">
         {err && <div className="ux-alert">{err}</div>}
+        {notice && <div className="ux-notice">{notice}</div>}
 
         {tab === "dashboard" && (
           <>
@@ -3398,9 +4359,9 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
               <button className="ux-btn primary" onClick={() => setTab("new")}>+ Place Order</button>
             </div>
             <div className="ux-card tint">
-              <div className="ux-section-title">Structured Freight Days</div>
-              <div style={{ fontSize: ".82rem", fontWeight: 900, textTransform: "uppercase" }}>{"Order Mon -> Delivered Tue   Order Wed -> Delivered Thu"}</div>
-              <div className="ux-muted" style={{ fontSize: ".78rem", marginTop: ".7rem" }}>Place orders before 12:30pm Brisbane time for the same-day dispatch cycle.</div>
+              <div className="ux-section-title">Daily Run Planning</div>
+              <div style={{ fontSize: ".82rem", fontWeight: 900, textTransform: "uppercase" }}>{"Supplier con notes received -> Driver creates daily run -> Pickup counted at depot"}</div>
+              <div className="ux-muted" style={{ fontSize: ".78rem", marginTop: ".7rem" }}>Submit pickup details as soon as your supplier confirms the goods. The driver builds the day&apos;s run from ready con notes and depot-ready packages.</div>
             </div>
             <div className="ux-stats">
               <div className="ux-stat"><strong>{total}</strong><span>Total Orders</span></div>
@@ -3415,6 +4376,28 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
               ) : (
                 <div className="ux-order-list">
                   {clientOrders.slice(0, 5).map(order => <ExperienceOrderRow key={order.id} order={order} />)}
+                </div>
+              )}
+            </div>
+            <div className="ux-card">
+              <div className="ux-section-title">Recent Updates</div>
+              {myOperationalNotices.length === 0 ? (
+                <div className="ux-empty">No driver or Admin updates recorded for this account yet.</div>
+              ) : (
+                <div className="ux-order-list">
+                  {myOperationalNotices.slice(0, 4).map(update => (
+                    <div className="ux-order-row" key={update.id}>
+                      <div className="ux-order-id">{update.orderId || "Acct"}</div>
+                      <div>
+                        <div className="ux-order-title">{update.subject || operationalNoticeLabel(update.noticeType)}</div>
+                        <div className="ux-order-meta">{update.message || "Update recorded."}</div>
+                        <div className="ux-order-meta" style={{ marginTop: ".2rem" }}>{fmtFullDate(isoDate(update.createdAt))}</div>
+                      </div>
+                      <div className="ux-order-actions">
+                        <span className="ux-badge">{operationalNoticeLabel(update.noticeType)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -3471,11 +4454,112 @@ function ClientExperiencePortal({ user, orders, suppliers, invoices, billingNoti
                 <div className="ux-subtitle">{clientOrders.length} total orders</div>
               </div>
             </div>
+            <div className="ux-card tint" style={{ padding: ".9rem 1rem" }}>
+              <div className="ux-section-title">Order Buttons</div>
+              <div className="ux-muted" style={{ fontSize: ".78rem", lineHeight: 1.6 }}>
+                <strong>Cancel</strong> cancels an order before the cut-off. <strong>Request Cancel Review</strong> asks Admin to review a post-cut-off cancellation and does not cancel the order automatically. <strong>Download POD</strong> saves delivered proof. <strong>Dispute</strong> asks Admin to investigate a delivered, failed, or no-pickup order. Green buttons mean the request has already been sent.
+              </div>
+            </div>
+            <div className="ux-filter-panel">
+              <div className="ux-filter-grid">
+                <div className="ux-field">
+                  <label>Search Orders</label>
+                  <input value={orderSearch} onChange={e => setOrderSearch(e.target.value)} placeholder="Con note, supplier, order ID, address, status..." />
+                </div>
+                <div className="ux-field">
+                  <label>Status</label>
+                  <select value={orderStatusFilter} onChange={e => setOrderStatusFilter(e.target.value)}>
+                    <option value="all">All statuses</option>
+                    <option value="scheduled">Scheduled / Pending</option>
+                    <option value="enroute">En Route</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="disputed">Disputed</option>
+                  </select>
+                </div>
+                <div className="ux-field">
+                  <label>Month</label>
+                  <select value={orderMonthFilter} onChange={e => setOrderMonthFilter(e.target.value)}>
+                    <option value="all">All months</option>
+                    {orderMonthOptions.map(month => <option key={month} value={month}>{orderMonthLabel(month)}</option>)}
+                  </select>
+                </div>
+                <button className="ux-btn secondary" type="button" onClick={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderMonthFilter("all"); }}>Clear</button>
+              </div>
+              <div className="ux-muted" style={{ fontSize: ".74rem", marginTop: ".7rem" }}>
+                Showing {Math.min(visibleClientOrders.length, filteredClientOrders.length)} of {filteredClientOrders.length} matching order{filteredClientOrders.length === 1 ? "" : "s"}. Orders remain live records; this page groups them by run month.
+              </div>
+            </div>
             {clientOrders.length === 0 ? (
               <div className="ux-card"><div className="ux-empty">No orders yet - place your first one!</div></div>
+            ) : filteredClientOrders.length === 0 ? (
+              <div className="ux-card"><div className="ux-empty">No orders match those filters.</div></div>
+            ) : (
+              <>
+                {Array.from(groupedVisibleOrders.entries()).map(([month, monthOrders]) => (
+                  <div className="ux-month-group" key={month}>
+                    <div className="ux-month-head">
+                      <span>{orderMonthLabel(month)}</span>
+                      <span className="ux-month-count">{monthOrders.length} shown</span>
+                    </div>
+                    <div className="ux-order-list">
+                      {monthOrders.map(order => (
+                        <ExperienceOrderRow
+                          key={order.id}
+                          order={order}
+                          proof={deliveryProofForOrder(order, proofs)}
+                          onCancel={cancelOrRequest}
+                          onDispute={requestDeliveryDispute}
+                          cancelReviewRequested={orderHasCancellationReview(order)}
+                          disputeRequested={orderHasDeliveryDispute(order)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {filteredClientOrders.length > visibleClientOrders.length && (
+                  <button className="ux-btn secondary full" style={{ marginTop: "1rem" }} onClick={() => setVisibleOrderLimit(limit => limit + 30)}>
+                    Load 30 More
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {tab === "updates" && (
+          <>
+            <div className="ux-heading">
+              <div>
+                <div className="ux-title">Account <span>Updates</span></div>
+                <div className="ux-subtitle">Driver and Admin status records for this workshop</div>
+              </div>
+            </div>
+            <div className="ux-card tint" style={{ padding: ".9rem 1rem" }}>
+              <div className="ux-section-title">Update Delivery</div>
+              <div className="ux-muted" style={{ fontSize: ".78rem", lineHeight: 1.6 }}>
+                These are local portal records for the operational contact. External email or SMS delivery remains separate until the notification provider is configured.
+              </div>
+            </div>
+            {myOperationalNotices.length === 0 ? (
+              <div className="ux-card"><div className="ux-empty">No operational updates recorded for this account yet.</div></div>
             ) : (
               <div className="ux-order-list">
-                {clientOrders.map(order => <ExperienceOrderRow key={order.id} order={order} onCancel={cancelOrRequest} onDispute={onDispute} />)}
+                {myOperationalNotices.map(update => (
+                  <div className="ux-order-row" key={update.id}>
+                    <div className="ux-order-id">{update.orderId || "Acct"}</div>
+                    <div>
+                      <div className="ux-order-title">{update.subject || operationalNoticeLabel(update.noticeType)}</div>
+                      <div className="ux-order-meta">{update.message || "Update recorded."}</div>
+                      <div className="ux-order-meta" style={{ marginTop: ".2rem" }}>
+                        {fmtFullDate(isoDate(update.createdAt))} {update.externalDeliveryStatus && <span> - {update.externalDeliveryStatus}</span>}
+                      </div>
+                    </div>
+                    <div className="ux-order-actions">
+                      <span className="ux-badge">{operationalNoticeLabel(update.noticeType)}</span>
+                      {update.orderId && <button className="ux-btn secondary" onClick={() => { setOrderSearch(update.orderId); setTab("orders"); }}>View Order</button>}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>
@@ -3544,14 +4628,14 @@ function fallbackDeliveryPrices(priceRules = []) {
   const rules = activePriceRules(priceRules);
   const partRules = rules.filter(rule => String(rule.itemType || rule.label || "").toLowerCase().includes("part"));
   const findPart = (tokens, fallback) => {
-    const rule = partRules.find(item => tokens.some(token => String(item.label || item.weightBand || "").toLowerCase().includes(token)));
+    const rule = partRules.find(item => tokens.some(token => String(`${item.label || ""} ${item.weightBand || ""}`).toLowerCase().includes(token)));
     return rule ? priceRuleDollars(rule) : fallback;
   };
   const returnRule = rules.find(rule => String(rule.itemType || rule.label || "").toLowerCase().includes("return"));
   return {
-    part5: findPart(["up to 5", "0_to_5", "0-5", "5kg"], 15.60),
-    part10: findPart(["5_to_10", "5-10", "10kg"], 19.20),
-    partHeavy: findPart(["10_plus", "10+", "heavy"], 22.80),
+    part5: findPart(["up_to_5", "up to 5", "lt_5", "0_to_5", "0-5", "5kg"], 17.20),
+    part10: findPart(["5_to_10", "5-10", "5 kg to 10", "5_to_15"], 21.00),
+    partHeavy: findPart(["10kg_plus", "10_plus", "10+", "10 kg+", "heavy", "gt_15"], 25.00),
     returns: returnRule ? priceRuleDollars(returnRule) : 6,
   };
 }
@@ -3569,10 +4653,10 @@ function tyreChargeFor(qty, priceRules = []) {
     const amount = priceRuleIsPerItem(exactRule) ? priceRuleDollars(exactRule) * count : priceRuleDollars(exactRule);
     return { amount, label: `${count} Tyres (${exactRule.label || "rate"})`, rule: exactRule };
   }
-  if (count === 1) return { amount: 16.80, label: "1 Tyre" };
-  if (count === 2) return { amount: 21.60, label: "2 Tyres" };
-  if (count === 3) return { amount: 30.00, label: "3 Tyres" };
-  return { amount: count * 11.20, label: `${count} Tyres (4+ rate)` };
+  if (count === 1) return { amount: 18.50, label: "1 Tyre" };
+  if (count === 2) return { amount: 24.00, label: "2 Tyres" };
+  if (count === 3) return { amount: 33.00, label: "3 Tyres" };
+  return { amount: count * 12.30, label: `${count} Tyres (4+ rate)` };
 }
 
 function QuantityStepper({ value, onChange }) {
@@ -3604,8 +4688,8 @@ function pickupCountsForOrder(order = {}) {
   if (!hasStructuredCounts && legacyQty > 0) {
     if (legacyText.includes("tyre")) counts.tyreQty = legacyQty;
     else if (legacyText.includes("return")) counts.returnQty = legacyQty;
-    else if (legacyText.includes("10+") || legacyText.includes("10_plus") || legacyText.includes("heavy")) counts.partHeavy = legacyQty;
-    else if (legacyText.includes("5-10") || legacyText.includes("5_to_10")) counts.part10 = legacyQty;
+    else if (legacyText.includes("10+") || legacyText.includes("10_plus") || legacyText.includes("10kg_plus") || legacyText.includes("gt_15") || legacyText.includes("heavy")) counts.partHeavy = legacyQty;
+    else if (legacyText.includes("5-10") || legacyText.includes("5_to_10") || legacyText.includes("5_to_15")) counts.part10 = legacyQty;
     else counts.part5 = legacyQty;
   }
   return counts;
@@ -3661,12 +4745,12 @@ function PickupItemCounter({ counts, priceRules, onChange, onFinalise, onCancel,
       )}
       <div className="ux-section-title" style={{ marginTop: "1rem" }}>Parts Consignments</div>
       {[
-        ["part5", "Up to 5kg", breakdown.priceFallbacks.part5],
-        ["part10", "5-10kg", breakdown.priceFallbacks.part10],
-        ["partHeavy", "10kg+", breakdown.priceFallbacks.partHeavy],
-      ].map(([key, label, amount]) => (
+        ["part5", "Up to 5kg", breakdown.priceFallbacks.part5, "per consignment"],
+        ["part10", "5-10kg", breakdown.priceFallbacks.part10, "per consignment"],
+        ["partHeavy", "10kg+", breakdown.priceFallbacks.partHeavy, "from - handling approval required"],
+      ].map(([key, label, amount, note]) => (
         <div className="ux-line" key={key}>
-          <div><strong>{label}</strong><div className="ux-order-meta">${Number(amount).toFixed(2)} per consignment</div></div>
+          <div><strong>{label}</strong><div className="ux-order-meta">${Number(amount).toFixed(2)} {note}</div></div>
           <QuantityStepper value={breakdown.counts[key]} onChange={value => update(key, value)} />
           {Number(breakdown.counts[key]) > 0 && <strong style={{ color: "#c8102e" }}>${(Number(breakdown.counts[key]) * Number(amount)).toFixed(2)}</strong>}
         </div>
@@ -3712,7 +4796,7 @@ function PickupSummary({ order, priceRules, compact = false }) {
 function pickupWeightBandForCounts(counts = {}) {
   if (Number(counts.partHeavy || 0) > 0) return "10kg_plus";
   if (Number(counts.part10 || 0) > 0) return "5_to_10kg";
-  if (Number(counts.part5 || 0) > 0) return "lt_5kg";
+  if (Number(counts.part5 || 0) > 0) return "up_to_5kg";
   return "";
 }
 
@@ -3770,7 +4854,7 @@ function orderWithPickupBreakdown(order, breakdown, user = {}) {
   };
 }
 
-function DriverRunCard({ order, suppliers, priceRules, enroute = false, pickupActive = false, pickupDraft, onStartPickup, onPickupDraftChange, onFinalisePickup, onCancelPickup }) {
+function DriverRunCard({ order, suppliers, priceRules, enroute = false, pickupActive = false, pickupDraft, onStartPickup, onPickupDraftChange, onFinalisePickup, onCancelPickup, onNoPickup, onFailedDelivery }) {
   const supplier = supplierByName(suppliers, order.vendor);
   const pickupPhone = supplier?.phone || order.supplierPhone || "";
   const deliveryPhone = order.deliveryPhone || order.clientPhone || order.receiverPhone || "";
@@ -3798,7 +4882,14 @@ function DriverRunCard({ order, suppliers, priceRules, enroute = false, pickupAc
         )}
       </div>
       {enroute ? (
-        <PickupSummary order={order} priceRules={priceRules} compact />
+        <>
+          <PickupSummary order={order} priceRules={priceRules} compact />
+          {onFailedDelivery && (
+            <button className="ux-btn secondary" style={{ marginTop: ".75rem" }} onClick={() => onFailedDelivery(order)}>
+              Record Failed Delivery
+            </button>
+          )}
+        </>
       ) : pickupActive ? (
         <PickupItemCounter
           counts={pickupDraft}
@@ -3808,13 +4899,16 @@ function DriverRunCard({ order, suppliers, priceRules, enroute = false, pickupAc
           onCancel={onCancelPickup}
         />
       ) : (
-        <button className="ux-btn primary" style={{ marginTop: ".85rem" }} onClick={() => onStartPickup(order)}>Pick Up</button>
+        <div style={{ display: "grid", gridTemplateColumns: onNoPickup ? "1fr 1fr" : "1fr", gap: ".6rem", marginTop: ".85rem" }}>
+          <button className="ux-btn primary" onClick={() => onStartPickup(order)}>Pick Up</button>
+          {onNoPickup && <button className="ux-btn secondary" onClick={() => onNoPickup(order)}>No Pickup</button>}
+        </div>
       )}
     </div>
   );
 }
 
-function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exceptions, runClosures, onUpdateOrder, onUpdateOrders, onDeliveryProof, onException, onRunClose, onLogout }) {
+function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exceptions, runClosures, syncQueue = [], onRetrySync, onUpdateOrder, onUpdateOrders, onCreateDriverPickup, onDeliveryProof, onException, onRunClose, onLogout }) {
   const [tab, setTab] = useState("run");
   const [query, setQuery] = useState("");
   const [vendorFilter, setVendorFilter] = useState("");
@@ -3823,34 +4917,47 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const [pickupDrafts, setPickupDrafts] = useState({});
   const [activeBringForwardId, setActiveBringForwardId] = useState("");
   const [bringForwardDrafts, setBringForwardDrafts] = useState({});
+  const [activeDepotSupplier, setActiveDepotSupplier] = useState("");
+  const [depotDrafts, setDepotDrafts] = useState({});
+  const [outcomeTarget, setOutcomeTarget] = useState(null);
+  const [outcomeDraft, setOutcomeDraft] = useState({ type: "", reason: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10 });
   const [editingSignoffItems, setEditingSignoffItems] = useState(false);
   const [receiverName, setReceiverName] = useState("");
   const [sig, setSig] = useState(null);
   const [notice, setNotice] = useState("");
+  const pendingSyncCount = Array.isArray(syncQueue) ? syncQueue.length : 0;
 
   const today = todayBrisbane();
   const driverVisibleOpenOrders = orders.filter(order => !["Delivered", "Cancelled", "Failed Delivery", "No Pickup"].includes(order.status || "Pending"));
   const assignedOrders = driverVisibleOpenOrders.filter(order => matchesDriverOrder(order, user));
   const driverPickupCandidates = driverVisibleOpenOrders.filter(order =>
-    orderIsDriverPickupReady(order) && (matchesDriverOrder(order, user) || !order.driverId)
+    orderIsDriverPickupReady(order) && (matchesDriverOrder(order, user) || orderNeedsDriverCreatedRun(order))
   );
-  const todayAssignedOrders = assignedOrders.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
-  const todayPickupCandidates = driverPickupCandidates.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
+  const todayAssignedOrders = assignedOrders.filter(order => driverRunDateValue(order) === today);
+  const todayPickupCandidates = driverPickupCandidates.filter(order => driverRunDateValue(order) === today);
   const todayOrders = [...new Map([...todayAssignedOrders, ...todayPickupCandidates].map(order => [order.id || order.conNote, order])).values()];
   const runOrders = todayOrders.slice().sort((a, b) => Number(a.runSequence || 9999) - Number(b.runSequence || 9999) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id).localeCompare(String(b.id)));
-  const unassignedDispatchable = orders.filter(order => orderIsDriverPickupReady(order) && !order.driverId);
-  const unassignedToday = unassignedDispatchable.filter(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10) === today);
+  const dailyRunReadyOrders = driverPickupCandidates.filter(order => {
+    const runDate = driverRunDateValue(order);
+    return !runDate || runDate <= today;
+  });
+  const runOrderKeys = new Set(runOrders.map(orderVisibilityKey));
+  const readyConNoteOrders = dailyRunReadyOrders
+    .filter(order => !runOrderKeys.has(orderVisibilityKey(order)))
+    .sort((a, b) => driverRunDateValue(a).localeCompare(driverRunDateValue(b)) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id || "").localeCompare(String(b.id || "")));
+  const unassignedDispatchable = driverVisibleOpenOrders.filter(order => orderNeedsDriverCreatedRun(order));
+  const unassignedToday = unassignedDispatchable.filter(order => driverRunDateValue(order) === today);
   const nextUnassignedRunDate = unassignedDispatchable
-    .map(order => (order.actualRunDate || order.runDate || order.date || "").slice(0, 10))
+    .map(driverRunDateValue)
     .filter(Boolean)
     .sort()[0] || "";
   const todayRouteSuppliers = new Set(todayOrders.map(order => order.vendor || "Supplier not recorded"));
   const upcomingOrders = orders
     .filter(order => {
-      const runDate = (order.actualRunDate || order.runDate || order.date || "").slice(0, 10);
+      const runDate = driverRunDateValue(order);
       return orderIsDriverPickupReady(order)
         && runDate > today
-        && (matchesDriverOrder(order, user) || !order.driverId);
+        && (matchesDriverOrder(order, user) || orderNeedsDriverCreatedRun(order));
     })
     .sort((a, b) => String(a.actualRunDate || a.date).localeCompare(String(b.actualRunDate || b.date)) || String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id).localeCompare(String(b.id)));
   const bringForwardEligibleCount = upcomingOrders.filter(order => todayRouteSuppliers.has(order.vendor || "Supplier not recorded")).length;
@@ -3859,6 +4966,8 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const signoffOrders = enRouteOrders.length ? enRouteOrders : [];
   const selectedOrder = signoffOrders.find(order => order.id === selectedId) || signoffOrders[0] || null;
   const vendors = [...new Set(runOrders.map(order => order.vendor).filter(Boolean))];
+  const activeSupplierRecords = activeSuppliers(suppliers);
+  const depotSupplierNames = [...new Set([...vendors, ...activeSupplierRecords.map(supplier => supplier.name).filter(Boolean)])];
   const searchValue = query.trim().toLowerCase();
   const visiblePickupOrders = pickupOrders.filter(order => {
     const searchOk = !searchValue || [order.clientName, order.vendor, order.conNote, order.dropAddress].some(value => String(value || "").toLowerCase().includes(searchValue));
@@ -3873,9 +4982,9 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
   const asapCount = pickupOrders.filter(order => orderPriority(order) === "ASAP").length;
   const selectedBreakdown = selectedOrder ? pickupBreakdownForCounts(pickupCountsForOrder(selectedOrder), priceRules) : pickupBreakdownForCounts(blankPickupCounts(), priceRules);
   const emptyPickupMessage = pickupOrders.length === 0 && assignedOrders.length === 0 && unassignedToday.length > 0
-    ? `${unassignedToday.length} pickup request${unassignedToday.length === 1 ? "" : "s"} waiting for Admin dispatch. They will appear here after Admin assigns the run to ${user.name || "this driver"}.`
+    ? `${unassignedToday.length} pickup request${unassignedToday.length === 1 ? "" : "s"} ready. Press Create Daily Run to pull them into today's run.`
     : pickupOrders.length === 0 && assignedOrders.length === 0 && nextUnassignedRunDate
-      ? `${unassignedDispatchable.length} pickup request${unassignedDispatchable.length === 1 ? "" : "s"} waiting for Admin dispatch. Next scheduled run is ${fmtFullDate(nextUnassignedRunDate)}.`
+      ? `${unassignedDispatchable.length} pickup request${unassignedDispatchable.length === 1 ? "" : "s"} ready for driver-created run. Next scheduled run is ${fmtFullDate(nextUnassignedRunDate)}.`
       : "No pickups assigned to this driver yet.";
 
   useEffect(() => {
@@ -3907,6 +5016,362 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
       ...prev,
       [order.id]: { ...bringForwardDraftForOrder(order), ...patch },
     }));
+  }
+
+  function driverRunContext(supplierName = "") {
+    const routeOrder = todayOrders.find(order => (order.vendor || "Supplier not recorded") === supplierName) || todayOrders[0] || {};
+    const assignment = driverAssignmentFields({
+      ...user,
+      id: user.driverRecordId || user.driverId || user.id,
+      name: user.name || user.displayName || user.driverName,
+      email: user.email || user.driverEmail || user.loginEmail,
+    });
+    const driverId = routeOrder.driverId || assignment.driverId || user.id || "";
+    const vehicleName = routeOrder.vehicleName || user.vehicleName || user.vehicleRegistration || (String(user.name || "").match(/^[A-Z0-9]{5,}$/i) ? user.name : "");
+    return {
+      routeOrder,
+      assignment,
+      driverId,
+      vehicleName,
+      runId: routeOrder.runId || (driverId ? runIdFor(today, driverId, vehicleName || "vehicle") : ""),
+    };
+  }
+
+  function orderWithDriverDailyRun(order, index = 0) {
+    const context = driverRunContext(order.vendor || "");
+    const assignedAt = isoNow();
+    return {
+      ...order,
+      ...context.assignment,
+      status: order.status === "Brought Forward" ? "Pending" : order.status || "Pending",
+      actualRunDate: today,
+      date: today,
+      runDate: today,
+      driverId: context.driverId,
+      assignedDriverId: context.assignment.assignedDriverId || context.driverId,
+      driverRecordId: context.assignment.driverRecordId || context.driverId,
+      driverProfileId: context.assignment.driverProfileId || user.profileId || "",
+      driverActorId: context.assignment.driverActorId || user.actorId || "",
+      driverEmail: context.assignment.driverEmail || user.email || "",
+      driverName: context.assignment.driverName || user.name || "",
+      vehicleId: context.routeOrder.vehicleId || order.vehicleId || "",
+      vehicleName: context.vehicleName || order.vehicleName || "",
+      runId: context.runId || order.runId || "",
+      runSequence: order.runSequence || index + 1,
+      supplierSequence: order.supplierSequence || index + 1,
+      assignedAt,
+      runCompiledAt: assignedAt,
+      runCompiledBy: "Driver",
+      dispatchMode: "driver_created_daily_run",
+      runCreatePolicyRef: "SOP-RUN-01 v1.3 driver-created daily run",
+      deliveryZone: deliveryZone(order.dropAddress),
+    };
+  }
+
+  async function createDailyRun() {
+    const ready = dailyRunReadyOrders
+      .filter(order => !pickupAlreadyCollected(order))
+      .sort((a, b) => String(a.vendor || "").localeCompare(String(b.vendor || "")) || String(a.id || "").localeCompare(String(b.id || "")));
+    if (!ready.length) {
+      setNotice("No ready con notes are available for today's driver-created run.");
+      return;
+    }
+    const updates = ready.map((order, index) => orderWithDriverDailyRun(order, index));
+    setNotice(`Creating today's run from ${updates.length} ready con note${updates.length === 1 ? "" : "s"}...`);
+    const result = await onUpdateOrders(updates, `Driver-created daily run ${today}: ${updates.length} ready con note${updates.length === 1 ? "" : "s"}`);
+    setNotice(result?.error
+      ? "Daily run is saved on this device, but live sync failed. Stay logged in and try again."
+      : `Daily run created from ${updates.length} ready con note${updates.length === 1 ? "" : "s"}.`);
+  }
+
+  function depotDraftForSupplier(supplierName) {
+    return depotDrafts[supplierName] || {
+      clientName: "",
+      dropAddress: "",
+      conNote: "",
+      notes: "",
+      counts: blankPickupCounts(),
+    };
+  }
+
+  function setDepotDraftForSupplier(supplierName, patch) {
+    setDepotDrafts(prev => ({
+      ...prev,
+      [supplierName]: { ...depotDraftForSupplier(supplierName), ...patch },
+    }));
+  }
+
+  function openOutcome(target, type) {
+    if (!target) return;
+    setOutcomeTarget(target);
+    setOutcomeDraft({
+      type,
+      reason: "",
+      handlingNote: "",
+      noPickupCategory: "",
+      failedDeliveryCategory: type === "Failed Delivery" ? "receiver_absent" : "",
+      graceMinutes: 10,
+    });
+    setNotice("");
+  }
+
+  function closeOutcome() {
+    setOutcomeTarget(null);
+    setOutcomeDraft({ type: "", reason: "", handlingNote: "", noPickupCategory: "", failedDeliveryCategory: "", graceMinutes: 10 });
+  }
+
+  async function submitOutcome() {
+    if (!outcomeTarget) return;
+    const reason = String(outcomeDraft.reason || "").trim();
+    const handlingNote = String(outcomeDraft.handlingNote || "").trim();
+    const targetOrders = deliveryStopOrders(outcomeTarget);
+    if (!reason) {
+      setNotice("Outcome reason is required.");
+      return;
+    }
+
+    if (outcomeDraft.type === "No Pickup") {
+      const order = targetOrders[0] || outcomeTarget;
+      if (!outcomeDraft.noPickupCategory) {
+        setNotice("No Pickup category is required.");
+        return;
+      }
+      const graceMinutes = Number(outcomeDraft.graceMinutes || 0);
+      if (graceMinutes > 10) {
+        setNotice("Policy #16 says the driver does not wait beyond the 10-minute supplier grace period.");
+        return;
+      }
+      if (outcomeDraft.noPickupCategory === "not_ready_after_grace" && graceMinutes < 10 && !handlingNote) {
+        setNotice("Record the timing impact when leaving before the full 10-minute grace period.");
+        return;
+      }
+      const categoryLabel = noPickupCategoryLabel(outcomeDraft.noPickupCategory);
+      const whsHazard = outcomeDraft.noPickupCategory === "whs_hazard";
+      const updated = {
+        ...order,
+        status: "No Pickup",
+        pickupOutcome: "No Pickup",
+        pickupNote: `${categoryLabel}: ${reason}`,
+        pickupOutcomeAt: isoNow(),
+        pickupNoPickupCategory: outcomeDraft.noPickupCategory,
+        pickupGraceMinutes: graceMinutes,
+        pickupGoodsAcceptanceRefused: true,
+        pickupAcceptanceFinalConfirmed: true,
+        pickupGoodsAcceptancePolicyRef: "Policy #15 / POL-OPS-015",
+        pickupStandardsPolicyRef: whsHazard ? `${POLICY27_WHS_SOURCE} / APP-DRV-002` : "Policy #15 / Policy #16 / APP-DRV-002",
+        whsHazardReported: whsHazard,
+        whsHazardStatus: whsHazard ? "Open - Admin supplier follow-up required" : "",
+        whsPolicyRef: whsHazard ? POLICY27_WHS_SOURCE : "",
+        billable: false,
+        billingReady: false,
+        driverOutcomeNote: handlingNote,
+        price: null,
+      };
+      setNotice(`Saving No Pickup for ${order.conNote || order.id}...`);
+      const result = await onUpdateOrder(updated);
+      onException?.({
+        type: whsHazard ? "WHS Hazard" : "No Pickup",
+        orderId: order.id,
+        supplierName: whsHazard ? order.vendor : "",
+        owner: "Admin",
+        note: whsHazard
+          ? `${POLICY27_WHS_SOURCE}: ${categoryLabel}. ${reason}. Driver must not enter the hazardous area.${handlingNote ? ` Driver note: ${handlingNote}.` : ""} No billable item row.`
+          : `Policy #15 / Policy #16 ${categoryLabel}. ${reason}. Dock decision final for this run. Grace ${graceMinutes} minute(s).${handlingNote ? ` Driver note: ${handlingNote}.` : ""} No billable item row.`,
+        status: "Open",
+        driverId: user.id,
+        severity: whsHazard ? "High" : "Medium",
+        source: whsHazard ? `${POLICY27_WHS_SOURCE} / APP-DRV-002` : "Policy #15 / Policy #16 / APP-DRV-002",
+      });
+      setActivePickupId("");
+      setPickupDrafts(prev => {
+        const next = { ...prev };
+        delete next[order.id];
+        return next;
+      });
+      closeOutcome();
+      setNotice(result?.error
+        ? `${order.conNote || order.id} No Pickup is saved on this device, but live sync failed. Stay logged in and try again.`
+        : `${order.conNote || order.id} recorded as No Pickup and sent to Admin review.`);
+      return;
+    }
+
+    if (outcomeDraft.type === "Failed Delivery") {
+      if (!outcomeDraft.failedDeliveryCategory) {
+        setNotice("Failed Delivery category is required.");
+        return;
+      }
+      const attemptedAt = isoNow();
+      const failedCategoryLabel = failedDeliveryCategoryLabel(outcomeDraft.failedDeliveryCategory);
+      const redeliveryRule = redeliveryPriceRule(priceRules);
+      const updates = [];
+      const exceptionRows = [];
+      for (const order of targetOrders) {
+        const previousAttempts = failedDeliveryAttempts(order);
+        const attemptNumber = previousAttempts.length + 1;
+        if (attemptNumber > 2) {
+          setNotice("Policy #8 allows a maximum of 2 delivery attempts for a consignment.");
+          return;
+        }
+        const deliveryStopKey = outcomeTarget.key || order.deliveryStopKey || deliveryStopKeyForOrder(order);
+        const attempts = [
+          ...previousAttempts,
+          {
+            attemptNumber,
+            attemptedAt,
+            reason,
+            category: outcomeDraft.failedDeliveryCategory,
+            categoryLabel: failedCategoryLabel,
+            handlingNote,
+            driverId: user.id,
+            driverName: user.name,
+            deliveryStopKey,
+          },
+        ];
+        const secondAttempt = attemptNumber >= 2;
+        updates.push({
+          ...order,
+          status: "Failed Delivery",
+          deliveryStopKey,
+          deliveryGroupId: outcomeTarget.deliveryId || order.deliveryGroupId || "",
+          deliveryGroupSize: targetOrders.length,
+          failedDeliveryReason: reason,
+          failedDeliveryCategory: outcomeDraft.failedDeliveryCategory,
+          failedDeliveryCategoryLabel: failedCategoryLabel,
+          failedDeliveryAt: attemptedAt,
+          failedDeliveryHandlingNote: handlingNote,
+          failedDeliveryAttemptCount: attemptNumber,
+          failedDeliveryAttempts: attempts,
+          failedDeliveryPolicyRef: "SOP-DEL-04 / Policy #8",
+          redeliveryFeeStatus: secondAttempt ? "Pending Admin Review" : "Not Applicable",
+          redeliveryFeeAmount: secondAttempt ? policy8RedeliveryFeeAmount(priceRules) : 0,
+          redeliveryFeeRuleId: secondAttempt ? (redeliveryRule?.id || "price-redelivery") : "",
+          returnToSupplierRequired: secondAttempt,
+          returnToSupplierStatus: secondAttempt
+            ? "Return to originating supplier on next scheduled milk run"
+            : "Goods retained with driver after first failed attempt",
+          billingReady: false,
+          price: null,
+        });
+        exceptionRows.push({
+          type: "Failed Delivery",
+          orderId: order.id,
+          owner: "Admin",
+          note: `Attempt ${attemptNumber} of 2. SOP-DEL-04 category: ${failedCategoryLabel}. ${reason}${handlingNote ? ` Driver note: ${handlingNote}.` : ""} ${secondAttempt ? "Policy #8: return goods to originating supplier on next scheduled milk run; Admin review required before redelivery fee is applied." : "Policy #8: goods remain with driver after first failed attempt; no redelivery fee after first attempt."}`,
+          status: "Open",
+          driverId: user.id,
+          severity: secondAttempt ? "High" : "Medium",
+          source: "SOP-DEL-04 / Policy #8 / APP-DRV-003",
+          failedDeliveryAttemptNumber: attemptNumber,
+          failedDeliveryCategory: outcomeDraft.failedDeliveryCategory,
+        });
+      }
+      setNotice(`Saving Failed Delivery for ${targetOrders.length} package${targetOrders.length === 1 ? "" : "s"}...`);
+      const result = updates.length > 1
+        ? await onUpdateOrders(updates, `SOP-DEL-04 failed delivery recorded for ${updates.length} package(s)`)
+        : await onUpdateOrder(updates[0]);
+      exceptionRows.forEach(row => onException?.(row));
+      resetSignoff();
+      closeOutcome();
+      setNotice(result?.error
+        ? "Failed Delivery is saved on this device, but live sync failed. Stay logged in and try again."
+        : "Failed Delivery recorded and sent to Admin review.");
+    }
+  }
+
+  async function finaliseDepotPickup(supplierName, breakdown) {
+    const draft = depotDraftForSupplier(supplierName);
+    const clientName = String(draft.clientName || "").trim();
+    const dropAddress = String(draft.dropAddress || "").trim();
+    const cleanConNote = String(draft.conNote || "").trim();
+    if (!supplierName) {
+      setNotice("Select the supplier depot before recording an unbooked pickup.");
+      return;
+    }
+    if (!clientName) {
+      setNotice("Enter the customer or workshop name before recording the depot pickup.");
+      return;
+    }
+    if (!dropAddress) {
+      setNotice("Enter the delivery address before recording the depot pickup.");
+      return;
+    }
+    if (breakdown.totalItems <= 0) {
+      setNotice("Count at least one item before recording the depot pickup.");
+      return;
+    }
+    const context = driverRunContext(supplierName);
+    const id = uid();
+    const conNote = cleanConNote || `DEPOT-${Date.now().toString().slice(-6)}`;
+    const knownClientOrder = orders.find(order =>
+      normaliseMatchText(order.clientName || "") === normaliseMatchText(clientName) ||
+      (normaliseDeliveryStopAddress(order.dropAddress || "") && normaliseDeliveryStopAddress(order.dropAddress || "") === normaliseDeliveryStopAddress(dropAddress))
+    );
+    const matchedClientId = knownClientOrder?.clientId || "";
+    const baseOrder = {
+      id,
+      clientId: matchedClientId || `driver-depot-${id}`,
+      accountId: knownClientOrder?.accountId || matchedClientId || "",
+      accountActorId: knownClientOrder?.accountActorId || knownClientOrder?.account_actor_id || "",
+      account_actor_id: knownClientOrder?.account_actor_id || knownClientOrder?.accountActorId || "",
+      clientName,
+      vendor: supplierName,
+      conNote,
+      dropAddress,
+      notes: [draft.notes, cleanConNote ? "Driver recorded customer-missed portal entry at supplier depot." : "Driver recorded ready package at supplier depot with no con note/customer portal entry."].filter(Boolean).join(" "),
+      priority: "ASAP",
+      deliveryPriority: "ASAP",
+      status: "Pending",
+      requestedDate: today,
+      actualRunDate: today,
+      date: today,
+      runDate: today,
+      submittedAt: isoNow(),
+      driverId: context.driverId,
+      assignedDriverId: context.assignment.assignedDriverId || context.driverId,
+      driverRecordId: context.assignment.driverRecordId || context.driverId,
+      driverProfileId: context.assignment.driverProfileId || user.profileId || "",
+      driverActorId: context.assignment.driverActorId || user.actorId || "",
+      driverEmail: context.assignment.driverEmail || user.email || "",
+      driverName: context.assignment.driverName || user.name || "",
+      vehicleId: context.routeOrder.vehicleId || "",
+      vehicleName: context.vehicleName || "",
+      runId: context.runId,
+      runSequence: Math.max(0, ...todayOrders.map(order => Number(order.runSequence || 0)).filter(Number.isFinite)) + 1,
+      supplierSequence: context.routeOrder.supplierSequence || 9999,
+      dispatchMode: "driver_created_depot_pickup",
+      runCompiledBy: "Driver",
+      runCompiledAt: isoNow(),
+      driverCreatedDepotPickup: true,
+      customerMissedPortalEntry: Boolean(cleanConNote),
+      noConNoteDepotPickup: !cleanConNote,
+      pickupSource: "SOP-RUN-01 / SOP-PUP-02 depot-ready pickup",
+      billingAccountMatchStatus: matchedClientId ? "matched_by_driver_workshop_name_pending_admin_review" : "admin_review_required",
+      billingAccountMatchSource: matchedClientId ? "Driver depot pickup matched to an existing workshop name; Admin still reviews before billing" : "Driver depot pickup requires Admin account reconciliation before billing",
+      recvName: "",
+      sig: "",
+    };
+    const stored = orderWithPickupBreakdown(baseOrder, breakdown, user);
+    setNotice(`Recording depot pickup ${stored.conNote}...`);
+    const result = await onCreateDriverPickup?.(stored);
+    onException?.({
+      type: "Unmatched Billing Account",
+      orderId: stored.id,
+      owner: "Admin",
+      note: `${stored.id}: driver recorded depot-ready pickup at ${supplierName}. Customer/workshop ${clientName}; con note ${cleanConNote || "not supplied"}. Admin must reconcile the account before billing.`,
+      status: "Open",
+      source: "SOP-RUN-01 / SOP-PUP-02 / SOP-EXC-03",
+      severity: "Medium",
+    });
+    setDepotDrafts(prev => {
+      const next = { ...prev };
+      delete next[supplierName];
+      return next;
+    });
+    setActiveDepotSupplier("");
+    setSelectedId(stored.id);
+    setNotice(result?.error
+      ? `${stored.conNote} is saved on this device, but live sync failed. Stay logged in and try again.`
+      : `${stored.conNote} recorded and moved to Sign-Off. Admin reconciliation was queued.`);
   }
 
   function todayRouteOrderForSupplier(supplierName) {
@@ -4114,12 +5579,25 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
     { key: "signoff", label: "Sign-Off" },
     { key: "pricing", label: "Pricing" },
   ];
+  const pendingSyncErrors = (syncQueue || [])
+    .map(item => friendlyLiveSyncIssue(item?.lastError))
+    .filter(Boolean)
+    .slice(0, 2);
 
   return (
     <div className="ux-shell">
       <ExperienceNav role="DRIVER" user={user} tabs={tabs} activeTab={tab} onTab={next => { setTab(next); setNotice(""); }} onLogout={onLogout} />
       <main className="ux-main wide">
         {notice && <div className="ux-alert">{notice}</div>}
+        {pendingSyncCount > 0 && (
+          <div className="ux-notice" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".8rem", flexWrap: "wrap" }}>
+            <span>
+              {pendingSyncCount} field update{pendingSyncCount === 1 ? "" : "s"} saved on this device and waiting to sync.
+              {pendingSyncErrors.length > 0 && <span style={{ display: "block", marginTop: ".25rem", color: "#7a7060" }}>Last sync issue: {pendingSyncErrors.join(" | ")}</span>}
+            </span>
+            <button className="ux-btn secondary" type="button" style={{ width: "auto", minHeight: 36, padding: ".45rem .8rem" }} onClick={() => onRetrySync?.()}>Retry Sync</button>
+          </div>
+        )}
 
         {tab === "run" && (
           <>
@@ -4133,6 +5611,45 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
                 <div className="ux-run-stat"><strong style={{ color: "#b8860b" }}>{enRouteOrders.length}</strong><span>En Route</span></div>
               </div>
             </div>
+            <div className="ux-card tint">
+              <div className="ux-run-top">
+                <div>
+                  <div className="ux-section-title">Create Daily Run</div>
+                  <div className="ux-order-meta">Consolidate every visible ready con note into today's driver run. Future work stays in Upcoming unless the complete order is brought forward at the supplier.</div>
+                </div>
+                <button className="ux-btn primary" style={{ width: "auto" }} onClick={createDailyRun}>Create Daily Run</button>
+              </div>
+              <div className="ux-order-meta" style={{ marginTop: ".55rem" }}>
+                Ready now: {dailyRunReadyOrders.length}. Today&apos;s suppliers: {vendors.length ? vendors.join(", ") : "none yet"}.
+              </div>
+            </div>
+            {readyConNoteOrders.length > 0 && (
+              <div className="ux-card">
+                <div className="ux-run-top">
+                  <div>
+                    <div className="ux-section-title">Ready Con Notes Not Yet In Today's Run</div>
+                    <div className="ux-order-meta">These are visible to the driver now and will be pulled into the run by Create Daily Run.</div>
+                  </div>
+                  <span className="ux-badge b-pending">{readyConNoteOrders.length} ready</span>
+                </div>
+                <div style={{ display: "grid", gap: ".55rem", marginTop: ".8rem" }}>
+                  {readyConNoteOrders.slice(0, 8).map(order => (
+                    <div
+                      className="ux-order-row"
+                      key={`ready-${orderVisibilityKey(order)}`}
+                      style={{ gridTemplateColumns: "minmax(92px,.65fr) minmax(0,1.4fr) auto", marginBottom: 0 }}
+                    >
+                      <div className="ux-order-id" style={{ fontSize: ".9rem" }}>{order.conNote || order.id}</div>
+                      <div>
+                        <div className="ux-order-title">{order.vendor || "Supplier not recorded"}</div>
+                        <div className="ux-order-meta">{order.clientName || "Client not recorded"} - {order.dropAddress || "Address not recorded"}</div>
+                      </div>
+                      <span className="ux-badge b-pending">{driverRunDateValue(order) ? fmtFullDate(driverRunDateValue(order)) : "No run date"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {asapCount > 0 && <div className="ux-alert">{asapCount} ASAP order{asapCount === 1 ? "" : "s"} - priority pickup required.</div>}
             {pickupOrders.length === 0 && assignedOrders.length === 0 && unassignedDispatchable.length > 0 && <div className="ux-alert">{emptyPickupMessage}</div>}
             <div className="ux-driver-tools">
@@ -4155,11 +5672,51 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
                 onPickupDraftChange={counts => setPickupDraftForOrder(order, counts)}
                 onFinalisePickup={finalisePickup}
                 onCancelPickup={() => setActivePickupId("")}
+                onNoPickup={target => openOutcome(target, "No Pickup")}
               />
             ))}
+            <div className="ux-run-section">Depot-Ready / Missed Portal Pickup</div>
+            <div className="ux-card tint">
+              <div className="ux-section-title">Record Package Found At Supplier</div>
+              <div className="ux-order-meta">Use this only when the supplier has a complete package ready but the customer did not lodge it correctly in the portal, or the con note is not available at the dock.</div>
+              <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginTop: ".75rem" }}>
+                {depotSupplierNames.map(supplierName => (
+                  <button
+                    key={`depot-${supplierName}`}
+                    type="button"
+                    className={`ux-btn ${activeDepotSupplier === supplierName ? "primary" : "secondary"}`}
+                    style={{ width: "auto", minHeight: 36, padding: ".45rem .75rem" }}
+                    onClick={() => { setActiveDepotSupplier(activeDepotSupplier === supplierName ? "" : supplierName); setNotice(""); }}
+                  >
+                    {supplierName}
+                  </button>
+                ))}
+              </div>
+              {activeDepotSupplier && (() => {
+                const draft = depotDraftForSupplier(activeDepotSupplier);
+                return (
+                  <div style={{ marginTop: ".9rem" }}>
+                    <div className="ux-grid-2">
+                      <div className="ux-field"><label>Customer / Workshop *</label><input value={draft.clientName} onChange={e => setDepotDraftForSupplier(activeDepotSupplier, { clientName: e.target.value })} placeholder="Workshop name" /></div>
+                      <div className="ux-field"><label>Con Note</label><input value={draft.conNote} onChange={e => setDepotDraftForSupplier(activeDepotSupplier, { conNote: e.target.value })} placeholder="Leave blank if not supplied" /></div>
+                    </div>
+                    <div className="ux-field"><label>Delivery Address *</label><input value={draft.dropAddress} onChange={e => setDepotDraftForSupplier(activeDepotSupplier, { dropAddress: e.target.value })} placeholder="Gold Coast delivery address" /></div>
+                    <div className="ux-field"><label>Driver Note</label><textarea value={draft.notes} onChange={e => setDepotDraftForSupplier(activeDepotSupplier, { notes: e.target.value })} placeholder="What happened at the supplier dock?" /></div>
+                    <PickupItemCounter
+                      counts={draft.counts}
+                      priceRules={priceRules}
+                      onChange={counts => setDepotDraftForSupplier(activeDepotSupplier, { counts })}
+                      onFinalise={breakdown => finaliseDepotPickup(activeDepotSupplier, breakdown)}
+                      onCancel={() => setActiveDepotSupplier("")}
+                      finaliseLabel="Record Depot Pickup & Move to Sign-Off"
+                    />
+                  </div>
+                );
+              })()}
+            </div>
             <div className="ux-run-section" style={{ color: "#18733c" }}>En Route - Gold Coast ({visibleEnRouteOrders.length})</div>
             {visibleEnRouteOrders.length === 0 ? <div className="ux-card"><div className="ux-empty">No deliveries are en route yet.</div></div> : visibleEnRouteOrders.map(order => (
-              <DriverRunCard key={order.id} order={order} suppliers={suppliers} priceRules={priceRules} enroute />
+              <DriverRunCard key={order.id} order={order} suppliers={suppliers} priceRules={priceRules} enroute onFailedDelivery={target => openOutcome(target, "Failed Delivery")} />
             ))}
           </>
         )}
@@ -4292,7 +5849,10 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               </div>
               <div className="ux-field"><label>Receiver Name *</label><input value={receiverName} onChange={e => setReceiverName(e.target.value)} placeholder="Full name" /></div>
               <div className="ux-field ux-sig"><label>Receiver Signature *</label><SigPad onSig={setSig} /></div>
-              <button className="ux-btn success full" disabled={!selectedOrder || selectedBreakdown.totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
+              <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
+                <button className="ux-btn success" style={{ flex: "1 1 260px" }} disabled={!selectedOrder || selectedBreakdown.totalItems <= 0 || !receiverName.trim() || !sig} onClick={completeDelivery}>Complete Delivery & Sign Off</button>
+                <button className="ux-btn secondary" style={{ flex: "1 1 220px" }} disabled={!selectedOrder} onClick={() => openOutcome(selectedOrder, "Failed Delivery")}>Record Failed Delivery</button>
+              </div>
             </div>
           </>
         )}
@@ -4315,6 +5875,62 @@ function DriverExperiencePortal({ user, orders, suppliers = [], priceRules, exce
               ))}
             </div>
           </>
+        )}
+
+        {outcomeTarget && (
+          <div className="overlay" onClick={closeOutcome}>
+            <div className="modal" onClick={event => event.stopPropagation()}>
+              <h3>{outcomeDraft.type} - {outcomeTarget.conNote || outcomeTarget.id}</h3>
+              <div className="meta">
+                <span>{outcomeTarget.clientName || "Customer not recorded"}</span>
+                <span>{outcomeTarget.vendor || "Supplier not recorded"}</span>
+                <span>Run {fmt(orderRunDate(outcomeTarget))}</span>
+              </div>
+              {outcomeDraft.type === "No Pickup" && (
+                <>
+                  <div className="ux-field">
+                    <label>No Pickup Category *</label>
+                    <select value={outcomeDraft.noPickupCategory} onChange={event => setOutcomeDraft(prev => ({ ...prev, noPickupCategory: event.target.value }))}>
+                      <option value="">Select category</option>
+                      {POLICY16_NO_PICKUP_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </div>
+                  <div className="ux-field">
+                    <label>Grace Minutes</label>
+                    <input type="number" min="0" max="10" value={outcomeDraft.graceMinutes} onChange={event => setOutcomeDraft(prev => ({ ...prev, graceMinutes: event.target.value }))} />
+                  </div>
+                </>
+              )}
+              {outcomeDraft.type === "Failed Delivery" && (
+                <div className="ux-field">
+                  <label>Failed Delivery Category *</label>
+                  <select value={outcomeDraft.failedDeliveryCategory} onChange={event => setOutcomeDraft(prev => ({ ...prev, failedDeliveryCategory: event.target.value }))}>
+                    {SOP_DEL04_FAILED_DELIVERY_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="ux-field">
+                <label>Outcome Reason *</label>
+                <textarea
+                  value={outcomeDraft.reason}
+                  onChange={event => setOutcomeDraft(prev => ({ ...prev, reason: event.target.value }))}
+                  placeholder={outcomeDraft.type === "Failed Delivery" ? "Why delivery could not be completed" : "What happened at the supplier dock"}
+                />
+              </div>
+              <div className="ux-field">
+                <label>Driver Handling Note</label>
+                <textarea
+                  value={outcomeDraft.handlingNote}
+                  onChange={event => setOutcomeDraft(prev => ({ ...prev, handlingNote: event.target.value }))}
+                  placeholder="Timing, supplier contact, receiver interaction, retained-goods detail..."
+                />
+              </div>
+              <button className={`ux-btn ${outcomeDraft.type === "Failed Delivery" ? "secondary" : "primary"} full`} onClick={submitOutcome}>
+                Save {outcomeDraft.type}
+              </button>
+              <button className="ux-btn secondary full" style={{ marginTop: ".55rem" }} onClick={closeOutcome}>Cancel</button>
+            </div>
+          </div>
         )}
       </main>
     </div>
@@ -4576,7 +6192,9 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
               </div>
             )}
             {myOrders.length === 0 && <div className="empty">No orders yet — create one above.</div>}
-            {myOrders.map(o => (
+            {myOrders.map(o => {
+              const proof = proofForOrder(o);
+              return (
               <div className="card" key={o.id}>
                 <div className="card-head"><div className="card-title">{o.id} — {o.vendor}</div>{statusBadge(clientFacingOrderStatus(o))}</div>
                 <div className="meta">
@@ -4606,11 +6224,15 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
                 {["Delivered", "Failed Delivery", "No Pickup"].includes(o.status) && (
                   <>
                     <hr className="dvd" />
-                    <button className="btn b-ghost b-sm" onClick={() => openDeliveryDispute(o)}>Raise Dispute</button>
+                    <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
+                      {o.status === "Delivered" && (proof || o.proofId || o.sig) && <button className="btn b-acc b-sm" onClick={() => downloadProcessedConNotePdf(o, proof)}>Download POD PDF</button>}
+                      <button className="btn b-ghost b-sm" onClick={() => openDeliveryDispute(o)}>Raise Dispute</button>
+                    </div>
                   </>
                 )}
               </div>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -4672,7 +6294,10 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
                     </div>
                   )}
                   {["Delivered", "Failed Delivery", "No Pickup"].includes(order.status) && (
-                    <button className="btn b-ghost b-sm" style={{ marginTop: ".8rem" }} onClick={() => openDeliveryDispute(order)}>Raise Dispute</button>
+                    <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".8rem" }}>
+                      {order.status === "Delivered" && (proof || order.proofId || order.sig) && <button className="btn b-acc b-sm" onClick={() => downloadProcessedConNotePdf(order, proof)}>Download POD PDF</button>}
+                      <button className="btn b-ghost b-sm" onClick={() => openDeliveryDispute(order)}>Raise Dispute</button>
+                    </div>
                   )}
                 </div>
               );
@@ -4781,7 +6406,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
                   <div key={exception.id} style={{ marginBottom: ".65rem" }}>
                     <div className="meta" style={{ marginBottom: ".25rem" }}>
                       <span>{invoice.id}</span>
-                      <span>{invoice.status}</span>
+                      <span>{invoiceStatusLabel(invoice)}</span>
                       <span className={`badge ${exceptionStatusBadgeClass(exception.status)}`}>{exception.status}</span>
                       <span>{exception.createdAt ? new Date(exception.createdAt).toLocaleString("en-AU") : "Not dated"}</span>
                     </div>
@@ -4801,7 +6426,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
               <div className="card" key={invoice.id}>
                 <div className="card-head">
                   <div className="card-title">{invoice.id}</div>
-                  <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoice.status}</span>
+                  <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoiceStatusLabel(invoice)}</span>
                 </div>
                 <div className="meta">
                   <span>Billing: {invoice.billingEmail}</span>
@@ -4821,7 +6446,7 @@ function ClientPortal({ user, orders, suppliers, invoices, billingNotices, opera
                 )}
                 {invoice.dispatchRecordedAt && (
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
-                    Dispatch recorded {fmtFullDate(isoDate(invoice.dispatchRecordedAt))}: {invoice.dispatchChannel === "local_record_only" ? "local record only" : invoice.dispatchChannel}; recipient {invoice.dispatchRecipient || invoice.billingEmail}; external status {invoice.dispatchExternalStatus || "not recorded"}.
+                    Local invoice dispatch evidence recorded {fmtFullDate(isoDate(invoice.dispatchRecordedAt))} for {invoice.dispatchRecipient || invoice.billingEmail}. No invoice email was sent because production invoice email/PDF delivery is not configured.
                   </div>
                 )}
                 {invoice.policy18LastOutcome && (
@@ -5120,7 +6745,7 @@ function BillingContactPortal({ user, orders = [], invoices, billingNotices, ope
               <div key={exception.id} style={{ marginBottom: ".65rem" }}>
                 <div className="meta" style={{ marginBottom: ".25rem" }}>
                   <span>{invoice.id}</span>
-                  <span>{invoice.status}</span>
+                  <span>{invoiceStatusLabel(invoice)}</span>
                   <span className={`badge ${exceptionStatusBadgeClass(exception.status)}`}>{exception.status}</span>
                   <span>{exception.createdAt ? new Date(exception.createdAt).toLocaleString("en-AU") : "Not dated"}</span>
                 </div>
@@ -5141,7 +6766,7 @@ function BillingContactPortal({ user, orders = [], invoices, billingNotices, ope
           <div className="card" key={invoice.id}>
             <div className="card-head">
               <div className="card-title">{invoice.id}</div>
-              <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoice.status}</span>
+              <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoiceStatusLabel(invoice)}</span>
             </div>
             <div className="meta">
               <span>Billing: {invoice.billingEmail}</span>
@@ -5314,7 +6939,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
   const runExceptions = exceptions.filter(e => e.status !== "Closed" && (driverOrderIds.has(e.orderId) || e.driverId === user.id));
   const latestRunClose = runClosures.filter(r => r.driverId === user.id).slice(-1)[0];
   const rules = activePriceRules(priceRules);
-  const pickupRules = rules.filter(r => r.itemType !== "redelivery");
+  const pickupRules = rules.filter(r => ["tyre", "parts"].includes(String(r.itemType || "").toLowerCase()));
   const selectedPriceRule = rules.find(r => r.id === typeKey || r.label === typeKey);
   const selectedPickupRule = pickupRules.find(r => r.id === pickupRuleId);
   const selectedOutcomeRule = pickupRules.find(r => r.id === outcomeDraft.priceRuleId);
@@ -5323,6 +6948,7 @@ function DriverPortal({ user, orders, priceRules, exceptions, runClosures, onUpd
   const runCloseSummary = runCloseSummaryForOrders(driverRunOrders);
   const preTripBlockingExceptions = runExceptions.filter(e => DRIVER_RUN_BLOCKING_ISSUE_TYPES.includes(e.type));
   const readyToDepart = preTrip.vehicle && preTrip.device && preTrip.run && preTripBlockingExceptions.length === 0;
+  const pendingSyncCount = Array.isArray(syncQueue) ? syncQueue.length : 0;
 
   function showWorkflowNotice(message) {
     setWorkflowNotice(String(message || "A workflow rule blocked this action."));
@@ -6705,7 +8331,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const enroute = orders.filter(o => o.status === "En Route").length;
   const delivered = orders.filter(o => o.status === "Delivered").length;
   const revenue = orders.filter(o => o.price).reduce((s, o) => s + o.price, 0);
-  const openExceptions = exceptions.filter(e => e.status !== "Closed");
+  const openExceptions = exceptions.filter(exceptionIsOpen);
   const unmatchedBillingRows = unmatchedBillingAccountRows(orders, clients, exceptions);
   const unmatchedBillingIds = new Set(unmatchedBillingRows.map(row => row.order.id));
   const billableOrders = orders.filter(o => isBillingCandidate(o) && !unmatchedBillingIds.has(o.id));
@@ -6721,6 +8347,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const overdueNoticeQueue = invoices.filter(invoice => invoice.status === "Overdue" && !day8NoticeRecords.some(notice => notice.invoiceId === invoice.id));
   const financialReconciliationReviewRows = financialReconciliationRows(invoices, financialReconciliations);
   const financialReconciliationOpenRows = financialReconciliationReviewRows.filter(row => row.status !== "Completed");
+  const invoiceAccountGroups = buildInvoiceAccountGroups(invoices, clients);
   const activeAccessCount = (accessRecords || []).filter(record => record.status !== "Revoked").length;
   const revokedAccessCount = (accessRecords || []).filter(record => record.status === "Revoked").length;
   const staffReviewDueCount = (accessRecords || []).filter(record => record.reviewDue).length;
@@ -6755,17 +8382,17 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
   const crmNextActionDueCount = crmRhythmRows.filter(row => row.nextActionDue).length;
   const crmOverdueObligationCount = crmRhythmRows.reduce((count, row) => count + row.overdueObligations.length, 0);
   const crmIncompleteCount = crmRhythmRows.filter(row => row.incomplete.length > 0).length;
-  const unassignedDispatch = orders.filter(o => ["Pending", "Brought Forward"].includes(o.status) && !o.driverId);
+  const unassignedDispatch = orders.filter(o => orderNeedsDriverCreatedRun(o));
   const assignedDispatch = orders
-    .filter(o => o.driverId && ["Pending", "En Route"].includes(o.status))
+    .filter(o => !orderNeedsDriverCreatedRun(o) && o.driverId && ["Pending", "En Route"].includes(o.status))
     .sort((a, b) => String(a.runId || "").localeCompare(String(b.runId || "")) || Number(a.runSequence || 9999) - Number(b.runSequence || 9999));
   const nextUnassignedRunDate = unassignedDispatch
-    .map(order => order.actualRunDate || order.date)
+    .map(driverRunDateValue)
     .filter(Boolean)
     .sort()[0] || todayBrisbane();
   const compileRunDate = dispatchDraft.runDate || nextUnassignedRunDate;
   const selectedVehicleCompliance = vehicleComplianceState(selectedDispatchVehicle, compileRunDate);
-  const compileCandidates = sequenceRunOrders(unassignedDispatch.filter(order => (order.actualRunDate || order.date) === compileRunDate));
+  const compileCandidates = sequenceRunOrders(unassignedDispatch.filter(order => driverRunDateValue(order) === compileRunDate));
   const compileSupplierGroups = Object.values(compileCandidates.reduce((groups, order) => {
     const supplier = order.vendor || "Supplier not recorded";
     if (!groups[supplier]) groups[supplier] = { supplier, zones: {}, orders: [] };
@@ -8140,12 +9767,49 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       }));
   }
 
+  function uniqueExceptionRecords(records) {
+    const seen = new Set();
+    return records.filter(record => {
+      const key = record?.id || JSON.stringify(record);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function exceptionAlertGroups() {
+    const rows = exceptionAlertRows();
+    const groups = new Map();
+    rows.forEach(row => {
+      const key = exceptionDuplicateKey(row.exception) || row.exception.id;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          primary: row,
+          rows: [],
+          linkedOrders: [],
+          linkedProofs: [],
+          ageHours: row.ageHours,
+        });
+      }
+      const group = groups.get(key);
+      group.rows.push(row);
+      group.linkedOrders = uniqueExceptionRecords([...group.linkedOrders, ...row.linkedOrders]);
+      group.linkedProofs = uniqueExceptionRecords([...group.linkedProofs, ...row.linkedProofs]);
+      group.ageHours = Math.max(group.ageHours, row.ageHours);
+    });
+    return Array.from(groups.values()).sort((a, b) =>
+      new Date(a.primary.exception.createdAt || 0).getTime() - new Date(b.primary.exception.createdAt || 0).getTime()
+    );
+  }
+
   function reviewedExceptionAlert() {
     return (exceptionAlerts || []).find(alert => alert.alertDate === todayBrisbane() && alert.audience === "Admin" && alert.channel === "local_dashboard");
   }
 
   function markExceptionAlertReviewed() {
     const rows = exceptionAlertRows();
+    const groups = exceptionAlertGroups();
     const typeCounts = exceptionTypeCounts();
     onAcknowledgeExceptionAlert({
       id: `exception-alert-${todayBrisbane()}-admin-local`,
@@ -8155,6 +9819,8 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       status: "reviewed",
       openExceptionCount: openExceptions.length,
       proofLinkedCount: rows.filter(row => row.linkedProofs.length > 0).length,
+      actionGroupCount: groups.length,
+      duplicateRecordCount: Math.max(0, rows.length - groups.length),
       typeCounts,
       exceptionIds: rows.map(row => row.exception.id),
       generatedAt: isoNow(),
@@ -8268,7 +9934,6 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     const note = investigationNote.trim();
     const outcome = investigationOutcome.trim();
     if (!outcome) return showWorkflowNotice("Investigation outcome required.");
-    if (!note) return showWorkflowNotice("Investigation note required.");
     const isPolicy18 = isPolicy18Dispute(investigationTarget);
     const finding = isPolicy18 ? policy18FindingForValue(investigationTarget, policy18Finding) : null;
     if (isPolicy18 && !finding) return showWorkflowNotice("Policy #18 finding required.");
@@ -8283,7 +9948,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     const investigation = {
       policy: control.policy,
       outcome,
-      note,
+      note: note || "No note recorded.",
       supplierId: supplierForException(investigationTarget)?.id || investigationTarget.supplierId || "",
       priceRuleId: linkedPriceRule?.id || investigationTarget.priceRuleId || "",
       linkedOrderIds: linkedOrders.map(order => order.id),
@@ -8857,35 +10522,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
 
   function clearDispatch(order) {
     if (order.status === "En Route") return showWorkflowNotice("En Route stops cannot be unassigned from this local dispatch screen.");
-    onUpdateOrder({
-      ...order,
-      driverId: null,
-      assignedDriverId: null,
-      driverRecordId: null,
-      driverProfileId: null,
-      driverActorId: null,
-      driverEmail: "",
-      driverName: null,
-      vehicleId: null,
-      vehicleName: "",
-      runId: null,
-      assignedAt: null,
-      runDate: null,
-      runCompiledAt: null,
-      runCompiledBy: "",
-      runSequence: null,
-      supplierSequence: null,
-      deliveryZone: "",
-      dispatchMode: "",
-      vehicleRegistrationCurrent: false,
-      vehicleInsuranceCurrent: false,
-      vehicleRegistrationExpiry: "",
-      vehicleInsuranceExpiry: "",
-      vehicleComplianceCheckedAt: "",
-      vehicleComplianceCheckedBy: "",
-      vehicleComplianceNote: "",
-      vehicleComplianceSource: "",
-    });
+    onUpdateOrder({ ...clearDriverRunAssignmentFields(order), dispatchMode: "driver_created_run_intake" });
   }
 
   function cancelAdminOrder(order) {
@@ -8894,7 +10531,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       return;
     }
     onUpdateOrder({
-      ...order,
+      ...clearDriverRunAssignmentFields(order),
       status: "Cancelled",
       cancelledAt: isoNow(),
       cancelledBy: "admin",
@@ -8902,11 +10539,6 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
       cancellationPolicyRef: "Policy #14",
       cancellationCutoffDate: cancellationCutoffDate(order),
       billable: false,
-      driverId: null,
-      driverName: null,
-      vehicleId: null,
-      vehicleName: "",
-      runId: null,
     });
   }
 
@@ -8993,10 +10625,90 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     return { subtotal, gst, total: subtotal + gst };
   }
 
+  function renderInvoiceBatchRow(invoice) {
+    const client = clients.find(client => client.id === invoice.clientId);
+    const notice = day8NoticeForInvoice(invoice.id);
+    const noticeDue = day8NoticeDueDate(invoice);
+    const noticeReady = canRecordDay8Notice(invoice);
+    const approved = invoiceIsApproved(invoice);
+    const canDispatch = invoice.status !== "Paid" && !invoice.dispatchRecordedAt;
+    const canMarkOverdue = invoice.status !== "Paid" && invoice.status !== "Overdue" && Boolean(invoice.dispatchRecordedAt);
+    return (
+      <div key={invoice.id} style={{ borderTop: `1px solid ${T.line}`, paddingTop: ".75rem", marginTop: ".75rem" }}>
+        <div className="card-head" style={{ marginBottom: ".45rem" }}>
+          <div>
+            <div className="card-title">{invoice.id}</div>
+            <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".15rem" }}>{invoice.lines.length} lines - Billing {invoice.billingEmail}</div>
+          </div>
+          <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoiceStatusLabel(invoice)}</span>
+        </div>
+        <div className="meta">
+          <span>Due {fmt(invoice.dueDate)}</span>
+          <span>Subtotal ${Number(invoice.subtotal || 0).toFixed(2)}</span>
+          <span>GST ${Number(invoice.gst || 0).toFixed(2)}</span>
+          <span>Total ${Number(invoice.total || 0).toFixed(2)}</span>
+        </div>
+        <div style={{ fontSize: ".78rem", color: approved ? T.mu : T.acc, marginTop: ".45rem" }}>
+          {approved
+            ? `Rendered invoice approved ${fmtFullDate(isoDate(invoice.invoiceApprovedAt))}; source ${invoice.invoiceApprovalSource || "SOP-BIL-04"}.`
+            : "Rendered invoice approval required before dispatch under SOP-BIL-04."}
+        </div>
+        {notice && (
+          <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+            Day 8 overdue notice recorded {fmtFullDate(isoDate(notice.recordedAt))}; source {billingNoticeSourceLabel(notice).toLowerCase()}; channel {notice.deliveryChannel === "local_record_only" ? "local record only" : notice.deliveryChannel}.
+          </div>
+        )}
+        {invoice.status === "Overdue" && !notice && (
+          <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+            Day 8 notice due {fmtFullDate(noticeDue)} before non-payment suspension.
+          </div>
+        )}
+        {invoice.status === "Paid" && invoice.paymentEvidence && (
+          <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+            Payment evidence recorded {fmtFullDate(isoDate(invoice.paymentRecordedAt || invoice.paidAt))}: {invoice.paymentEvidence}
+          </div>
+        )}
+        {invoice.dispatchRecordedAt && (
+          <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+            Local invoice dispatch evidence recorded {fmtFullDate(isoDate(invoice.dispatchRecordedAt))} for {invoice.dispatchRecipient || invoice.billingEmail}. No invoice email was sent because production invoice email/PDF delivery is not configured.
+          </div>
+        )}
+        {invoice.policy18LastOutcome && (
+          <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
+            Policy #18 billing dispute outcome recorded {fmtFullDate(isoDate(invoice.policy18LastOutcomeAt))}: {invoice.policy18LastOutcome}.
+            {policy18RemedyLine(invoice) && <><br />{policy18RemedyLine(invoice)}</>}
+          </div>
+        )}
+        <details style={{ marginTop: ".55rem" }}>
+          <summary style={{ cursor: "pointer", fontSize: ".78rem", fontWeight: 800, color: T.tx }}>Invoice lines</summary>
+          <div style={{ marginTop: ".45rem" }}>
+            {invoice.lines.map(line => (
+              <div key={line.orderId} className="meta"><span>{line.orderId}</span><span>{line.vendor}</span><span>{line.description}</span><span>${line.amount}</span></div>
+            ))}
+          </div>
+        </details>
+        <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".8rem" }}>
+          <button className="btn b-acc b-sm" onClick={() => setInvoicePreview(invoice)}>Preview Invoice</button>
+          <button className="btn b-acc b-sm" onClick={() => downloadInvoicePdf(invoice, { client, orders, proofs })}>Download Invoice PDF</button>
+          {invoice.status !== "Paid" && (!approved || canDispatch) && <button className="btn b-teal b-sm" onClick={() => openInvoiceApproval(invoice)}>Confirm Invoice Correct</button>}
+          {invoice.status !== "Paid" && <button className="btn b-acc b-sm" disabled={!invoice.dispatchRecordedAt} onClick={() => openPayment(invoice)}>{invoice.dispatchRecordedAt ? "Record Payment Evidence" : "Dispatch Required"}</button>}
+          {invoice.status !== "Paid" && invoice.status !== "Overdue" && <button className="btn b-red b-sm" disabled={!canMarkOverdue} onClick={() => onUpdateInvoice({ ...invoice, status: "Overdue", overdueAt: isoNow() })}>{canMarkOverdue ? "Mark Overdue" : "Dispatch Required"}</button>}
+          {invoice.status === "Overdue" && !notice && <button className="btn b-acc b-sm" disabled={!noticeReady} onClick={() => onRecordBillingNotice(invoice)}>{noticeReady ? "Record Day 8 Notice" : "Notice Not Due"}</button>}
+          {invoice.status === "Overdue" && <button className="btn b-red b-sm" disabled={!notice} onClick={() => {
+            const client = clients.find(c => c.id === invoice.clientId);
+            if (client) openSuspension(client, invoice);
+          }}>{notice ? "Suspend Account" : "Notice Required"}</button>}
+        </div>
+      </div>
+    );
+  }
+
   function renderDailyExceptionAlert() {
     const typeCounts = exceptionTypeCounts();
     const rows = exceptionAlertRows();
-    const oldest = rows[0];
+    const groups = exceptionAlertGroups();
+    const oldest = groups[0];
+    const duplicateRecordCount = Math.max(0, rows.length - groups.length);
     const reviewedAlert = reviewedExceptionAlert();
     return (
       <div className="card" style={{ borderColor: openExceptions.length ? T.acc : T.border }}>
@@ -9008,7 +10720,9 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
           <span>{todayBrisbane()}</span>
           <span>Admin</span>
           <span>{oldest ? `Oldest ${oldest.ageHours}h` : "No open exceptions"}</span>
-          <span>{rows.filter(row => row.linkedProofs.length > 0).length} proof-linked</span>
+          <span>{groups.length} action group{groups.length === 1 ? "" : "s"}</span>
+          <span>{groups.filter(group => group.linkedProofs.length > 0).length} proof-linked</span>
+          {duplicateRecordCount > 0 && <span>{duplicateRecordCount} duplicate record{duplicateRecordCount === 1 ? "" : "s"} collapsed</span>}
           <span>{reviewedAlert ? `Reviewed ${new Date(reviewedAlert.reviewedAt).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : "Not reviewed"}</span>
         </div>
         {openExceptions.length === 0 ? (
@@ -9023,19 +10737,24 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 <span className="pill sel" key={type}>{type}: {count}</span>
               ))}
             </div>
-            {rows.slice(0, 5).map(row => {
+            {groups.slice(0, 5).map(group => {
+              const row = group.primary;
               const linkedSupplier = supplierForException(row.exception);
               const linkedPriceRule = priceRuleForException(row.exception);
               return (
-                <div key={row.exception.id} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".55rem", marginTop: ".55rem" }}>
+                <div key={group.key} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".55rem", marginTop: ".55rem" }}>
                   <div className="card-head">
-                    <div style={{ fontWeight: 800, fontSize: ".86rem" }}>{row.exception.type} - {row.exception.orderId}</div>
-                    <span className="badge b-pending">{row.ageHours}h</span>
+                    <div style={{ fontWeight: 800, fontSize: ".86rem" }}>{row.exception.type} - {exceptionPrimaryReference(row.exception)}</div>
+                    <div style={{ display: "flex", gap: ".35rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {group.rows.length > 1 && <span className="badge b-pending">{group.rows.length} records</span>}
+                      <span className="badge b-pending">{group.ageHours}h</span>
+                    </div>
                   </div>
                   <div style={{ fontSize: ".8rem", color: T.mu }}>{row.exception.note}</div>
                   <div className="meta" style={{ marginTop: ".35rem" }}>
-                    <span>{linkedSupplier ? `${linkedSupplier.name} supplier record` : linkedPriceRule ? `${linkedPriceRule.label} price rule` : row.linkedOrders.length ? `${row.linkedOrders.length} linked work item(s)` : "No linked work"}</span>
-                    <span>{linkedSupplier ? (row.exception.type === "Supplier Pickup Standards Review" ? "Policy #15 / Policy #16 / CAP-MCL-001 review" : "SOP-MDM-01 / CAP-MCL-001 review") : linkedPriceRule ? "Policy #9 / SOP-MDM-02 review" : row.linkedProofs.length ? `${row.linkedProofs.length} POD proof record(s)` : "No POD proof linked"}</span>
+                    <span>{linkedSupplier ? `${linkedSupplier.name} supplier record` : linkedPriceRule ? `${linkedPriceRule.label} price rule` : group.linkedOrders.length ? `${group.linkedOrders.length} linked work item(s)` : "No linked work"}</span>
+                    <span>{linkedSupplier ? (row.exception.type === "Supplier Pickup Standards Review" ? "Policy #15 / Policy #16 / CAP-MCL-001 review" : "SOP-MDM-01 / CAP-MCL-001 review") : linkedPriceRule ? "Policy #9 / SOP-MDM-02 review" : group.linkedProofs.length ? `${group.linkedProofs.length} POD proof record(s)` : "No POD proof linked"}</span>
+                    {group.rows.length > 1 && <span>{group.rows.length - 1} duplicate record{group.rows.length === 2 ? "" : "s"} hidden here</span>}
                     <span>Owner: {row.exception.owner}</span>
                   </div>
                 </div>
@@ -9051,36 +10770,50 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
     );
   }
 
+  const adminTabs = [
+    { key: "dashboard", label: "Dashboard" },
+    { key: "orders", label: "Orders" },
+    { key: "dispatch", label: `Dispatch (${unassignedDispatch.length})` },
+    { key: "runClose", label: `Run Close (${runCloseReviewRows.length})` },
+    { key: "updates", label: `Updates (${operationalNoticeRows.length})` },
+    { key: "ai", label: `AI Drafts (${pendingAiDraftRows.length})` },
+    { key: "clients", label: "Clients" },
+    { key: "drivers", label: "Drivers" },
+    { key: "fleet", label: "Fleet" },
+    { key: "access", label: "Access" },
+    { key: "dataUse", label: `Data Use (${blockedDataUseRows.length})` },
+    { key: "privacy", label: `Privacy (${openPrivacyRequestRows.length})` },
+    { key: "exceptions", label: `Exceptions (${openExceptions.length})` },
+    { key: "vendors", label: "Suppliers" },
+    { key: "pricing", label: "Pricing" },
+    { key: "billing", label: "Billing" },
+    { key: "ndb", label: `NDB (${openDataBreachRows.length})` },
+    { key: "retention", label: "Retention" },
+    { key: "audit", label: "Audit" },
+  ];
+  const activeAdminTab = adminTabs.find(tab => tab.key === view) || adminTabs[0];
+
   return (
-    <>
-      <div className="nav">
-        <div className="logo"><img src="/moto-and-co-couriers-logo.png" alt="Moto and Co Couriers" /><span className="logo-sub">Admin operations</span></div>
-        <div style={{ display: "flex", gap: ".6rem", alignItems: "center" }}>
-          <div className="nav-role">Admin</div>
-          <button className="nav-out" onClick={onLogout}>Log out</button>
-        </div>
-      </div>
-      <div className="main">
-        <div className="tabs" style={{ marginBottom: "1.2rem" }}>
-          <button className={`tab${view === "dashboard" ? " active" : ""}`} onClick={() => setView("dashboard")}>Dashboard</button>
-          <button className={`tab${view === "orders" ? " active" : ""}`} onClick={() => setView("orders")}>Orders</button>
-          <button className={`tab${view === "dispatch" ? " active" : ""}`} onClick={() => setView("dispatch")}>Dispatch ({unassignedDispatch.length})</button>
-          <button className={`tab${view === "runClose" ? " active" : ""}`} onClick={() => setView("runClose")}>Run Close ({runCloseReviewRows.length})</button>
-          <button className={`tab${view === "updates" ? " active" : ""}`} onClick={() => setView("updates")}>Updates ({operationalNoticeRows.length})</button>
-          <button className={`tab${view === "ai" ? " active" : ""}`} onClick={() => setView("ai")}>AI Drafts ({pendingAiDraftRows.length})</button>
-          <button className={`tab${view === "clients" ? " active" : ""}`} onClick={() => setView("clients")}>Clients</button>
-          <button className={`tab${view === "drivers" ? " active" : ""}`} onClick={() => setView("drivers")}>Drivers</button>
-          <button className={`tab${view === "fleet" ? " active" : ""}`} onClick={() => setView("fleet")}>Fleet</button>
-          <button className={`tab${view === "access" ? " active" : ""}`} onClick={() => setView("access")}>Access</button>
-          <button className={`tab${view === "dataUse" ? " active" : ""}`} onClick={() => setView("dataUse")}>Data Use ({blockedDataUseRows.length})</button>
-          <button className={`tab${view === "privacy" ? " active" : ""}`} onClick={() => setView("privacy")}>Privacy ({openPrivacyRequestRows.length})</button>
-          <button className={`tab${view === "exceptions" ? " active" : ""}`} onClick={() => setView("exceptions")}>Exceptions ({openExceptions.length})</button>
-          <button className={`tab${view === "vendors" ? " active" : ""}`} onClick={() => setView("vendors")}>Suppliers</button>
-          <button className={`tab${view === "pricing" ? " active" : ""}`} onClick={() => setView("pricing")}>Pricing</button>
-          <button className={`tab${view === "billing" ? " active" : ""}`} onClick={() => setView("billing")}>Billing</button>
-          <button className={`tab${view === "ndb" ? " active" : ""}`} onClick={() => setView("ndb")}>NDB ({openDataBreachRows.length})</button>
-          <button className={`tab${view === "retention" ? " active" : ""}`} onClick={() => setView("retention")}>Retention</button>
-          <button className={`tab${view === "audit" ? " active" : ""}`} onClick={() => setView("audit")}>Audit</button>
+    <div className="ux-shell">
+      <ExperienceNav
+        role="ADMIN"
+        user={{ name: "Moto & Co" }}
+        tabs={adminTabs}
+        activeTab={view}
+        onTab={next => { setView(next); setWorkflowNotice(""); }}
+        onLogout={onLogout}
+      />
+      <main className="ux-main wide admin-main">
+        <div className="ux-heading">
+          <div>
+            <div className="ux-title">Admin <span>Operations</span></div>
+            <div className="ux-subtitle">{activeAdminTab.label} - dispatch, CRM, billing, exceptions, access, and compliance controls</div>
+          </div>
+          <div className="ux-run-stats">
+            <div className="ux-run-stat"><strong>{unassignedDispatch.length}</strong><span>Dispatch</span></div>
+            <div className="ux-run-stat"><strong style={{ color: "#c8102e" }}>{openExceptions.length}</strong><span>Exceptions</span></div>
+            <div className="ux-run-stat"><strong style={{ color: "#18733c" }}>{billingNotices.length}</strong><span>Billing</span></div>
+          </div>
         </div>
 
         {workflowNotice && (
@@ -9263,12 +10996,12 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               </div>
               <div className="meta" style={{ marginBottom: ".65rem" }}>
                 <span>POL-MCL-002-001</span>
-                <span>Night-before compilation</span>
+                <span>Driver-created daily run</span>
                 <span>{runPlanningStopCount} dispatchable stop(s)</span>
                 <span>{runPlanningQueuedRows.length} queued exception(s)</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu }}>
-                CAP-MCL-002 requires every milk run to be compiled the night before with a named driver, named vehicle, and APP-FLT-001 compliance gate. This local monitor records the governance evidence and queues Admin exceptions; live pg_cron automation remains a production blocker.
+                CAP-MCL-002 now tracks whether ready con notes have been consolidated into a driver-created daily run with a named driver, named vehicle, and APP-FLT-001 compliance evidence. The old night-before lockdown is removed for V2.0 because supplier con notes may arrive late in the day.
               </div>
               {runPlanningExceptionRows.length > 0 && (
                 <>
@@ -9280,7 +11013,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                         <span className={`badge ${row.openException ? "b-pending" : row.overdue ? "b-cancelled" : "b-pending"}`}>{row.openException ? "Queued" : row.overdue ? "Overdue" : "Review"}</span>
                       </div>
                       <div className="meta">
-                        <span>Night-before compile due {fmtFullDate(row.compileDueDate)}</span>
+                        <span>Daily run review date {fmtFullDate(row.compileDueDate)}</span>
                         <span>{row.totalStops} stop(s)</span>
                         <span>{row.unassignedOrders.length} unassigned</span>
                         <span>{row.namedAssignmentOrders.length}/{row.assignedOrders.length || 0} named</span>
@@ -9340,7 +11073,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 </div>
               )}
               <div style={{ fontSize: ".82rem", color: T.mu }}>
-                APP-ADM-002 compiles eligible work for the selected run date, groups stops by supplier and delivery geography, assigns a named driver and vehicle record, and reads local APP-FLT-001 registration/insurance/defect evidence from the fleet register. Night-before automation and live APP-FLT-001 checks remain production gaps.
+                APP-ADM-002 supports Admin assignment when needed, but V2.0 allows the driver to create the daily run from ready con notes and depot-ready packages. Supplier con-note timing remains an upstream input; APP-FLT-001 registration, insurance, and defect evidence still gate the run.
               </div>
               {compileSupplierGroups.length > 0 && (
                 <div style={{ marginTop: ".8rem" }}>
@@ -10404,15 +12137,19 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   <select value={priceDraft.serviceVariant} onChange={e => setPriceDraft(p => ({ ...p, serviceVariant: e.target.value }))}>
                     <option value="SVC-MCL-001-T">Tyre Delivery</option>
                     <option value="SVC-MCL-001-P">Parts Delivery</option>
+                    <option value="RETURN_SUPPLIER">Return to Supplier</option>
+                    <option value="OUT_OF_ZONE">Out-of-Zone Delivery</option>
                     <option value="REDELIVERY">Redelivery</option>
                   </select>
                 </div>
               </div>
               <div className="fr">
                 <div className="f"><label>Item Type</label>
-                  <select value={priceDraft.itemType} onChange={e => setPriceDraft(p => ({ ...p, itemType: e.target.value, serviceVariant: e.target.value === "parts" ? "SVC-MCL-001-P" : e.target.value === "redelivery" ? "REDELIVERY" : "SVC-MCL-001-T" }))}>
+                  <select value={priceDraft.itemType} onChange={e => setPriceDraft(p => ({ ...p, itemType: e.target.value, serviceVariant: e.target.value === "parts" ? "SVC-MCL-001-P" : e.target.value === "return" ? "RETURN_SUPPLIER" : e.target.value === "surcharge" ? "OUT_OF_ZONE" : e.target.value === "redelivery" ? "REDELIVERY" : "SVC-MCL-001-T" }))}>
                     <option value="tyre">Tyre</option>
                     <option value="parts">Parts</option>
+                    <option value="return">Return</option>
+                    <option value="surcharge">Surcharge</option>
                     <option value="redelivery">Redelivery</option>
                   </select>
                 </div>
@@ -10430,9 +12167,9 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               <div className="f"><label>Weight Band</label>
                 <select value={priceDraft.weightBand} onChange={e => setPriceDraft(p => ({ ...p, weightBand: e.target.value }))}>
                   <option value="">Not applicable</option>
-                  <option value="lt_5kg">Less than 5 kg</option>
-                  <option value="5_to_15kg">5 kg to 15 kg</option>
-                  <option value="gt_15kg">More than 15 kg</option>
+                  <option value="up_to_5kg">Up to 5 kg</option>
+                  <option value="5_to_10kg">5 kg to 10 kg</option>
+                  <option value="10kg_plus">10 kg+</option>
                 </select>
               </div>
               <div className="fr">
@@ -10629,9 +12366,51 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 </div>
               );
             })}
-            <h2 style={{ margin: "1.2rem 0 .8rem" }}>Invoice Batches</h2>
-            {invoices.length === 0 && <div className="empty">No invoice batches created locally.</div>}
-            {invoices.slice().reverse().map(invoice => {
+            <h2 style={{ margin: "1.2rem 0 .8rem" }}>Account Monthly Bills</h2>
+            {invoiceAccountGroups.length === 0 && <div className="empty">No invoice batches created locally.</div>}
+            {invoiceAccountGroups.map(account => (
+              <div className="card" key={account.key}>
+                <div className="card-head">
+                  <div>
+                    <div className="card-title">{account.accountName}</div>
+                    <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".15rem" }}>Billing account: {account.billingEmail}</div>
+                  </div>
+                  <span className={`badge ${account.unpaidTotal > 0 ? "b-pending" : "b-done"}`}>${account.unpaidTotal.toFixed(2)} unpaid</span>
+                </div>
+                <div className="meta">
+                  <span>{account.invoiceCount} invoice(s)</span>
+                  <span>{account.months.length} month(s)</span>
+                  <span>Total ${account.total.toFixed(2)}</span>
+                  <span>Paid ${account.paidTotal.toFixed(2)}</span>
+                  <span>Overdue ${account.overdueTotal.toFixed(2)}</span>
+                </div>
+                {account.months.map(month => (
+                  <div key={`${account.key}-${month.period}`} style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".75rem", marginTop: ".8rem" }}>
+                    <div className="card-head" style={{ marginBottom: ".35rem" }}>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: ".92rem" }}>{month.label}</div>
+                        <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".15rem" }}>{month.invoiceCount} invoice(s), {month.openCount} open, {month.paidCount} paid, {month.overdueCount} overdue</div>
+                      </div>
+                      <span className={`badge ${month.unpaidTotal > 0 ? "b-pending" : "b-done"}`}>${month.total.toFixed(2)} month total</span>
+                    </div>
+                    <div className="meta">
+                      <span>Paid ${month.paidTotal.toFixed(2)}</span>
+                      <span>Unpaid ${month.unpaidTotal.toFixed(2)}</span>
+                      <span>Overdue ${month.overdueTotal.toFixed(2)}</span>
+                    </div>
+                    {month.invoices.map(renderInvoiceBatchRow)}
+                    <button
+                      className="btn b-acc"
+                      style={{ marginTop: ".8rem", width: "100%" }}
+                      onClick={() => downloadInvoicePdf(monthInvoicePdfRecord(account, month), { client: account.client, orders, proofs })}
+                    >
+                      Download EOM Invoice PDF
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+            {false && invoices.slice().reverse().map(invoice => {
               const notice = day8NoticeForInvoice(invoice.id);
               const noticeDue = day8NoticeDueDate(invoice);
               const noticeReady = canRecordDay8Notice(invoice);
@@ -10642,7 +12421,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               <div className="card" key={invoice.id}>
                 <div className="card-head">
                   <div className="card-title">{invoice.id} — {invoice.clientName}</div>
-                  <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoice.status}</span>
+                  <span className={`badge ${invoice.status === "Paid" ? "b-done" : invoice.status === "Overdue" ? "b-cancelled" : "b-pending"}`}>{invoiceStatusLabel(invoice)}</span>
                 </div>
                 <div className="meta"><span>{invoice.billingEmail}</span><span>Due {fmt(invoice.dueDate)}</span><span>{invoice.lines.length} lines</span><span>Total ${invoice.total}</span></div>
                 <div style={{ fontSize: ".78rem", color: approved ? T.mu : T.acc, marginTop: ".45rem" }}>
@@ -10667,7 +12446,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                 )}
                 {invoice.dispatchRecordedAt && (
                   <div style={{ fontSize: ".78rem", color: T.mu, marginTop: ".45rem" }}>
-                    Dispatch recorded {fmtFullDate(isoDate(invoice.dispatchRecordedAt))}: {invoice.dispatchChannel === "local_record_only" ? "local record only" : invoice.dispatchChannel}; recipient {invoice.dispatchRecipient || invoice.billingEmail}; external status {invoice.dispatchExternalStatus || "not recorded"}.
+                    Local invoice dispatch evidence recorded {fmtFullDate(isoDate(invoice.dispatchRecordedAt))} for {invoice.dispatchRecipient || invoice.billingEmail}. No invoice email was sent because production invoice email/PDF delivery is not configured.
                   </div>
                 )}
                 {invoice.policy18LastOutcome && (
@@ -10951,9 +12730,12 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                     Schedule evidence: {runDateAdjustmentLabel(row.order.scheduleAdjustmentReason)}.
                   </div>
                 )}
-                <button className="btn b-ghost b-sm" style={{ marginTop: ".7rem" }} disabled>
-                  Destruction blocked pending Privacy Owner approval
-                </button>
+                <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginTop: ".7rem" }}>
+                  {row.order && <button className="btn b-acc b-sm" onClick={() => downloadProcessedConNotePdf(row.order, row.proof)}>Download POD PDF</button>}
+                  <button className="btn b-ghost b-sm" disabled>
+                    Destruction blocked pending Privacy Owner approval
+                  </button>
+                </div>
               </div>
             ))}
             <div className="card">
@@ -11592,7 +13374,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               {suspensionTarget.invoice && (
                 <div className="card" style={{ marginBottom: ".8rem" }}>
                   <div className="card-title">{suspensionTarget.invoice.id}</div>
-                  <div className="meta"><span>{suspensionTarget.invoice.status}</span><span>Due {fmt(suspensionTarget.invoice.dueDate)}</span><span>Total ${Number(suspensionTarget.invoice.total || 0).toFixed(2)}</span></div>
+                  <div className="meta"><span>{invoiceStatusLabel(suspensionTarget.invoice)}</span><span>Due {fmt(suspensionTarget.invoice.dueDate)}</span><span>Total ${Number(suspensionTarget.invoice.total || 0).toFixed(2)}</span></div>
                 </div>
               )}
               <div className="f">
@@ -11797,7 +13579,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               <h3>Record Payment Evidence - {paymentTarget.id}</h3>
               <div className="meta" style={{ marginBottom: ".7rem" }}>
                 <span>{paymentTarget.clientName}</span>
-                <span>{paymentTarget.status}</span>
+                <span>{invoiceStatusLabel(paymentTarget)}</span>
                 <span>Due {fmt(paymentTarget.dueDate)}</span>
                 <span>Total ${Number(paymentTarget.total || 0).toFixed(2)}</span>
               </div>
@@ -11817,12 +13599,12 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
               <h3>Approve Invoice For Dispatch - {invoiceApprovalTarget.id}</h3>
               <div className="meta" style={{ marginBottom: ".7rem" }}>
                 <span>{invoiceApprovalTarget.clientName}</span>
-                <span>{invoiceApprovalTarget.status}</span>
+                <span>{invoiceStatusLabel(invoiceApprovalTarget)}</span>
                 <span>{invoiceApprovalTarget.lines?.length || 0} lines</span>
                 <span>Total ${Number(invoiceApprovalTarget.total || 0).toFixed(2)}</span>
               </div>
               <div style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".7rem" }}>
-                SOP-BIL-04 requires Admin review of the rendered invoice. Confirming the invoice is correct triggers dispatch automatically. Production PDF/email delivery remains unconfirmed, so this records a local dispatch evidence row.
+                SOP-BIL-04 requires Admin review of the rendered invoice. Confirming the invoice is correct records local dispatch evidence only. No invoice email is sent until production invoice email/PDF delivery is configured.
               </div>
               <div className="meta" style={{ marginBottom: ".7rem" }}>
                 <span>Billing group approved {fmtFullDate(isoDate(invoiceApprovalTarget.billingGroupApprovedAt || invoiceApprovalTarget.createdAt))}</span>
@@ -11848,6 +13630,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
             client={clients.find(client => client.id === invoicePreview.clientId)}
             notices={billingNotices || []}
             onClose={() => setInvoicePreview(null)}
+            onDownloadPdf={invoice => downloadInvoicePdf(invoice, { client: clients.find(client => client.id === invoice.clientId), orders, proofs })}
           />
         )}
 
@@ -11937,15 +13720,22 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: ".7rem", marginBottom: ".7rem" }}>
                     <div className="card-title">POD Proof Records</div>
                     {linkedProofs.length === 0 && <div style={{ fontSize: ".82rem", color: T.acc, marginTop: ".35rem" }}>No delivery proof record is linked to this exception.</div>}
-                    {linkedProofs.map(proof => (
-                      <div className="meta" key={proof.id} style={{ marginTop: ".35rem" }}>
-                        <span>{proof.id}</span>
-                        <span>{proof.orderId}</span>
-                        <span>Receiver {proof.receiverName}</span>
-                        <span>{proof.deliveredAt ? new Date(proof.deliveredAt).toLocaleString("en-AU") : "Delivered time not recorded"}</span>
-                        <span>{proof.storage || "Storage not recorded"}</span>
-                      </div>
-                    ))}
+                    {linkedProofs.map(proof => {
+                      const proofOrder = linkedOrders.find(order => order.id === proof.orderId || order.proofId === proof.id || (proof.groupOrderIds || []).includes(order.id))
+                        || orders.find(order => order.id === proof.orderId || order.proofId === proof.id || (proof.groupOrderIds || []).includes(order.id));
+                      return (
+                        <div key={proof.id} style={{ marginTop: ".45rem" }}>
+                          <div className="meta">
+                            <span>{proof.id}</span>
+                            <span>{proof.orderId}</span>
+                            <span>Receiver {proof.receiverName}</span>
+                            <span>{proof.deliveredAt ? new Date(proof.deliveredAt).toLocaleString("en-AU") : "Delivered time not recorded"}</span>
+                            <span>{proof.storage || "Storage not recorded"}</span>
+                          </div>
+                          {proofOrder && <button className="btn b-acc b-sm" style={{ marginTop: ".45rem" }} onClick={() => downloadProcessedConNotePdf(proofOrder, proof)}>Download POD PDF</button>}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {isPolicy18Dispute(investigationTarget) && (
@@ -11972,7 +13762,7 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
                   </div>
                 )}
                 <div className="f"><label>Investigation Outcome</label><input value={investigationOutcome} onChange={e => setInvestigationOutcome(e.target.value)} /></div>
-                <div className="f"><label>Admin Investigation Note</label><textarea value={investigationNote} onChange={e => setInvestigationNote(e.target.value)} placeholder={control.notePlaceholder} /></div>
+                <div className="f"><label>Admin Investigation Note (optional)</label><textarea value={investigationNote} onChange={e => setInvestigationNote(e.target.value)} placeholder={control.notePlaceholder} /></div>
                 <button className="btn b-acc" onClick={closeInvestigation}>Close Exception</button>
                 <button className="btn b-ghost" style={{ marginTop: ".5rem" }} onClick={() => setInvestigationTarget(null)}>Cancel</button>
               </div>
@@ -12018,8 +13808,8 @@ function AdminPortal({ orders, clients, drivers, vehicles = [], suppliers, price
             </div>
           </div>
         )}
-      </div>
-    </>
+      </main>
+    </div>
   );
 }
 
@@ -12103,35 +13893,98 @@ function mergeLiveClientsWithLocalPending(liveClients = [], localClients = []) {
   return merged;
 }
 
-function mergeLiveOrdersWithLocalPending(liveOrders = [], localOrders = []) {
-  const seenIds = new Set();
-  const seenKeys = new Set();
-  const merged = [];
-  const keyFor = order => [
+function orderMergeKey(order = {}) {
+  return [
     String(order?.clientId || order?.accountId || order?.clientName || "").toLowerCase(),
     String(order?.vendor || "").toLowerCase(),
     String(order?.conNote || "").toLowerCase(),
   ].join("|");
+}
+
+function orderSyncRank(order = {}) {
+  const status = String(order?.status || "Pending");
+  if (status === "Delivered") return 50;
+  if (["Failed Delivery", "No Pickup", "Cancelled"].includes(status)) return 45;
+  if (status === "En Route" || String(order?.pickupOutcome || "") === "Picked Up") return 35;
+  if (status === "Brought Forward") return 25;
+  if (["Scheduled", "Received - Scheduled", "Received - Awaiting Dispatch", "Cut-off Adjusted", "Schedule Adjusted"].includes(status)) return 15;
+  return 10;
+}
+
+function localOrderHasFieldEvidence(order = {}) {
+  const status = String(order?.status || "");
+  if (status === "Delivered") return Boolean(order.proofId || order.sig || order.recvName || order.deliveredAt);
+  if (status === "En Route" || String(order?.pickupOutcome || "") === "Picked Up") {
+    return Boolean(order.pickupCapturedAt || order.pickupCalculatedPrice || order.pickupItemType || order.pickupItemQty || order.itemSummary);
+  }
+  return ["Failed Delivery", "No Pickup", "Brought Forward"].includes(status);
+}
+
+function localOrderOutranksLive(localOrder = {}, liveOrder = {}) {
+  if (!localOrder?.id || !liveOrder?.id) return false;
+  if (!localOrderHasFieldEvidence(localOrder)) return false;
+  return orderSyncRank(localOrder) > orderSyncRank(liveOrder);
+}
+
+function recoverableLocalOrders(liveOrders = [], localOrders = []) {
+  const liveById = new Map((liveOrders || []).map(order => [String(order.id || ""), order]));
+  const liveByKey = new Map((liveOrders || []).map(order => [orderMergeKey(order), order]));
+  return (localOrders || []).filter(localOrder => {
+    const liveOrder = liveById.get(String(localOrder.id || "")) || liveByKey.get(orderMergeKey(localOrder));
+    return liveOrder && localOrderOutranksLive(localOrder, liveOrder);
+  });
+}
+
+function mergeLiveOrdersWithLocalPending(liveOrders = [], localOrders = []) {
+  const seenIds = new Set();
+  const seenKeys = new Set();
+  const merged = [];
+  const localById = new Map((localOrders || []).map(order => [String(order.id || ""), order]));
+  const localByKey = new Map((localOrders || []).map(order => [orderMergeKey(order), order]));
 
   for (const order of liveOrders || []) {
     if (!order?.id) continue;
+    const localOrder = localById.get(String(order.id || "")) || localByKey.get(orderMergeKey(order));
+    const resolvedOrder = localOrderOutranksLive(localOrder, order) ? localOrder : order;
     seenIds.add(String(order.id));
-    seenKeys.add(keyFor(order));
-    merged.push(order);
+    seenKeys.add(orderMergeKey(order));
+    merged.push(resolvedOrder);
   }
 
   for (const order of localOrders || []) {
     const status = order?.status || "Pending";
     const recentlySubmitted = Boolean(order?.submittedAt || order?.createdAt);
     const dispatchable = orderIsDriverPickupReady(order) || ["En Route", "Picked Up"].includes(status);
-    const alreadySeen = seenIds.has(String(order?.id || "")) || seenKeys.has(keyFor(order));
+    const alreadySeen = seenIds.has(String(order?.id || "")) || seenKeys.has(orderMergeKey(order));
     if (!alreadySeen && recentlySubmitted && dispatchable) merged.unshift(order);
   }
 
   return merged;
 }
 
-export default function App() {
+function proofMergeKey(proof = {}) {
+  return String(proof?.id || proof?.orderId || proof?.deliveryId || proof?.deliveryStopKey || "");
+}
+
+function recoverableLocalProofs(liveProofs = [], localProofs = []) {
+  const liveKeys = new Set((liveProofs || []).map(proofMergeKey).filter(Boolean));
+  return (localProofs || []).filter(proof => {
+    const key = proofMergeKey(proof);
+    return key && !liveKeys.has(key) && Boolean(proof.signatureUrl || proof.signaturePath || proof.receiverName);
+  });
+}
+
+function mergeLiveProofsWithLocal(liveProofs = [], localProofs = []) {
+  const liveKeys = new Set((liveProofs || []).map(proofMergeKey).filter(Boolean));
+  const localOnly = recoverableLocalProofs(liveProofs, localProofs);
+  localOnly.forEach(proof => {
+    const key = proofMergeKey(proof);
+    if (key) liveKeys.add(key);
+  });
+  return [...localOnly, ...(liveProofs || [])];
+}
+
+function AppShell() {
   const pathname = usePathname();
   const routeIntent = routeIntentFromPath(pathname || "/");
   const [session, setSession] = useState(null);
@@ -12207,6 +14060,7 @@ export default function App() {
     if (JSON.stringify(loaded) !== JSON.stringify(normalised)) save(KEY_PRIVACY_REQUESTS, normalised);
     return normalised;
   });
+  const [liveOutbox, setLiveOutbox] = useState(() => load(KEY_LIVE_OUTBOX, []));
   const [accessOverrides, setAccessOverrides] = useState(() => load(KEY_ACCESS_OVERRIDES, []));
   const [showReg, setShowReg] = useState(false);
   const [accountSecurityOpen, setAccountSecurityOpen] = useState(false);
@@ -12222,8 +14076,22 @@ export default function App() {
   const liveRefreshSeq = useRef(0);
   const pendingLiveSyncRef = useRef(new Set());
   const liveSnapshotRefreshRef = useRef(null);
+  const liveOutboxRef = useRef(liveOutbox);
+  const liveOutboxFlushRef = useRef(null);
   const workspaceSession = workspaceSessionForLiveData(session, clients, operationalDrivers);
   const operationalOrders = liveRuntimeEnabled ? orders.filter(order => !isSeedRuntimeOrder(order)) : orders;
+
+  useEffect(() => {
+    liveOutboxRef.current = liveOutbox;
+  }, [liveOutbox]);
+
+  useEffect(() => {
+    if (!systemNotice) return undefined;
+    const timeout = window.setTimeout(() => {
+      setSystemNotice(current => current === systemNotice ? "" : current);
+    }, 9000);
+    return () => window.clearTimeout(timeout);
+  }, [systemNotice]);
 
   useEffect(() => {
     if (!liveRuntimeEnabled) {
@@ -12272,33 +14140,79 @@ export default function App() {
   }, [liveRuntimeEnabled]);
 
   function applyLiveRuntimeSnapshot(snapshot = {}) {
-    if (snapshot.clients?.length) setClients(prev => mergeLiveClientsWithLocalPending(snapshot.clients, prev));
-    if (snapshot.suppliers?.length) setSuppliers(mergeApprovedSupplierRecords(snapshot.suppliers));
-    if (snapshot.drivers?.length) setDrivers(snapshot.drivers.map(normaliseDriverRecord));
-    if (snapshot.vehicles?.length) setVehicles(snapshot.vehicles);
-    if (snapshot.priceRules?.length) setPriceRules(snapshot.priceRules.map(normalisePriceRule));
-    if (snapshot.orders?.length) setOrders(prev => mergeLiveOrdersWithLocalPending(snapshot.orders, prev));
-    if (snapshot.proofs?.length) setProofs(snapshot.proofs.map(proof => normaliseDeliveryProof(proof, snapshot.orders?.length ? snapshot.orders : [])));
-    if (snapshot.exceptions?.length) setExceptions(snapshot.exceptions);
-    if (snapshot.audit?.length) setAudit(snapshot.audit);
-    if (snapshot.invoices?.length) setInvoices(snapshot.invoices.map(normaliseInvoice));
-    if (snapshot.billingNotices?.length) setBillingNotices(snapshot.billingNotices);
-    if (snapshot.operationalNotices?.length) setOperationalNotices(snapshot.operationalNotices);
-    if (snapshot.runClosures?.length) setRunClosures(snapshot.runClosures);
-    if (snapshot.masterDataChanges?.length) setMasterDataChanges(snapshot.masterDataChanges);
-    if (snapshot.exceptionAlerts?.length) setExceptionAlerts(snapshot.exceptionAlerts);
-    if (snapshot.driverAvailability?.length) setDriverAvailability(snapshot.driverAvailability.map(normaliseDriverAvailabilityRecord));
-    if (snapshot.financialReconciliations?.length) setFinancialReconciliations(snapshot.financialReconciliations.map(normaliseFinancialReconciliation));
-    if (snapshot.aiDrafts?.length) setAiDrafts(snapshot.aiDrafts.map(normaliseAiDraft));
-    if (snapshot.dataBreachIncidents?.length) setDataBreachIncidents(snapshot.dataBreachIncidents.map(normaliseDataBreachIncident));
-    if (snapshot.dataUseRecords?.length) setDataUseRecords(snapshot.dataUseRecords.map(normaliseDataUseRecord));
-    if (snapshot.privacyRequests?.length) setPrivacyRequests(snapshot.privacyRequests.map(normalisePrivacyRequest));
+    const liveClients = rows(snapshot.clients);
+    const liveSuppliers = rows(snapshot.suppliers);
+    const liveDrivers = rows(snapshot.drivers);
+    const liveVehicles = rows(snapshot.vehicles);
+    const livePriceRules = rows(snapshot.priceRules);
+    const liveOrders = rows(snapshot.orders);
+    const liveProofRows = rows(snapshot.proofs);
+    if (liveClients.length) setClients(prev => mergeLiveClientsWithLocalPending(liveClients, prev));
+    if (liveSuppliers.length) setSuppliers(mergeApprovedSupplierRecords(liveSuppliers));
+    if (liveDrivers.length) setDrivers(liveDrivers.map(normaliseDriverRecord));
+    if (liveVehicles.length) setVehicles(liveVehicles);
+    if (livePriceRules.length) setPriceRules(livePriceRules.map(normalisePriceRule));
+    if (liveOrders.length) setOrders(prev => {
+      const recoverable = recoverableLocalOrders(liveOrders, prev);
+      if (recoverable.length && typeof window !== "undefined") {
+        window.setTimeout(() => queueLiveOutbox({ kind: "domain", domainKey: "orders", rows: recoverable }, new Error("Recovered local field update waiting for live sync.")), 0);
+      }
+      const merged = mergeLiveOrdersWithLocalPending(liveOrders, prev);
+      save(KEY_ORDERS, merged);
+      return merged;
+    });
+    if (liveProofRows.length) setProofs(prev => {
+      const liveProofs = liveProofRows.map(proof => normaliseDeliveryProof(proof, liveOrders.length ? liveOrders : []));
+      const localProofs = prev.map(proof => normaliseDeliveryProof(proof, orders));
+      const recoverable = recoverableLocalProofs(liveProofs, localProofs);
+      if (recoverable.length && typeof window !== "undefined") {
+        window.setTimeout(() => recoverable.forEach(proof => queueLiveOutbox({ kind: "proof", proof }, new Error("Recovered local proof waiting for live sync."))), 0);
+      }
+      const merged = mergeLiveProofsWithLocal(liveProofs, localProofs);
+      save(KEY_PROOFS, merged);
+      return merged;
+    });
+    if (Array.isArray(snapshot.exceptions)) {
+      const liveExceptions = rows(snapshot.exceptions);
+      setExceptions(liveExceptions);
+      save(KEY_EXCEPTIONS, liveExceptions);
+    }
+    const liveAudit = rows(snapshot.audit);
+    const liveInvoices = rows(snapshot.invoices);
+    const liveBillingNotices = rows(snapshot.billingNotices);
+    const liveOperationalNotices = rows(snapshot.operationalNotices);
+    const liveRunClosures = rows(snapshot.runClosures);
+    const liveMasterDataChanges = rows(snapshot.masterDataChanges);
+    const liveExceptionAlerts = rows(snapshot.exceptionAlerts);
+    const liveDriverAvailability = rows(snapshot.driverAvailability);
+    const liveFinancialReconciliations = rows(snapshot.financialReconciliations);
+    const liveAiDrafts = rows(snapshot.aiDrafts);
+    const liveDataBreachIncidents = rows(snapshot.dataBreachIncidents);
+    const liveDataUseRecords = rows(snapshot.dataUseRecords);
+    const livePrivacyRequests = rows(snapshot.privacyRequests);
+    if (liveAudit.length) setAudit(liveAudit);
+    if (liveInvoices.length) setInvoices(liveInvoices.map(normaliseInvoice));
+    if (liveBillingNotices.length) setBillingNotices(liveBillingNotices);
+    if (liveOperationalNotices.length) setOperationalNotices(liveOperationalNotices);
+    if (liveRunClosures.length) setRunClosures(liveRunClosures);
+    if (liveMasterDataChanges.length) setMasterDataChanges(liveMasterDataChanges);
+    if (liveExceptionAlerts.length) setExceptionAlerts(liveExceptionAlerts);
+    if (liveDriverAvailability.length) setDriverAvailability(liveDriverAvailability.map(normaliseDriverAvailabilityRecord));
+    if (liveFinancialReconciliations.length) setFinancialReconciliations(liveFinancialReconciliations.map(normaliseFinancialReconciliation));
+    if (liveAiDrafts.length) setAiDrafts(liveAiDrafts.map(normaliseAiDraft));
+    if (liveDataBreachIncidents.length) setDataBreachIncidents(liveDataBreachIncidents.map(normaliseDataBreachIncident));
+    if (liveDataUseRecords.length) setDataUseRecords(liveDataUseRecords.map(normaliseDataUseRecord));
+    if (livePrivacyRequests.length) setPrivacyRequests(livePrivacyRequests.map(normalisePrivacyRequest));
     setLiveSnapshotLoaded(true);
   }
 
   async function refreshLiveRuntimeSnapshot({ background = false } = {}) {
     if (!liveRuntimeEnabled || !session?.role) return { skipped: true };
     if (pendingLiveSyncRef.current.size) return { skipped: true, reason: "pending_sync" };
+    if (liveOutboxRef.current.length) {
+      await flushLiveOutbox({ background: true });
+      if (liveOutboxRef.current.length) return { skipped: true, reason: "offline_outbox" };
+    }
     if (liveSnapshotRefreshRef.current) return liveSnapshotRefreshRef.current;
 
     const refreshPromise = loadLiveRuntimeSnapshot()
@@ -12360,10 +14274,36 @@ export default function App() {
     };
   }, [liveRuntimeEnabled, session?.role, liveSnapshotLoaded]);
 
+  useEffect(() => {
+    if (!liveRuntimeEnabled || !session?.role) return;
+    const retrySavedFieldUpdates = () => {
+      if (liveOutboxRef.current.length) flushLiveOutbox({ background: false });
+    };
+    const retryWhenVisible = () => {
+      if (document.visibilityState === "visible") retrySavedFieldUpdates();
+    };
+
+    window.addEventListener("online", retrySavedFieldUpdates);
+    window.addEventListener("focus", retrySavedFieldUpdates);
+    document.addEventListener("visibilitychange", retryWhenVisible);
+    retrySavedFieldUpdates();
+
+    return () => {
+      window.removeEventListener("online", retrySavedFieldUpdates);
+      window.removeEventListener("focus", retrySavedFieldUpdates);
+      document.removeEventListener("visibilitychange", retryWhenVisible);
+    };
+  }, [liveRuntimeEnabled, session?.role, session?.user?.profileId]);
+
   async function logout() {
     if (pendingLiveSyncRef.current.size) {
       setSystemNotice("Finishing live saves before logging out...");
       await Promise.allSettled([...pendingLiveSyncRef.current]);
+      setSystemNotice("");
+    }
+    if (liveOutboxRef.current.length) {
+      setSystemNotice("Checking saved field updates before logging out...");
+      await flushLiveOutbox({ background: false });
       setSystemNotice("");
     }
     if (liveRuntimeEnabled) await signOutLiveRuntime();
@@ -12375,12 +14315,123 @@ export default function App() {
     setSystemNotice(String(message || "A system workflow rule blocked this action."));
   }
 
+  function outboxRowId(row = {}) {
+    return String(row.id || row.localId || row.invoiceNumber || row.orderId || row.email || row.deliveryId || "");
+  }
+
+  function outboxEntryKey(entry = {}) {
+    if (entry.kind === "proof") {
+      const proof = entry.proof || {};
+      return `proof:${proof.id || proof.deliveryId || proof.orderId || entry.id || ""}`;
+    }
+    if (entry.kind === "deliveryCompletion") {
+      const proof = entry.proof || {};
+      const rowIds = (entry.rows || []).map(outboxRowId).filter(Boolean).join(",");
+      return `delivery:${proof.id || proof.deliveryId || proof.orderId || entry.id || ""}:${rowIds}`;
+    }
+    const rowIds = (entry.rows || []).map(outboxRowId).filter(Boolean).join(",");
+    return `domain:${entry.domainKey || ""}:${rowIds || entry.id || ""}`;
+  }
+
+  function commitLiveOutbox(next) {
+    const safeNext = (next || []).slice(0, 200);
+    liveOutboxRef.current = safeNext;
+    setLiveOutbox(safeNext);
+    save(KEY_LIVE_OUTBOX, safeNext);
+  }
+
+  function queueLiveOutbox(entry, error) {
+    const now = isoNow();
+    const queued = {
+      id: entry.id || `live-outbox-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      kind: entry.kind || "domain",
+      domainKey: entry.domainKey || "",
+      rows: entry.rows || [],
+      proof: entry.proof || null,
+      createdAt: entry.createdAt || now,
+      updatedAt: now,
+      attempts: Number(entry.attempts || 0),
+      lastError: error?.message || String(error || "Live sync failed."),
+      actorRole: workspaceSession?.role || "",
+      actorEmail: workspaceSession?.user?.email || "",
+    };
+    const key = outboxEntryKey(queued);
+    const previous = liveOutboxRef.current || [];
+    const existing = previous.find(item => outboxEntryKey(item) === key);
+    const nextItem = existing
+      ? { ...existing, ...queued, id: existing.id, createdAt: existing.createdAt || queued.createdAt, attempts: Number(existing.attempts || 0) }
+      : queued;
+    const next = [nextItem, ...previous.filter(item => outboxEntryKey(item) !== key)];
+    commitLiveOutbox(next);
+    return { queued: true, error, outboxId: nextItem.id };
+  }
+
+  async function flushLiveOutbox({ background = false } = {}) {
+    if (!liveRuntimeEnabled || !workspaceSession?.role) return { skipped: true };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      if (!background) setSystemNotice("No internet connection. Field updates are saved on this device and will sync when the connection returns.");
+      return { skipped: true, reason: "offline" };
+    }
+    if (liveOutboxFlushRef.current) return liveOutboxFlushRef.current;
+
+    const flushPromise = (async () => {
+      let current = liveOutboxRef.current || [];
+      if (!current.length) return { synced: 0, failed: 0 };
+
+      let synced = 0;
+      let failed = 0;
+      const entries = [...current].reverse();
+      for (const entry of entries) {
+        try {
+          if (entry.kind === "proof") {
+            await uploadLiveDeliveryProof(entry.proof, workspaceSession);
+          } else if (entry.kind === "deliveryCompletion") {
+            const results = await Promise.allSettled([
+              uploadLiveDeliveryProof(entry.proof, workspaceSession),
+              (entry.rows || []).length ? syncLiveRuntimeDomain("orders", entry.rows || [], workspaceSession) : Promise.resolve({ skipped: true }),
+            ]);
+            const failures = results.filter(item => item.status === "rejected").map(item => item.reason);
+            if (failures.length) {
+              throw new Error(failures.map(error => error?.message || String(error || "Live sync failed.")).join(" | "));
+            }
+          } else {
+            await syncLiveRuntimeDomain(entry.domainKey, entry.rows || [], workspaceSession);
+          }
+          current = current.filter(item => item.id !== entry.id);
+          commitLiveOutbox(current);
+          synced += 1;
+        } catch (error) {
+          failed += 1;
+          const now = isoNow();
+          current = current.map(item => item.id === entry.id
+            ? { ...item, attempts: Number(item.attempts || 0) + 1, lastAttemptAt: now, lastError: error?.message || "Live sync failed.", updatedAt: now }
+            : item);
+          commitLiveOutbox(current);
+        }
+      }
+
+      if (synced && failed === 0) {
+        if (!background) setSystemNotice(`${synced} saved field update${synced === 1 ? "" : "s"} synced to the live system.`);
+        await refreshLiveRuntimeSnapshot({ background: true });
+      } else if (failed && !background) {
+        const detail = current.map(item => friendlyLiveSyncIssue(item.lastError)).filter(Boolean).slice(0, 1).join(" ");
+        setSystemNotice(`${current.length} field update${current.length === 1 ? "" : "s"} still waiting to sync.${detail ? ` ${detail}` : ""} Keep this device signed in and online.`);
+      }
+      return { synced, failed };
+    })().finally(() => {
+      liveOutboxFlushRef.current = null;
+    });
+
+    liveOutboxFlushRef.current = flushPromise;
+    return flushPromise;
+  }
+
   function syncLiveRecords(domainKey, rows = [], failureMessage = "Live system sync failed.") {
     if (!liveRuntimeEnabled || !workspaceSession?.role || !rows?.length) return Promise.resolve({ skipped: true });
     const syncPromise = syncLiveRuntimeDomain(domainKey, rows, workspaceSession).catch(error => {
       console.error(error);
-      setSystemNotice(error?.message || failureMessage);
-      return { error };
+      setSystemNotice(`${failureMessage} Saved on this device and queued for automatic retry.`);
+      return queueLiveOutbox({ kind: "domain", domainKey, rows }, error);
     });
     pendingLiveSyncRef.current.add(syncPromise);
     syncPromise.finally(() => {
@@ -12393,8 +14444,32 @@ export default function App() {
     if (!liveRuntimeEnabled || !workspaceSession?.role || !proof) return Promise.resolve({ skipped: true });
     const syncPromise = uploadLiveDeliveryProof(proof, workspaceSession).catch(error => {
       console.error(error);
-      setSystemNotice(error?.message || "Delivery proof could not be saved to live storage.");
-      return { error };
+      setSystemNotice("Delivery proof is saved on this device and queued for automatic retry.");
+      return queueLiveOutbox({ kind: "proof", proof }, error);
+    });
+    pendingLiveSyncRef.current.add(syncPromise);
+    syncPromise.finally(() => {
+      pendingLiveSyncRef.current.delete(syncPromise);
+    });
+    return syncPromise;
+  }
+
+  function syncLiveDeliveryCompletion(proof, deliveredRows = []) {
+    if (!liveRuntimeEnabled || !workspaceSession?.role || !proof) return Promise.resolve({ skipped: true });
+    const syncPromise = (async () => {
+      const results = await Promise.allSettled([
+        uploadLiveDeliveryProof(proof, workspaceSession),
+        (deliveredRows || []).length ? syncLiveRuntimeDomain("orders", deliveredRows, workspaceSession) : Promise.resolve({ skipped: true }),
+      ]);
+      const failures = results.filter(item => item.status === "rejected").map(item => item.reason);
+      if (failures.length) {
+        throw new Error(failures.map(error => error?.message || String(error || "Live sync failed.")).join(" | "));
+      }
+      return { proof: results[0]?.value, deliveredRows: deliveredRows.length };
+    })().catch(error => {
+      console.error(error);
+      setSystemNotice("Delivery is saved on this device and queued for automatic retry.");
+      return queueLiveOutbox({ kind: "deliveryCompletion", proof, rows: deliveredRows || [] }, error);
     });
     pendingLiveSyncRef.current.add(syncPromise);
     syncPromise.finally(() => {
@@ -13004,67 +15079,29 @@ export default function App() {
     return activeDriverRecords(operationalDrivers);
   }
 
-  function orderWithSingleDriverAutoAssignment(order, options = {}) {
-    const repairSeedAssignment = Boolean(options.repairSeedAssignment);
-    if (liveRuntimeEnabled && !liveSnapshotLoaded) return order;
-    if ((order.driverId || order.assignedDriverId) && !(repairSeedAssignment && isSeedDriverAssignment(order))) return order;
-    const activeDrivers = liveAssignableDrivers();
-    if (activeDrivers.length !== 1) return order;
-
-    const driver = activeDrivers[0];
-    const assignedDriver = driverAssignmentFields(driver);
-    const runDate = order.actualRunDate || order.date || todayBrisbane();
-    const readyVehicles = activeVehicles(vehicles).filter(vehicle => vehicleComplianceState(vehicle, runDate).ready);
-    const vehicle = readyVehicles.length === 1 ? readyVehicles[0] : null;
-    const vehicleName = vehicleLabel(vehicle);
-    const assignedAt = isoNow();
-    const driverId = assignedDriver.driverId || driver.id;
-    if (!driverId) return order;
-
+  function orderForDriverCreatedRunIntake(order, patch = {}) {
     return {
-      ...order,
-      ...assignedDriver,
-      driverId,
-      assignedDriverId: assignedDriver.assignedDriverId || driverId,
-      driverName: assignedDriver.driverName || driver.name,
-      vehicleId: vehicle?.id || order.vehicleId || "",
-      vehicleName: vehicleName || order.vehicleName || "",
-      runId: vehicleName ? runIdFor(runDate, driverId, vehicleName) : order.runId || "",
-      assignedAt,
-      runDate,
-      runCompiledAt: assignedAt,
-      runCompiledBy: "Auto assignment",
-      runSequence: order.runSequence || 1,
-      supplierSequence: order.supplierSequence || 1,
-      deliveryZone: deliveryZone(order.dropAddress),
-      dispatchMode: "single_active_driver_auto_assignment",
-      vehicleRegistrationCurrent: vehicle ? true : Boolean(order.vehicleRegistrationCurrent),
-      vehicleInsuranceCurrent: vehicle ? true : Boolean(order.vehicleInsuranceCurrent),
-      vehicleRegistrationExpiry: vehicle?.registrationExpiry || order.vehicleRegistrationExpiry || "",
-      vehicleInsuranceExpiry: vehicle?.insuranceExpiry || order.vehicleInsuranceExpiry || "",
-      vehicleComplianceCheckedAt: vehicle ? assignedAt : order.vehicleComplianceCheckedAt || "",
-      vehicleComplianceCheckedBy: vehicle ? "Auto assignment" : order.vehicleComplianceCheckedBy || "",
-      vehicleComplianceNote: vehicle ? "Single active driver / single ready vehicle auto-assignment" : order.vehicleComplianceNote || "",
-      vehicleComplianceSource: vehicle ? "vehicle_register_auto_assignment" : order.vehicleComplianceSource || "",
+      ...clearDriverRunAssignmentFields(order),
+      ...patch,
+      dispatchMode: patch.dispatchMode || "driver_created_run_intake",
+      driverCreatedRunRequired: true,
+      driverCreatedRunPolicyRef: "SOP-RUN-01 driver-created daily run",
     };
   }
 
   function addOrder(o) {
-    const order = orderWithSingleDriverAutoAssignment(o);
+    const order = orderForDriverCreatedRunIntake(o);
     const next = [order, ...orders];
     setOrders(next); save(KEY_ORDERS, next);
     const syncPromise = syncLiveRecords("orders", [order], "Pickup request could not be synced to the live system.");
     writeAudit("Pickup request created", `${order.id} for ${order.clientName}, supplier ${order.vendor}, run ${order.actualRunDate || order.date}`, "client");
-    if (order.dispatchMode === "single_active_driver_auto_assignment") {
-      writeAudit("Pickup request auto-assigned", `${order.id} assigned to ${order.driverName || order.driverId}${order.vehicleName ? `, vehicle ${order.vehicleName}` : ""}`, "system");
-    }
     createOperationalNotice({
       clientId: order.clientId,
       clientName: order.clientName,
       orderId: order.id,
       noticeType: "pickup_request_submitted",
       subject: `Pickup request received - ${order.id}`,
-      message: `${order.vendor} pickup request was received and scheduled for run ${fmtFullDate(orderRunDate(order))}. Con note ${order.conNote}.`,
+      message: `${order.vendor} pickup request was received for the driver-created daily run. Con note ${order.conNote}. Requested run date ${fmtFullDate(orderRunDate(order))}.`,
       eventRef: order.submittedAt || "",
       createdBy: "client",
     });
@@ -13084,20 +15121,44 @@ export default function App() {
     return syncPromise;
   }
 
+  function createDriverDepotPickup(o) {
+    const order = {
+      ...o,
+      id: o.id || uid(),
+      createdAt: o.createdAt || isoNow(),
+      updatedAt: isoNow(),
+      driverCreatedDepotPickup: true,
+    };
+    const next = [order, ...orders.filter(item => item.id !== order.id)];
+    setOrders(next); save(KEY_ORDERS, next);
+    const syncPromise = syncLiveRecords("orders", [order], "Driver depot pickup could not be synced to the live system.");
+    writeAudit(
+      "Driver depot pickup recorded",
+      `${order.id} ${order.conNote || "no con note"} for ${order.clientName || "Admin review"} at ${order.vendor}; ${order.pickupCountSummary || order.itemType || "items counted"}; Admin account reconciliation required`,
+      "driver"
+    );
+    recordOrderStatusNotice(null, order);
+    return syncPromise;
+  }
+
   useEffect(() => {
     if (!session?.role) return;
+    if (!["admin", "super_admin", "driver"].includes(session.role)) return;
     if (liveRuntimeEnabled && !liveSnapshotLoaded) return;
-    const autoAssignable = (order) =>
-      ["Pending", "Brought Forward"].includes(order.status || "Pending") &&
-      !isSeedRuntimeOrder(order) &&
-      ((!order.driverId && !order.assignedDriverId) || (liveRuntimeEnabled && isSeedDriverAssignment(order)));
+    const autoAssignedButUncollected = (order) =>
+      orderIsDriverPickupReady(order) &&
+      !pickupAlreadyCollected(order) &&
+      (order.dispatchMode === "single_active_driver_auto_assignment" || order.runCompiledBy === "Auto assignment");
 
     let changed = false;
     const updates = [];
     const next = orders.map(order => {
-      if (!autoAssignable(order)) return order;
-      const assigned = orderWithSingleDriverAutoAssignment(order, { repairSeedAssignment: true });
-      if (assigned === order) return order;
+      if (!autoAssignedButUncollected(order)) return order;
+      const assigned = orderForDriverCreatedRunIntake(order, {
+        autoAssignmentClearedAt: isoNow(),
+        autoAssignmentClearedBy: session.role,
+        autoAssignmentClearReason: "Released from legacy single-driver auto assignment before pickup collection.",
+      });
       changed = true;
       updates.push(assigned);
       return assigned;
@@ -13105,8 +15166,8 @@ export default function App() {
 
     if (!changed) return;
     setOrders(next); save(KEY_ORDERS, next);
-    syncLiveRecords("orders", updates, "Existing pickup requests could not be auto-assigned in the live system.");
-    writeAudit("Pending pickups auto-assigned", `${updates.length} unassigned pickup request${updates.length === 1 ? "" : "s"} assigned to ${updates[0]?.driverName || updates[0]?.driverId || "single active driver"}`, "system");
+    syncLiveRecords("orders", updates, "Legacy auto-assigned pickup requests could not be released in the live system.");
+    writeAudit("Auto-assigned pickups released", `${updates.length} pickup request${updates.length === 1 ? "" : "s"} returned to driver-created daily run intake`, "system");
   }, [orders, drivers, vehicles, session?.role, liveRuntimeEnabled, liveSnapshotLoaded]);
 
   function cancelOrderBeforeCollection(order, reason, actor = session?.role || "admin") {
@@ -13118,7 +15179,7 @@ export default function App() {
     }
     const cancelledAt = isoNow();
     const updated = {
-      ...order,
+      ...clearDriverRunAssignmentFields(order),
       status: "Cancelled",
       cancelledAt,
       cancelledBy: actor,
@@ -13126,11 +15187,6 @@ export default function App() {
       cancellationPolicyRef: "Policy #14",
       cancellationCutoffDate: cancellationCutoffDate(order),
       billable: false,
-      driverId: null,
-      driverName: null,
-      vehicleId: null,
-      vehicleName: "",
-      runId: null,
     };
     const next = orders.map(item => item.id === order.id ? updated : item);
     setOrders(next); save(KEY_ORDERS, next);
@@ -13142,6 +15198,11 @@ export default function App() {
     const state = cancellationState(order);
     if (!state.canRequestAdminReview) {
       writeAudit("Cancellation review blocked", `${order.id}: ${state.reason}`, "client");
+      return;
+    }
+    const duplicate = findOpenDuplicateException({ type: "Cancellation Request", orderId: order.id });
+    if (duplicate) {
+      writeAudit("Cancellation review duplicate blocked", `${order.id}: existing exception ${duplicate.id}`, "client");
       return;
     }
     addException({
@@ -13191,7 +15252,7 @@ export default function App() {
     if (session?.user?.id === stored.id) setSession({ ...session, user: stored });
     if (liveRuntimeEnabled && workspaceSession?.role && ["admin", "super_admin"].includes(workspaceSession.role)) {
       syncLiveRuntimeDomain("clients", [stored], workspaceSession).catch(error => {
-        showWorkflowNotice(error?.message || "Customer update could not be synced to the live system.");
+        showWorkflowNotice(friendlyLiveSyncIssue(error));
       });
     }
     recordAccountStatusNotices(previous, stored);
@@ -13280,15 +15341,29 @@ export default function App() {
     writeAudit(exists ? "Driver directory updated" : "Driver directory added", `${storedDriver.name || storedDriver.id}: ${reason}`, "admin");
   }
 
+  function findOpenDuplicateException(candidate, source = exceptions) {
+    const key = exceptionDuplicateKey(candidate);
+    if (!key) return null;
+    return (source || []).find(exception => exceptionIsOpen(exception) && exceptionDuplicateKey(exception) === key) || null;
+  }
+
   function addException(e, actor = session?.role || "system") {
+    const duplicate = findOpenDuplicateException(e);
+    if (duplicate) {
+      writeAudit("Exception duplicate blocked", `${e.type} on ${exceptionPrimaryReference(e)} matches open exception ${duplicate.id}`, actor);
+      return duplicate;
+    }
     const event = { ...e, id: `ex-${Date.now()}-${Math.random().toString(16).slice(2)}`, createdAt: isoNow(), status: e.status || "Open" };
     setExceptions(prev => {
+      const prevDuplicate = findOpenDuplicateException(e, prev);
+      if (prevDuplicate) return prev;
       const next = [event, ...prev];
       save(KEY_EXCEPTIONS, next);
       return next;
     });
     syncLiveRecords("exceptions", [event], "Exception could not be synced to the live system.");
     writeAudit("Exception recorded", `${event.type} on ${event.orderId}: ${event.note}`, actor);
+    return event;
   }
 
   useEffect(() => {
@@ -13440,7 +15515,7 @@ export default function App() {
       orderId: row.runDate,
       runDate: row.runDate,
       owner: "Admin",
-      note: `CAP-MCL-002 / APP-ADM-002 run ${fmtFullDate(row.runDate)}: ${reasons.join("; ")}. Night-before compile due ${fmtFullDate(row.compileDueDate)}. Local monitor only; production pg_cron automation remains unconnected.`,
+      note: `CAP-MCL-002 / APP-ADM-002 run ${fmtFullDate(row.runDate)}: ${reasons.join("; ")}. Daily run review date ${fmtFullDate(row.compileDueDate)}. Driver-created daily run evidence must be checked before accepting the run as complete.`,
       status: "Open",
       source: "CAP-MCL-002 / APP-ADM-002 / POL-MCL-002-001",
       severity: row.overdue ? "High" : "Medium",
@@ -13570,9 +15645,9 @@ export default function App() {
     }
     const next = [storedProof, ...proofs];
     setProofs(next); save(KEY_PROOFS, next);
-    const proofSync = syncLiveProof(storedProof);
     writeAudit("Delivery proof stored", `${storedProof.orderId} receiver ${storedProof.receiverName}; ${storedProof.signaturePath}; group size ${storedProof.deliveryGroupSize || 1}; SOP-DEL-04 sign-off evidence captured`, "driver");
     if (matchedOrders.length === 0) {
+      const proofSync = syncLiveProof(storedProof);
       addException({
         type: "Delivery Completion Failure",
         orderId: storedProof.orderId || storedProof.deliveryId,
@@ -13624,10 +15699,10 @@ export default function App() {
     });
     const nextOrders = orders.map(order => completedIds.has(order.id) ? completedById.get(order.id) : order);
     setOrders(nextOrders); save(KEY_ORDERS, nextOrders);
-    const orderSync = syncLiveRecords("orders", [...completedById.values()], "Delivered order updates could not be synced to the live system.");
+    const deliverySync = syncLiveDeliveryCompletion(storedProof, [...completedById.values()]);
     matchedOrders.forEach(previous => recordOrderStatusNotice(previous, completedById.get(previous.id)));
     writeAudit("Delivery completed by system", `${matchedOrders.map(order => order.id).join(", ")}: proof ${storedProof.id}; grouped stop billing-ready under SOP-DEL-01 / SOP-DEL-04 / SOP-DEL-05`, "system");
-    return Promise.allSettled([proofSync, orderSync]);
+    return Promise.allSettled([deliverySync]);
   }
 
   function raiseClientDispute(order, disputeInput) {
@@ -13641,6 +15716,11 @@ export default function App() {
     const window = disputeInput?.window || policy18DisputeWindowForInvoice(linkedInvoice, isoDate(receivedAt));
     const timing = window.timingLabel || "Invoice date unavailable - Admin timing review required";
     const description = `${dispute.reasonLabel}; order ${order.id}; con note ${order.conNote || "not recorded"}; delivery date ${dispute.deliveryDate || "not recorded"}; ${timing}. Client note: ${dispute.note}`;
+    const duplicate = findOpenDuplicateException({ type: "Delivery Dispute", orderId: order.id, disputedOrderId: order.id });
+    if (duplicate) {
+      writeAudit("Client dispute duplicate blocked", `${order.id}: existing exception ${duplicate.id}`, "client");
+      return;
+    }
     addException({
       type: "Delivery Dispute",
       orderId: order.id,
@@ -13687,6 +15767,11 @@ export default function App() {
     const window = disputeInput?.window || policy18DisputeWindowForInvoice(invoice, isoDate(receivedAt));
     const timing = window.timingLabel || "Invoice date unavailable - Admin timing review required";
     const description = `${dispute.reasonLabel}; invoice ${invoice.id}; order ${dispute.orderId || "not selected"}; delivery date ${dispute.deliveryDate || "not recorded"}; ${timing}. Client note: ${dispute.note}`;
+    const duplicate = findOpenDuplicateException({ type: "Billing Dispute", orderId: invoice.id, invoiceId: invoice.id, invoiceLineOrderId: dispute.orderId || "" });
+    if (duplicate) {
+      writeAudit("Billing dispute duplicate blocked", `${invoice.id}: existing exception ${duplicate.id}`, actor);
+      return;
+    }
     addException({
       type: "Billing Dispute",
       orderId: invoice.id,
@@ -13728,6 +15813,11 @@ export default function App() {
   function requestSupplierSetup(client, request) {
     const selected = (request.supplierNames || []).join(", ") || "No supplier selected";
     const note = request.note ? ` Note: ${request.note}` : "";
+    const duplicate = findOpenDuplicateException({ type: "Supplier Setup", orderId: client.id });
+    if (duplicate) {
+      writeAudit("Supplier setup duplicate blocked", `${client.name}: existing exception ${duplicate.id}`, "client");
+      return;
+    }
     addException({ type: "Supplier Setup", orderId: client.id, owner: "Admin", note: `${client.name} requested supplier setup. Suppliers: ${selected}.${note}`, status: "Open" });
     writeAudit("Supplier setup requested", `${client.name}: ${selected}`, "client");
     createOperationalNotice({
@@ -13986,7 +16076,7 @@ export default function App() {
         />
       )}
       {systemNotice && (
-        <PolicyNotice title="System Workflow Rule" system onDismiss={() => setSystemNotice("")}>
+        <PolicyNotice title={portalNoticeTitle(systemNotice)} system onDismiss={() => setSystemNotice("")}>
           {systemNotice}
         </PolicyNotice>
       )}
@@ -14022,10 +16112,18 @@ export default function App() {
       ) : workspaceSession.role === "billing" ? (
         <BillingContactPortal user={workspaceSession.user} orders={operationalOrders} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} exceptions={exceptions} onBillingDispute={raiseBillingDispute} onLogout={logout} />
       ) : workspaceSession.role === "driver" ? (
-        <DriverExperiencePortal user={workspaceSession.user} orders={operationalOrders} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
+        <DriverExperiencePortal user={workspaceSession.user} orders={operationalOrders} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} runClosures={runClosures} syncQueue={liveOutbox} onRetrySync={() => flushLiveOutbox({ background: false })} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onCreateDriverPickup={createDriverDepotPickup} onDeliveryProof={addDeliveryProof} onException={addException} onRunClose={closeRun} onLogout={logout} />
       ) : (
         <AdminPortal orders={operationalOrders} clients={clients} drivers={operationalDrivers} vehicles={vehicles} suppliers={suppliers} priceRules={priceRules} exceptions={exceptions} audit={audit} masterDataChanges={masterDataChanges} invoices={invoices} billingNotices={billingNotices} operationalNotices={operationalNotices} proofs={proofs} exceptionAlerts={exceptionAlerts} driverAvailability={driverAvailability} financialReconciliations={financialReconciliations} aiDrafts={aiDrafts} dataBreachIncidents={dataBreachIncidents} dataUseRecords={dataUseRecords} privacyRequests={privacyRequests} accessRecords={accessRecords} runClosures={runClosures} onUpdateOrder={updateOrder} onUpdateOrders={updateOrders} onUpdateClient={updateClient} onSaveSupplier={saveSupplier} onArchiveSupplier={archiveSupplier} onSavePriceRule={savePriceRule} onSaveVehicle={saveVehicle} onSaveDriver={saveDriver} onCreateInvoice={createInvoice} onUpdateInvoice={updateInvoice} onRecordBillingNotice={recordBillingNotice} onSaveFinancialReconciliation={saveFinancialReconciliation} onCreateAiDraft={createAiDraft} onUpdateAiDraft={updateAiDraft} onSaveDataBreachIncident={saveDataBreachIncident} onSaveDataUseRecord={saveDataUseRecord} onSavePrivacyRequest={savePrivacyRequest} onSaveAccessChange={saveAccessChange} onCreateSupplierReviewException={createSupplierReviewException} onCreateSupplierPickupStandardsException={createSupplierPickupStandardsException} onCreatePricingReviewException={createPricingReviewException} onCreateUnmatchedBillingException={createUnmatchedBillingException} onCreateRunPlanningException={createRunPlanningException} onAcknowledgeException={acknowledgeException} onUpdateException={updateException} onAcknowledgeExceptionAlert={acknowledgeExceptionAlert} onSaveDriverAvailability={saveDriverAvailability} onLogout={logout} />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <PortalErrorBoundary>
+      <AppShell />
+    </PortalErrorBoundary>
   );
 }

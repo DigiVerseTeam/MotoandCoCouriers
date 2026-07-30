@@ -43,8 +43,7 @@ function missing(keys) {
 }
 
 function commandStatus(command, argsForVersion) {
-  const runViaCmd = isWindows && !path.isAbsolute(command);
-  const result = runViaCmd
+  const result = isWindows
     ? spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", command, ...argsForVersion], {
         cwd,
         encoding: "utf8",
@@ -62,14 +61,6 @@ function commandStatus(command, argsForVersion) {
 
   const version = `${result.stdout || result.stderr}`.split(/\r?\n/).find(Boolean) || "available";
   return { available: true, version: version.trim() };
-}
-
-function firstAvailableCommand(candidates) {
-  for (const candidate of candidates) {
-    const result = commandStatus(candidate.command, candidate.args);
-    if (result.available) return result;
-  }
-  return { available: false };
 }
 
 function statusLine(status, label, detail) {
@@ -111,35 +102,12 @@ checks.push(
       },
 );
 
-const toolChecks = [
-  [
-    "Git CLI",
-    [
-      { command: "git", args: ["--version"] },
-      ...(isWindows ? [{ command: "C:\\Program Files\\Git\\cmd\\git.exe", args: ["--version"] }] : []),
-    ],
-    "needed to initialise, commit, and push the GitHub repository",
-  ],
-  [
-    "Supabase CLI",
-    [
-      { command: "supabase", args: ["--version"] },
-      { command: isWindows ? "npx.cmd" : "npx", args: ["supabase", "--version"] },
-    ],
-    "needed for live migration execution and project checks unless Digiverse runs them elsewhere",
-  ],
-  [
-    "Vercel CLI",
-    [
-      { command: "vercel", args: ["--version"] },
-      { command: isWindows ? "npx.cmd" : "npx", args: ["vercel", "--version"] },
-    ],
-    "needed for local deployment verification unless Vercel is connected through GitHub only",
-  ],
-];
-
-toolChecks.forEach(([label, candidates, missingDetail]) => {
-  const result = firstAvailableCommand(candidates);
+[
+  ["Git CLI", "git", ["--version"], "needed to initialise, commit, and push the GitHub repository"],
+  ["Supabase CLI", "supabase", ["--version"], "needed for live migration execution and project checks unless Digiverse runs them elsewhere"],
+  ["Vercel CLI", "vercel", ["--version"], "needed for local deployment verification unless Vercel is connected through GitHub only"],
+].forEach(([label, command, versionArgs, missingDetail]) => {
+  const result = commandStatus(command, versionArgs);
   checks.push({
     status: result.available ? "ok" : "open",
     label,

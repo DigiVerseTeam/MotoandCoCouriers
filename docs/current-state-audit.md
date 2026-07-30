@@ -1,10 +1,25 @@
 # Current State Audit
 
-Last updated: 2026-06-19
+Last updated: 2026-07-02
 
 This audit checks the current local package against the user objective: develop the Moto and Co end-to-end local software and website package from BOAS, customer journeys, and the old Moto and Co Logistics app baseline, without inventing unknown requirements.
 
-It is not a claim that production launch is complete. It separates locally executable software from items that need live platform access or business/policy decisions.
+It is not a claim that production launch is complete. It separates executable software from items that need live platform assurance, business decisions, or policy decisions.
+
+## 2026-07-02 Reconciliation Note
+
+The original audit below was written as a local-build audit. Since then, the V1 portal has moved into production testing at `https://motoandcocouriers.vercel.app` with Supabase project ref `fhrqfrhqopicekaiibyj` as the active runtime target.
+
+Current changes since the original local audit:
+
+- Login/provisioning, client activation, driver run work, Admin operations, and billing have been exercised against the production portal.
+- Driver offline recovery is now a formal requirement documented in `SOP-OPS-01 Offline Device Sync And Recovery`.
+- Offline mode saves updates on the driver device only; Client/Admin views update after the same device reconnects and sync succeeds.
+- Billing V1 is portal-generated invoice PDF download plus Admin manual email outside the portal. Xero, OpenClaw, and accounting API integration are not part of the V1 baseline.
+- Ficeda has been removed from the active supplier network for V1 runtime.
+- Baseline documentation now has a control register, addendum set, and full recreated v2.0 source pack under `baseline/v2.0/full-source/`. The files are draft for approval; approval references remain open.
+
+Remaining production assurance gaps are tracked in `production-blocker-register.md`.
 
 ## Evidence Inspected
 
@@ -36,7 +51,7 @@ It is not a claim that production launch is complete. It separates locally execu
 | Use BOAS and journeys as implementation rules | Journey coverage is mapped in `src/lib/journeys.ts` and `docs/customer-journey-comparison.md`; source-backed rules are captured in `docs/release-one-source-map.md`. | Locally built with documented gaps |
 | Client Operational login and booking | Local testing-code login, registration, pending activation, supplier setup gate, supplier-controlled pickup request, account suspension block, cut-off adjustment, Policy #14 cancellation/review request, tracking, and Policy #18 delivery dispute required-field handoff exist. | Locally built |
 | Client Billing login and billing workflow | Separate billing login, invoice visibility, invoice preview, dispatch/payment evidence visibility, account notices, Policy #18 invoice-line/date billing-query acknowledgement, query status, and Admin investigation outcome visibility exist. | Locally built |
-| Driver login and delivery workflow | Local testing-code login, compiled run brief, pre-trip gate, Policy #27 fatigue/health and WHS incident reporting, supplier pickup, SOP-PUP-02 supplier-stop closeout, Policy #15 goods-acceptance evidence, Policy #16 pickup standards evidence, structured Policy #15 / Policy #16 / Policy #27 No Pickup / SOP-RUN-04 future-pickup Bring Forward / Policy #8 Failed Delivery attempts, SOP-DEL-01 grouped delivery stops by account/address with one signature per location, SOP-DEL-04 gated address/goods/receiver/handover/price/device-supervision sign-off, SOP-DEL-04 price-discrepancy reporting from read-only price review, POD receiver/signature capture, SOP-DEL-05 system delivery completion, and UJ-DRV-001 S5 run-close confirmation/action items exist. | Locally built |
+| Driver login and delivery workflow | Production portal driver workflow includes compiled run brief, pre-trip gate, supplier pickup, pickup-time item count/pricing, SOP-RUN-04 bring-forward, delivery/POD, receiver name/signature capture, SOP-DEL-05 completion, and SOP-OPS-01 local outbox retry for offline updates. | Built; offline field UAT required |
 | Admin operations | Admin CRM, account activation/suspension/reinstatement/termination, supplier master data with CAP-MCL-001 approval-gate evidence, supplier pickup standards and Policy #27 WHS hazard monitoring, Driver Directory account records, Policy #22 manual driver availability with notice/late/contingency evidence, fleet register, CAP-MCL-002 run-planning monitor, dispatch/run compilation, Policy #14 cancellation review, WHS/fatigue exceptions, billing, Policy #24 month-end financial reconciliation, Policy #6 NDB suspected-incident intake/containment register, Policy #21 / Policy #7 data-use register, Policy #3/#4/#5 privacy request register, pricing, retention, audit, and structured access governance are locally interactive. | Locally built |
 | AI use governance | Admin has a Policy #20 AI Draft Review Gate that creates local CTA draft records from flagged CRM, supplier, and APP-ADM-005 exception records; Admin must review with a note before approval/rejection; approved drafts are explicitly not sent and stay `not_sent_provider_not_configured`; live AI provider/model/prompt/send path remains blocked. | Locally built; production AI integration blocked |
 | Receiver actor | Receiver remains no-login; receiver name and signature are captured only through Driver POD. | Locally built |
@@ -48,10 +63,10 @@ It is not a claim that production launch is complete. It separates locally execu
 | Billing and account suspension/termination | Draft invoice batches, SOP-BIL-04 rendered-invoice confirmation with automatic local dispatch evidence, browser-verified SOP-EXC-03 unmatched account exclusion/correction before invoice inclusion, a fresh-seed unmatched-account fixture for correction-path verification, proof-linked SOP-DEL-05 billing-ready delivery line items, approved Policy #8 redelivery-fee line items, dispatch evidence, payment evidence after dispatch before Paid, Policy #24 month-end financial reconciliation evidence, system-generated local Day 8 overdue notice evidence, Admin fallback Day 8 notice recording, non-payment suspension confirmation, conduct suspension evidence, suspension notice evidence, automatic reinstatement notice record, structured payment-arrangement fields, reinstatement evidence, voluntary termination, conduct termination, Owner consultation evidence, written termination notice evidence, and local termination account notices exist. | Locally built; repeated non-payment termination, external delivery/payment/accounting source blocked |
 | Audit and retention | Local APP-PRV-004 hash-chain audit review and Policy #5 / Policy #24 / Policy #6 retention register exist for confirmed 7-year pickup request, supplier relationship, master-data change-log, POD proof, financial reconciliation, and post-breach review report rules; browser verification generated supplier master-data changes and confirmed disabled destruction pending Privacy Owner approval. | Locally built; deletion approval blocked |
 | Public website | `/website` uses confirmed logo, brand colours, market geography, cadence, booking/tracking/app links, and photo placeholders because no approved photos exist; browser verification confirmed website links hand off to `/booking`, `/tracking`, `/`, and `/legal`, with no mobile horizontal overflow at 390px. | Locally built |
-| Legal page | `/legal` lists required legal surfaces as not published and avoids publishing unapproved legal copy; browser verification confirmed 8 required rows with 8 `Not Published` statuses. | Locally built as status surface only |
-| Supabase backend | Draft schema, RLS, storage, audit, retention, pricing, notification, cancellation, billing-notice generation, Policy #6 NDB incident controls, Policy #21 / Policy #7 data-use controls, Policy #3 / Policy #4 / Policy #5 privacy request controls, Policy #24 financial reconciliation controls, Policy #20 AI draft review controls, Policy #22 driver scheduling, Policy #27 WHS hazard controls, CAP-MCL-001 supplier approval gate, CAP-MCL-002 run planning monitor, Policy #8, Policy #15, Policy #16, Policy #18 dispute timestamp/remedy/outcome-history, SOP-PUP-02 supplier-stop closeout, SOP-DEL-01 grouped delivery stops, SOP-DEL-04 delivery sign-off proof, SOP-DEL-05, UJ-DRV-001 run-close confirmation, and guardrail migrations exist. HCM-owned driver legal/classification/agreement/conduct/expansion migrations were extracted from the active migration set. | Source-ready draft; live execution blocked |
+| Legal page | `/legal` renders the approved customer-facing legal HTML held at `src/content/legal/motoandco-legal-pages.v2.html`, including booking terms, credit terms, dangerous goods, delivery disclaimer, privacy, collection notice, retention, and security. | Published for UAT from approved HTML source |
+| Supabase backend | Draft schema/migrations exist and project ref `fhrqfrhqopicekaiibyj` is the active runtime target for V1 testing. Live RLS, Storage, migration execution state, region/data residency, and monitoring evidence still need final assurance. HCM-owned driver legal/classification/agreement/conduct/expansion migrations were extracted from the active migration set. | Active runtime target; assurance incomplete |
 | Supabase migration guardrails | `npm.cmd run verify:migrations` statically checks core source-backed migration markers for schema, RLS, audit hash-chain, private POD storage, retention, pricing, supplier-stop closeout, delivery sign-off proof, delivery stop grouping/completion, WHS hazard controls, exceptions, billing, and dispute guardrails. | Locally verified; live execution blocked |
-| Vercel launch | Next.js app is Vercel-ready in structure; environment guard blocks local/preview app from production-labelled Supabase. | Locally prepared; deployment blocked |
+| Vercel launch | Active production portal is `https://motoandcocouriers.vercel.app`; environment guard blocks local/preview app from production-labelled Supabase. | Deployed; ownership/monitoring evidence open |
 | GitHub launch | Draft GitHub Actions CI exists locally and runs the package gates when a repo is connected; repository is not initialised/connected because Git is not available on PATH and owner/name are unconfirmed. | Prepared locally; connection blocked |
 | Platform environment handoff | `.env.example`, `docs/platform-env-contract.md`, `npm.cmd run verify:platform`, `npm.cmd run verify:launch`, and the failing strict `npm.cmd run verify:production` gate list GitHub, Supabase, and Vercel values plus local CLI/repository readiness required before external connection. | Prepared locally; values open |
 
@@ -72,18 +87,19 @@ It is not a claim that production launch is complete. It separates locally execu
 
 - GitHub owner, repository name, and local Git availability.
 - Supabase MCP project ref `fhrqfrhqopicekaiibyj` is registered/authenticated, but region, credentials, Auth identity binding, RLS execution, migration execution, and Storage policy testing remain open.
-- Vercel team/account, project, production domain, environment variables, and deployment ownership.
+- Vercel deployment ownership, environment variables, deployment protection, and monitoring evidence.
 - Notification provider and delivery channels for activation, booking, invoice, overdue, suspension, reinstatement, termination, delivery updates, and Admin alerts.
 - Policy #23 repeated non-payment termination remains blocked until debt recovery escalation and write-off thresholds are confirmed.
 - Public tracking token model and final customer-visible tracking status taxonomy.
-- Zoho Books integration versus export/manual reconciliation, production EFT/payment confirmation source, external accountant/BAS handoff, Otimi Rules reporting cadence/format/recipient, and the Policy #18 credit-note/corrected-invoice issue path.
-- Privacy Owner, retention destruction approval workflow, and any remaining TBD retention periods.
-- Production reason-code taxonomies beyond the SOP-DEL-04 failed-delivery categories for driver issues, redelivery, retained goods, upload retry, offline handling, and any extra wrong-address handling.
+- Invoice PDF UAT, manual payment evidence format, manual corrected-invoice process if required, and out-of-system BAS/Otimi reporting evidence.
+- Role-based GM Moto & Co Logistics Privacy Owner evidence, retention destruction approval workflow, and any remaining TBD retention periods.
+- Production reason-code taxonomies beyond the SOP-DEL-04 failed-delivery categories for driver issues, redelivery, retained goods, upload retry, and any extra wrong-address handling. Offline handling is now governed by SOP-OPS-01.
 - WHSQ notifiable-incident procedure, production WHS notification ownership, and full fatigue/risk framework activation evidence.
 - Actual supplier named dock contacts, live Policy #16 supplier-health automation, and exact health scoring beyond CAP-MCL-001 thresholds.
 - Privacy Owner (ACT-TECH-002), Policy #6 OAIC/affected-person notification templates, website public statement URL, and production NDB incident responsibility handoff.
 - Approved public legal copy, final website sitemap/copy, real approved black-and-white photography, and case/origin-story publishing approval.
 - Production authority for applying price-rule changes where user direction and source material still need reconciliation.
+- Formal owner/legal/privacy approvals for the recreated v2.0 baseline source pack.
 
 ## Next Source-Backed Actions
 
@@ -91,5 +107,5 @@ It is not a claim that production launch is complete. It separates locally execu
 2. When notification answers arrive, replace local-only outbox records with provider-backed send attempts and keep APP-ADM-005 failure routing.
 3. When tracking-token/status answers arrive, add the public tracking experience without weakening authenticated account-scoped tracking.
 4. When legal copy is approved, publish only the approved documents under `/legal`.
-5. When payment/accounting answers arrive, implement the confirmed invoice export, Zoho integration, BAS/accountant handoff, Otimi reporting workflow, or live payment reconciliation workflow.
+5. When billing/payment evidence is ready, test the invoice PDF download path and record the manual payment/reconciliation evidence expected from Admin.
 6. Keep `docs/production-blocker-register.md` as the gating source before turning any local-only evidence path into production behavior.

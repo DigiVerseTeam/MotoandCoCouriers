@@ -14,6 +14,9 @@ const buildEnv = {
 };
 
 const steps = [
+  ["Driver order visibility regression", ["run", "verify:driver-visibility"], baseEnv],
+  ["Runtime row access regression", ["run", "verify:runtime-access"], baseEnv],
+  ["Public registration hardening", ["run", "verify:public-registration"], baseEnv],
   ["Source-backed runtime requirements", ["run", "verify:requirements"], baseEnv],
   ["Platform environment contract", ["run", "verify:platform"], baseEnv],
   ["Launch readiness report", ["run", "verify:launch"], baseEnv],

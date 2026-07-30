@@ -27,5 +27,5 @@ Last updated: 2026-06-18
 
 ## Not Reused
 
-- Workshop service checklists, parts search, labour entry, motorcycle service stages, live Zoho calls, and AI assistant prompts are not Moto & Co courier requirements.
+- Workshop service checklists, parts search, labour entry, motorcycle service stages, live external CRM/accounting calls, and AI assistant prompts are not Moto & Co courier requirements.
 - Route optimisation, supplier sequencing, and production driver availability automation remain gaps until confirmed from BOAS/SOP owner decisions.

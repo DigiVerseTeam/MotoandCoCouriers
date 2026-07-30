@@ -1,7 +1,8 @@
 export const brand = {
-  name: "Moto and Co Couriers",
+  name: "Moto & Co Couriers",
+  plainName: "Moto and Co Couriers",
   legalEntity: "Moto & Co Pty Ltd",
-  tagline: "Not just couriers. Built on the parts people.",
+  tagline: "The Motorcycle Supply Chain. Simplified.",
   geography: "Brisbane suppliers to Gold Coast workshops",
   colors: {
     signalRed: "#e11d48",

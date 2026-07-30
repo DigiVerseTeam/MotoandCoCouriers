@@ -1,6 +1,6 @@
 # Source Index
 
-Last updated: 2026-06-21
+Last updated: 2026-07-03
 
 This index records what has been identified in the local workspace. It is not a full content extraction.
 
@@ -22,6 +22,19 @@ This index records what has been identified in the local workspace. It is not a 
 - `unified boas and village.zip`
 - `customer journey.zip`
 - `DECISIONS-REGISTER.html`
+- `MotoCo_Unified_BOAS_Hierarchy_v1.9.xlsx`
+- `SOP/SOP-OPS-01-OfflineDeviceSyncRecovery-v1.0.xlsx`
+- `docs/offline-device-sync-sop.md`
+- `docs/baseline-documentation-register.md`
+- `docs/policy-baseline-reconciliation.md`
+- `docs/baseline-tbd-approval-register.md`
+- `docs/system-testing-status-and-uat-scripts.md`
+- `docs/product-backlog-v1.md`
+- `docs/legal-pages-policy-reconciliation.md`
+- `src/content/legal/motoandco-legal-pages.v2.html`
+- `baseline/v2.0/`
+- `moto-and-co-couriers-webcopy-final.md`
+- `moto-and-co-couriers-brand-architecture-guide.md`
 
 ## External source files
 
@@ -32,6 +45,69 @@ This index records what has been identified in the local workspace. It is not a 
 - Reviewed: 2026-06-21.
 - Purpose: authoritative decisions register for 24 pre-build user-journey gaps.
 - Status: all 24 gaps decision-resolved; portal alignment tracked in `decision-register-alignment.md`.
+
+### `SOP-OPS-01 Offline Device Sync And Recovery`
+
+- Created: 2026-07-02.
+- Purpose: operating rule for driver network dropouts, local outbox sync, retry sync, Admin recovery, and unresolved offline device gaps.
+- Status: active for V1 production testing; field UAT still required on the actual driver device/browser.
+
+### `Baseline Documentation Register`
+
+- Created: 2026-07-02.
+- Purpose: control register for BOAS, SOP, policy, journey, and runtime documentation alignment before additional build work.
+- Status: active working register. Formal BOAS and policy source files still require approved versioning.
+
+### `Policy Baseline Reconciliation`
+
+- Created: 2026-07-02.
+- Purpose: policy impact addendum for offline mode, manual invoice PDF, active supplier changes, pickup-count timing, HCM boundary, SLA boundary, and production runtime.
+- Status: active working addendum. Not final legal copy.
+
+### `Baseline Pack v2.0`
+
+- Created: 2026-07-02.
+- Folder: `baseline/v2.0/`.
+- Purpose: version-controlled recreated baseline pack for BOAS, SOP, policy, and documentation control changes.
+- Contents: pack README, version-control register, markdown sources, DOCX addendums, and full recreated source set under `baseline/v2.0/full-source/`.
+- Full source outputs: BOAS v2.0 workbook, versioned SOP workbook set, versioned policy DOCX set, versioned journey records, zipped BOAS/SOP/policy/journey bundles, `baseline/v2.0/MotoCo_Full_Baseline_v2.0_Draft.zip`, and `baseline/v2.0/MotoCo_Baseline_v2.0_Documentation_Pack.zip`.
+- Status: Draft for approval. Original BOAS v1.9 and policy zip archives are preserved.
+
+### `System Testing Status And UAT Scripts`
+
+- Created: 2026-07-02.
+- Purpose: records that system testing is not complete and provides UAT scripts for V1 production testing.
+- Status: active UAT control document.
+
+### `Product Backlog V1`
+
+- Created: 2026-07-08.
+- Purpose: working backlog for V1 changes, candidate changes, UAT findings, documentation/control tasks, and immediate post-UAT product decisions.
+- Status: active working backlog. It is not the full BOAS; BOAS/SOP/policy updates are required before approved backlog items become runtime changes.
+
+### `Legal Pages Policy Reconciliation`
+
+- Created: 2026-07-02.
+- Purpose: records updates made to `src/content/legal/motoandco-legal-pages.v2.html` against v2.0 policy changes.
+- Status: approved user-supplied HTML published through `/legal` for UAT.
+
+### `Brand Architecture Marketing Capability`
+
+- Created: 2026-07-03.
+- Purpose: records the customer-facing brand architecture direction, public copy boundaries, and future marketing/copy-control policy need.
+- Status: working marketing capability input. Future Moto & Co family naming ideas are not active public services or runtime scope.
+
+### `moto-and-co-couriers-webcopy-final.md`
+
+- Reviewed: 2026-07-03.
+- Purpose: updated website copy recommendations for home, workshops, suppliers, about, Standard Network Rates, FAQ, legal hub structure, portal login, footer, and brand language.
+- Status: used as marketing copy input. Pricing placeholders in the source were not used; current approved rates remain the live public pricing source.
+
+### `moto-and-co-couriers-brand-architecture-guide.md`
+
+- Reviewed: 2026-07-03.
+- Purpose: brand architecture and positioning guide for Moto & Co Couriers.
+- Status: used as brand architecture input for website copy and internal marketing capability notes. Future brand-family ideas remain future considerations only.
 
 ### `The village ERM Complete Requirements v2.0.pdf`
 
@@ -167,8 +243,9 @@ This index records what has been identified in the local workspace. It is not a 
 
 ## Extraction still needed
 
-- Full archive content inventory.
-- Full text extraction from policy documents.
+- Detailed archive content inventory beyond the recreated baseline pack.
+- Detailed policy body analysis beyond the v2.0 draft policy copies.
+- Formal owner/legal/privacy approval references for the v2.0 baseline pack.
 - Full text extraction from SOP spreadsheets and workflow images.
 - Capability document summaries.
 - Approved public legal-page content.
