@@ -1,45 +1,47 @@
-import { StatusPill } from "@/components/status-pill";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { PublicFooter, PublicPageIntro, PublicSiteHeader } from "@/components/public-site-shell";
+import { approvedLegalContent, legalDocs } from "@/lib/legal-docs";
+import styles from "../website/website.module.css";
 
-const documents = [
-  "Booking Terms",
-  "Credit Terms",
-  "Dangerous Goods Policy",
-  "Delivery Disclaimer",
-  "Privacy Policy",
-  "Collection Notice",
-  "Data Retention & Destruction",
-  "Information Security"
-];
+export const metadata: Metadata = {
+  title: "Legal & Policies | Moto & Co Couriers",
+  description: "Customer-facing legal, privacy, collection notice, delivery, billing, and data handling terms for Moto and Co Couriers.",
+  alternates: {
+    canonical: "/legal",
+  },
+};
 
 export default function LegalPage() {
+  const legalContent = approvedLegalContent();
+  const approvedLegalSource = "motoandco-legal-pages.v2.html";
+  const sourceContainsApprovedFooter = legalContent.includes("site-footer");
+
   return (
-    <main className="page stack">
-      <span className="eyebrow">Legal</span>
-      <h1>Legal Library</h1>
-      <p className="lead">
-        Source documents exist, but approved customer-facing copy is not final until the policy owners
-        complete review.
-      </p>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Status</th>
-              <th>Source state</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.map((document) => (
-              <tr key={document}>
-                <td>{document}</td>
-                <td><StatusPill tone="red">Not Published</StatusPill></td>
-                <td>Awaiting approved release copy</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <main className={styles.site}>
+      <PublicSiteHeader />
+      <PublicPageIntro
+        eyebrow="Legal and policies"
+        title="How we operate. In plain terms."
+        lead="Everything that governs how Moto & Co Couriers works with you, your suppliers, and your freight. Choose a legal document below."
+      />
+      <section className={styles.whiteBand}>
+        <div className={styles.entryGrid}>
+          {legalDocs.map((doc) => (
+            <Link className={styles.entryItem} href={`/legal/${doc.slug}`} key={doc.slug}>
+              <span>{doc.label}</span>
+              <p>{doc.description}</p>
+            </Link>
+          ))}
+        </div>
+        <div className={styles.inner}>
+          <p className={styles.noteText}>
+            Legal documents are rendered from approved source file {approvedLegalSource}
+            {sourceContainsApprovedFooter ? " including the approved site-footer content." : "."}
+          </p>
+        </div>
+      </section>
+      <PublicFooter />
     </main>
   );
 }

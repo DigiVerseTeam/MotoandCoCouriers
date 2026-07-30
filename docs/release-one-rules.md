@@ -1,8 +1,8 @@
 # Release One Rules
 
-Last updated: 2026-06-19
+Last updated: 2026-07-02
 
-Source for this pass: direct user answers on 2026-06-18, with policy/SOP/control references preserved as supplied.
+Source for this pass: direct user answers from 2026-06-18 through 2026-07-02, with policy/SOP/control references preserved as supplied.
 
 ## Booking
 
@@ -35,29 +35,27 @@ TBD:
 - Signature URL is written to the `delivery_proof` table.
 - POD retention is 7 years from delivery date.
 - POD retention source: Policy #5 and billing dispute window.
+- Driver offline device handling is governed by `SOP-OPS-01`.
+- Offline mode saves driver actions on the same device and retries live sync later.
+- Offline mode does not update the live production record until that device reconnects and sync succeeds.
+- If signature image upload fails, proof metadata may still sync with a storage-pending status for Admin review.
 
 TBD:
 
 - Whether photos are optional, conditionally required, or not part of release one.
-- Driver device assumptions for POD capture.
+- Minimum supported driver device/browser.
+- Production Supabase Storage policy UAT and proof-object persistence.
 
 ## Operations
 
 Confirmed launch roles:
 
-- Client: `ACT-CRM-001a/b`.
+- Client Operational Contact: `ACT-CRM-001a`.
+- Client Billing Contact: `ACT-CRM-001b`.
 - Driver: `ACT-INT-001`.
 - Admin: `ACT-INT-002`.
 - Super Admin: `ACT-INT-003`.
 - Receiver: `ACT-INT-004`, no login.
-
-Confirmed access model from BOAS v1.9 / `SOP-IAM-03`:
-
-- Super Admin is one person at launch and is bootstrapped manually by Digiverse server-side.
-- Super Admin creates/removes Admin users inside the app after bootstrap.
-- Admin creates Client Ops, Client Billing, and Driver users inside the app.
-- Login-user provisioning must run through a server-side API/Edge Function using `service_role`; the `service_role` key must never be exposed in the browser.
-- Admin can add/update customer/workshop, supplier, driver, vehicle, and login-user master data with required approval/audit evidence.
 
 Exceptions:
 
@@ -70,11 +68,19 @@ Disputes:
 - Policy #18 governs disputes.
 - Admin investigates disputes using `APP-DRV-003` proof records.
 
+Offline recovery:
+
+- `SOP-OPS-01` governs driver network dropouts.
+- The driver portal shows pending sync count and the last sync issue.
+- Drivers must keep the same device signed in and online until pending sync clears.
+- Admin recovery for unrecoverable local outbox data is handled through APP-ADM-005 evidence.
+
 TBD:
 
 - Daily structured alert channel.
 - Full admin dispatch workflow.
 - Full run-planning workflow.
+- Final unrecoverable-offline-data correction procedure.
 
 ## Billing
 
@@ -86,12 +92,16 @@ TBD:
 - Rates are not manually entered by drivers.
 - Administrators must be able to update pricing rules.
 - Pricing must not be hard-coded in the app.
+- Xero, OpenClaw, and accounting API integration are not part of V1 after the attempted Xero connection failed.
+- V1 billing uses portal-generated invoice PDFs.
+- Admin downloads invoice PDFs and emails them to clients manually outside the portal.
+- Payment follow-up and bank reconciliation are manual out-of-system processes.
 
 TBD:
 
-- Whether Zoho Books is integrated in release one.
-- If Zoho is not integrated, what export or manual reconciliation is required.
-- Exact invoice fields required at job level.
+- UAT evidence that the correct client/month invoice PDF can be downloaded.
+- Manual payment evidence format recorded by Admin.
+- Corrected-invoice or credit-note manual process only if required by a live dispute.
 
 ## Data And Compliance
 
@@ -102,6 +112,12 @@ Controlling policies:
 - Policy #5.
 - Policy #7.
 - Policy #21.
+
+Policy baseline:
+
+- `docs/policy-baseline-reconciliation.md` records policy impacts introduced by current V1 runtime decisions.
+- The policy reconciliation file is a working addendum, not final legal copy.
+- Formal policy `.docx` files still need Policy Owner/legal owner versioning before they are treated as approved policy baseline.
 
 Access control:
 
@@ -118,7 +134,8 @@ Audit history:
 Retention and deletion:
 
 - Policy #5 governs data retention and deletion.
-- Some retention periods remain TBD pending Privacy Owner.
+- Privacy Owner is role-based GM Moto & Co Logistics.
+- Some retention periods remain TBD pending retained Privacy Owner approval evidence.
 
 Australian data residency:
 
@@ -128,11 +145,14 @@ Australian data residency:
 
 ## Platform
 
+- Production V1 portal URL: `https://motoandcocouriers.vercel.app`.
+- Active Supabase project ref for V1 testing: `fhrqfrhqopicekaiibyj`.
 - Supabase region is not confirmed.
 - Supabase region is a Digiverse decision.
 - Preview deployments must not connect to production Supabase.
 - `PIPE-DEV-001` release control policy and `SOP-REL-01` imply environment separation.
 - Environment separation is implied but not explicitly confirmed in the source documents.
+- Live RLS/Auth, private Storage, migration execution, and deployment ownership still require production UAT/evidence.
 
 ## Brand And UI
 

@@ -1,6 +1,6 @@
 # Release One Source Map
 
-Last updated: 2026-06-19
+Last updated: 2026-07-02
 
 This file records implementation rules extracted from source material. It is not legal copy and must not be published as customer-facing terms.
 
@@ -22,7 +22,7 @@ Confirmed journey actors:
 
 Implementation note:
 
-- Current local build only partially covers these journeys. See `customer-journey-comparison.md` for stage-by-stage coverage.
+- The active V1 portal now implements the software shell for these journeys. Remaining alignment gaps are tracked in `customer-journey-comparison.md`, `user-journey-gap-audit.md`, and `production-blocker-register.md`.
 
 ## AI Use Governance
 
@@ -143,7 +143,7 @@ Confirmed rules:
 
 Implementation gaps:
 
-- Production reason-code taxonomy and offline/upload retry handling remain unconfirmed.
+- Offline device recovery is now governed by `SOP-OPS-01`; production reason-code taxonomy beyond source-backed categories remains unconfirmed.
 - Production notification delivery after each failed attempt remains unbuilt until the notification provider/channel is confirmed.
 - Live Supabase execution of the Policy #8 columns and guardrails remains untested until the project is connected.
 
@@ -155,7 +155,8 @@ Source:
 
 Confirmed rules:
 
-- The approved pickup network has six Preferred, Active suppliers: Link International, A1 Accessories, McLeods, Gas Imports, Ficeda, and Whites Powersports.
+- The original CAP-MCL-001 source network listed six Preferred, Active suppliers: Link International, A1 Accessories, McLeods, Gas Imports, Ficeda, and Whites Powersports.
+- The current V1 active runtime list removes Ficeda by 2026-07-02 business decision and keeps five active suppliers: Link International, A1 Accessories, McLeods, Gas Imports, and Whites Powersports.
 - `POL-MCL-001-001` states that no supplier is added to the approved pickup network without Admin confirmation that dock access, packaging standards, and pickup window have been agreed in writing.
 - The 2026-2028 charter target is that every approved supplier has a documented current dock access arrangement, named dock contact, agreed packaging standards, and confirmed pickup window on file.
 - Named supplier Logistics/Dock Contact individuals are explicitly unresolved in the source material.
@@ -166,7 +167,8 @@ Local runtime state:
 - Admin Suppliers now includes a `POL-MCL-001-001 Supplier Approval Gate` with dock-access, packaging-standards, pickup-window, and written-evidence fields.
 - Active supplier save/reactivation is blocked locally unless the approval gate evidence is complete.
 - Supplier cards and exception investigations now surface named dock contact status and approval evidence.
-- The six source-approved suppliers remain active from the CAP-MCL-001 current network, while named dock contact names remain blank and flagged until Admin records the real people.
+- The active runtime supplier list contains Link International, A1 Accessories, McLeods, Gas Imports, and Whites Powersports. Ficeda is inactive/removed for V1 runtime because the business has confirmed Moto & Co is not allowed to attend that supplier.
+- Named dock contact names remain blank and flagged until Admin records the real people.
 - Supabase draft migration `202606190016_supplier_approval_gate_cap_mcl001.sql` adds matching supplier approval fields and an active-supplier approval-gate constraint.
 
 Open gaps:
@@ -268,7 +270,7 @@ Open gaps:
 
 - Named dock contacts are not confirmed in the source material.
 - The exact supplier health scoring algorithm beyond the CAP-MCL-001 targets is not specified.
-- Production `APP-ADM-002` night-before automation, live `pg_cron`, and live supplier-health monitoring remain untested until Supabase is connected.
+- Production APP-ADM-002 automation, live scheduler authority, and live supplier-health monitoring remain untested until Supabase is connected.
 
 ## Confirm Customer Pickup
 
@@ -305,7 +307,41 @@ Supabase draft state:
 Open gaps:
 
 - The decisions register confirms `time_constraint` as a valid No Pickup reason. The runtime and superseding Supabase draft migration include that category.
-- Production route optimisation, offline handling, and live Supabase execution/testing remain unconfirmed.
+- Offline handling is governed by `SOP-OPS-01`; production route optimisation and live Supabase execution/testing remain unconfirmed.
+
+## Offline Device Sync And Recovery
+
+Source:
+
+- `SOP-OPS-01-OfflineDeviceSyncRecovery-v1.0.xlsx`
+- `docs/offline-device-sync-sop.md`
+- Field-test decision recorded 2026-07-02.
+
+Confirmed rules:
+
+- Offline mode protects the driver device's local copy of pickup, item count, bring-forward, delivery, POD, and run-close work.
+- Offline mode does not update the live production record until the same device reconnects and sync succeeds.
+- The driver portal must show pending sync count and the last sync issue.
+- Drivers must keep the device signed in and online until pending sync clears.
+- Drivers must not clear saved device data unless Admin accepts that unsynced local updates may be abandoned.
+- Bad or malformed signature image data must not block order-status/proof metadata from syncing.
+- Storage upload failure may leave proof metadata synced with a `storage_pending:*` status for Admin investigation.
+- Manual recovery is handled through APP-ADM-005 exception evidence and APP-PRV-004 audit where production data or PII is corrected.
+
+Local runtime state:
+
+- The driver portal uses a local outbox key `mc_live_sync_outbox` for failed live writes.
+- `Retry Sync` replays queued updates when the browser is online.
+- Live proof metadata is synced through the server runtime even if direct Storage upload fails.
+- Client and Admin views only receive the new state after live sync succeeds.
+
+Open gaps:
+
+- Minimum supported driver device/browser is not confirmed.
+- True PWA background sync or IndexedDB-backed offline storage is not implemented for V1.
+- Live Supabase Storage policy and signature object persistence still require UAT.
+- Admin procedure for unrecoverable local outbox data needs a final operating decision.
+- Retention/destruction handling for local device cache needs Privacy Owner confirmation.
 
 ## Bring Future Pickup Into Today
 
@@ -361,16 +397,19 @@ Confirmed rules:
 - Runtime `price_rules` rows must reference a pricing change-log record with written reason and Owner approval evidence before taking effect.
 - Unlogged pricing changes are immediate Admin alerts.
 
-Current pricing tiers:
+Current standard freight pricing, ex GST:
 
-- Tyre Delivery, 1 tyre: $25.00.
-- Tyre Delivery, 2 tyres: $40.00.
-- Tyre Delivery, 3 tyres: $55.00.
-- Tyre Delivery, 4 or more tyres: $12.00 each.
-- Parts Delivery, less than 5 kg: $15.00.
-- Parts Delivery, 5 kg to 15 kg: $22.00.
-- Parts Delivery, more than 15 kg: $35.00.
-- Redelivery fee after 2nd failed attempt: $10.00.
+- Tyre Delivery, 1 tyre: $18.50.
+- Tyre Delivery, 2 tyres: $24.00.
+- Tyre Delivery, 3 tyres: $33.00.
+- Tyre Delivery, 4 or more tyres: $12.30 each.
+- Parts Delivery, up to 5 kg: $17.20.
+- Parts Delivery, 5 kg to 10 kg: $21.00.
+- Parts Delivery, 10 kg+: from $25.00, subject to handling approval.
+- Return to Supplier, pre-labelled: $6.00.
+- Out-of-Zone Delivery: $10.00.
+- Oversized / Bulky Freight: quoted on application.
+- Failed-delivery redelivery fee after 2nd failed attempt remains a separate Policy #8 operational fee at $10.00.
 
 Implementation gap:
 
@@ -387,9 +426,9 @@ Confirmed rules:
 
 - Invoice generation starts from an approved billing group.
 - Admin confirms the rendered invoice is correct.
-- The system dispatches the invoice to the Billing Contact from that same confirmation action.
+- V1 creates a portal-generated invoice PDF for Admin to download and email manually to the Billing Contact.
 - `invoice_id` is written back to billed jobs.
-- Payment monitoring starts after invoice dispatch.
+- Payment monitoring starts after Admin records invoice issue/manual dispatch evidence.
 - During billing compilation, the system flags jobs where `account_id` is null, unknown, inactive, or has multiple possible matches.
 - Flagged jobs are excluded from the billing group and added to the APP-ADM-005 exception queue.
 - Admin investigates using POD proof and pickup capture evidence: delivery address, con note/order reference, supplier, and delivery date.
@@ -400,19 +439,21 @@ Local runtime state:
 
 - Admin Billing now excludes unmatched billing account candidates from draft invoice groups.
 - Draft invoice creation records the approved billing group evidence.
-- Admin Billing now requires rendered invoice correctness confirmation with an Admin review note; dispatch is recorded automatically from that confirmation action.
-- Payment evidence and overdue monitoring are blocked locally until dispatch evidence exists.
+- Admin Billing now groups invoice history by client/month and can generate downloadable invoice PDFs for manual email by Admin.
+- The previous Xero connection attempt is deferred/removed from V1 after an invalid-scope connection failure.
+- Payment evidence and overdue monitoring are blocked until Admin issue/manual dispatch evidence exists.
 - Admin Billing shows an Unmatched Billing Account Queue with reason, supplier, con note, run date, delivery address, proof link, and candidate account names.
 - The local system scan queues APP-ADM-005 `Unmatched Billing Account` exceptions for current billing candidates that fail the account match.
 - Admin can correct the account match only to an active client account and must record an investigation note before the work returns to billing eligibility.
 - Closing the account-match correction writes local order state, exception investigation evidence, and APP-PRV-004 audit evidence.
 - Supabase draft migration `202606190009_unmatched_billing_account_exceptions.sql` adds billing-account match state, exception queueing, and an Admin-only correction function that refuses already-invoiced retro-modification.
-- Supabase draft migration `202606190010_invoice_approval_gate_sop_bil04.sql` adds invoice approval evidence fields, an Admin-only approval function, and guardrails requiring approval before dispatch/payment-monitoring states. The active runtime uses the decisions-register single confirmation/dispatch action.
+- Supabase draft migration `202606190010_invoice_approval_gate_sop_bil04.sql` adds invoice approval evidence fields, an Admin-only approval function, and guardrails requiring approval before payment-monitoring states. The active runtime uses portal PDF generation and manual external email for V1.
 
 Open gaps:
 
-- Production invoice PDF/email rendering, provider dispatch, bounce handling, payment source, and accounting export/reconciliation remain unconfirmed.
-- The production next-period treatment workflow for already-invoiced account corrections is not built until the accounting path is confirmed.
+- UAT must prove the correct client/month invoice PDF can be downloaded from the portal.
+- Admin email, bounce handling, payment follow-up, bank reconciliation, BAS/accountant handoff, and any corrected-invoice handling are manual out-of-system processes unless a later approved baseline changes scope.
+- The production next-period treatment workflow for already-invoiced account corrections is not built until a manual correction process is approved.
 
 ## Revenue Reporting And Financial Controls
 
@@ -516,6 +557,7 @@ Confirmed rules:
 Local runtime state:
 
 - Driver grouped delivery sign-off is now a gated SOP-DEL-04 workflow, not a static workflow display.
+- Driver item counts and pricing are captured at pickup. Delivery sign-off verifies the pickup-counted items, price, receiver name, and receiver signature.
 - Step 1 requires the driver to confirm registered address match, goods match, authorised receiver, handover, and read-only price review before proof capture opens.
 - If the read-only price appears incorrect, Driver can report a SOP-DEL-04 price discrepancy from sign-off; this opens Failed Delivery evidence with the controlled `price_discrepancy` category and blocks delivery completion.
 - Step 2 requires receiver full name, receiver signature, and device-supervision confirmation before the proof can be stored.
@@ -527,8 +569,8 @@ Local runtime state:
 TBD:
 
 - Whether POD photos are optional, conditionally required, or out of release one.
-- Production device model, offline retry behavior, and hardware/support assumptions for signature capture.
-- Live upload transport: direct browser upload, signed upload URL, or server/RPC mediated upload.
+- Minimum production device/browser support assumptions for signature capture.
+- Live Storage policy/object persistence UAT and final upload transport assurance.
 - Broader production reason-code governance beyond the SOP-DEL-04 failed-delivery categories.
 
 ## Delivery Completion
@@ -636,7 +678,7 @@ Local runtime state:
 Open gaps:
 
 - External notification delivery for dispute acknowledgement/resolution remains unbuilt because the notification provider and channel are unconfirmed.
-- External credit-note/corrected-invoice issuance and accounting handoff remain unbuilt until Zoho/export/manual reconciliation is confirmed.
+- External credit-note/corrected-invoice issuance and accounting handoff remain unbuilt until the manual PDF/accounting path is confirmed.
 - Live Supabase execution and RLS testing for the Policy #18 migration remain blocked until the project is connected.
 
 ## Privacy, Access, Audit, And Retention
@@ -684,7 +726,7 @@ Supabase draft state:
 
 Open gaps:
 
-- Privacy Owner is unnamed in source policies.
+- Privacy Owner is role-based GM Moto & Co Logistics; retained approval evidence, contact details, and escalation workflow still need to be recorded.
 - Specific retention periods are not fully confirmed.
 - Digiverse must confirm TLS, encryption at rest, and Australian Supabase data residency.
 - Policy #3 and Policy #4 remain Draft until Privacy Owner approval, ABN/contact details, APP 5 non-collection consequences, APP 6 Digiverse assessment, and Supabase data-location confirmation are completed.
@@ -739,18 +781,24 @@ Source:
 
 - `CAP-MCL-002-RunPlanningDispatch.docx`
 
-Confirmed rules:
+Confirmed source rules:
 
 - APP-ADM-002 is the Run Planning Module.
-- Runs are compiled the night before the run date.
-- Same-day compilation is not permitted as the structural planning model.
+- V2 baseline supersedes the earlier night-before compilation model for V1.
+- Driver creates the daily run from con notes that are ready before departure.
 - APP-ADM-002 reads orders that have already passed the 12:30pm Brisbane cut-off gate in APP-ADM-001.
 - APP-ADM-002 groups stops by supplier and geography.
 - Every milk run must have a named driver and named vehicle before departure.
-- APP-FLT-001 checks vehicle registration and insurance at compilation.
+- APP-FLT-001 checks vehicle registration and insurance before departure.
 - Admin is the escalation gate for exceptions APP-ADM-002 cannot resolve.
-- Success measures include compilation completion rate, Admin intervention rate, named driver/vehicle assignment rate, and fleet compliance gate pass rate.
+- Success measures include daily-run creation evidence, Admin intervention rate, named driver/vehicle assignment rate, and fleet compliance gate pass rate.
 - Target maturity is automated by 2026, with Admin intervention trending toward zero under normal operating conditions.
+
+V1 owner decision:
+
+- The previous evening-before/day-before run lockdown is rejected for V1 because supplier con-note timing is an upstream customer/supplier input.
+- After ERD review, the Driver portal needs a `Create Daily Run` action that consolidates con notes ready now.
+- At each depot, the driver must be able to collect planned milk-run packages, bring forward ready next-day packages where the whole order is ready, and record ready packages with no con note/customer missed portal entry.
 
 Local runtime state:
 
@@ -765,7 +813,8 @@ Supabase draft state:
 
 Open gaps:
 
-- Live APP-ADM-002 pg_cron automation is not connected.
+- ERD review and runtime build are required before the new driver-created daily run workflow can be UAT-tested.
+- Live APP-ADM-002 automation is not connected.
 - Production route optimisation remains separate from the local supplier/geography deterministic sequencing.
 - Production driver pool expansion and future JDD dispatch evaluation remain deferred until a 3-5 casual-driver pool exists.
 
@@ -799,8 +848,8 @@ Supabase draft state:
 
 Open gaps:
 
-- The exact "evening before" time cut-off is not defined in the source material; local enforcement uses the previous calendar day and flags late notices.
-- Daily in-app availability entry versus exception-only availability entry remains a V1 operating decision.
+- Owner could not locate Policy #22 source for final approval.
+- The exact evening-before time cut-off is no longer a V1 run-lockdown control; keep only light-touch logistics availability governance unless Policy #22 source review changes it.
 - Multi-driver assignment policy is deferred until the driver pool expands to 3-5 drivers.
 
 ## HCM Boundary For Driver Legal And Expansion Sources
@@ -940,7 +989,7 @@ Confirmed rules:
 Local runtime state:
 
 - Admin now has a `Policy #6 / POL-OPS-006 NDB Response Register` for suspected incident title, reporter, awareness date, description, information involved, affected estimate, containment action/status, APP-PRV-004 audit refs, system access logs, Digiverse evidence, Privacy Owner notification/blocker evidence, 30-day assessment due date, notification evidence fields, and post-breach review report ref.
-- The local app blocks Privacy Owner assessment, eligible/not-eligible decision, notification-required, post-breach-review, and closed states while ACT-TECH-002 remains unnamed.
+- Privacy Owner is role-based GM Moto & Co Logistics. UAT still needs retained evidence that the role holder can complete the Privacy Owner assessment, eligible/not-eligible decision, notification-required, post-breach-review, and closure stages.
 - Admin can record identify/contain evidence without pretending the NDB plan is Active.
 - Policy #6 post-breach review report records appear in the retention register with completion + 7 years where a report exists.
 - APP-PRV-004 audit records are written when Admin records or updates an NDB incident.
@@ -951,7 +1000,7 @@ Supabase draft state:
 
 Open gaps:
 
-- Privacy Owner (ACT-TECH-002) is not named.
+- Privacy Owner is role-based GM Moto & Co Logistics; named contact details and retained approval evidence are not yet recorded.
 - OAIC notification evidence format and owner are not confirmed.
 - Affected-individual notification template/contact details are not provided.
 - Website URL/content approval path for public NDB statements is not confirmed.

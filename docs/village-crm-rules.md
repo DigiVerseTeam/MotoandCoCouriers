@@ -390,8 +390,8 @@ Relevant integration directions:
 
 Release-one implication:
 
-- The Moto and Co Couriers runtime should not depend on Zoho, HubSpot, Salesforce, or another external CRM to function at launch unless a separate decision confirms that dependency.
-- Zoho Books integration can be deferred if manual billing/export rules are approved.
+- The Moto and Co Couriers runtime should not depend on an external CRM or accounting system to function at launch unless a separate decision confirms that dependency.
+- Accounting integration is deferred/out of V1 scope because manual billing/export rules are approved.
 
 ## Do Not Assume Yet
 

@@ -1,6 +1,6 @@
 # Decision Log
 
-Last updated: 2026-06-18
+Last updated: 2026-07-03
 
 ## Format
 
@@ -13,6 +13,56 @@ Each decision should include:
 - Notes.
 
 ## Decisions
+
+### 2026-07-03 - Driver safety legal document draft
+
+Status: Pending Policy Owner / legal owner approval.
+
+Decision: Draft a separate customer-facing Driver Safety and Respectful Conduct legal document before publishing it to the website. The document should be derived from Policy #27 WHS / fatigue / driver wellbeing controls and current Australian WHS guidance, but the public copy must avoid BOAS, SOP, versioning, administration, and internal control terminology.
+
+Source: User direction on 2026-07-03; `docs/release-one-source-map.md`; official Safe Work Australia, WorkSafe Queensland, Australian Human Rights Commission, and Fair Work Ombudsman guidance reviewed on 2026-07-03.
+
+Notes: Draft created at `docs/driver-safety-and-respectful-conduct-policy-draft.md`. Do not add it to `/legal` until approval and publication gaps are closed.
+
+### 2026-07-03 - Supplier warehouse cut-off replaces fixed public cut-off
+
+Status: Confirmed.
+
+Decision: Public website and legal booking copy must not publish a Moto & Co-owned universal order cut-off time. Customer-facing copy must tell workshops to place supplier orders before each supplier warehouse's own cut-off so goods can be picked, packed, and ready for the scheduled collection. Tuesday and Thursday remain the published standard run days unless separately changed.
+
+Source: User direction on 2026-07-03.
+
+Notes: This supersedes the earlier public `12:30pm Brisbane time` cut-off wording. Existing portal/runtime and internal documentation references to the old fixed cut-off require separate reconciliation before booking logic is changed.
+
+### 2026-07-03 - Legal pages split into separate public routes
+
+Status: Confirmed.
+
+Decision: Keep the approved legal copy unchanged but present each legal document on its own public page under `/legal/...`, with `/legal` acting as the legal hub. Restore Legal to the top website navigation.
+
+Source: User direction on 2026-07-03; `src/content/legal/motoandco-legal-pages.v2.html`.
+
+Notes: No legal wording was rewritten for this change. The split routes are Booking Terms, Credit Terms, Dangerous Goods, Delivery Disclaimer, Privacy Policy, Collection Notice, Data Retention, and Information Security.
+
+### 2026-07-03 - Brand architecture and public copy boundaries
+
+Status: Confirmed for working website and marketing capability alignment.
+
+Decision: Treat `moto-and-co-couriers-brand-architecture-guide.md` as the current brand architecture input for public website copy and internal marketing capability documentation. Public copy should use Moto & Co Couriers as the customer-facing brand, keep Moto & Co Pty Ltd as the parent-company reference, avoid internal control/version/administration terminology, and align operational claims to the approved pricing, supplier, cadence, POD, billing, and portal boundaries.
+
+Source: User direction on 2026-07-03; `moto-and-co-couriers-brand-architecture-guide.md`; `moto-and-co-couriers-webcopy-final.md`; `docs/baseline-documentation-register.md`; `baseline/v2.0/MotoCo_BOAS_Baseline_Addendum_v2.0.md`.
+
+Notes: Future Moto & Co family naming ideas are future considerations only. They are not active public services, policy requirements, or runtime scope until separately approved.
+
+### 2026-07-03 - Public website SEO copy alignment
+
+Status: Confirmed.
+
+Decision: Update the public website copy using the uploaded SEO/web copy direction, but align every operational claim with the V1 BOAS, policy, and legal baseline. Public pages must keep the approved active supplier list, approved ex-GST pricing, Tuesday/Thursday cadence, supplier warehouse cut-off wording, receiver-name/signature POD rule, and manual PDF invoice boundary.
+
+Source: User direction on 2026-07-03; `moto and Co web copy and seo.zip`; `docs/baseline-documentation-register.md`; `docs/policy-baseline-reconciliation.md`; `baseline/v2.0/MotoCo_BOAS_Baseline_Addendum_v2.0.md`.
+
+Notes: Do not publish Ficeda as active, do not use the lower draft pricing table, do not invent phone/address NAP details, and do not claim portal-based invoice email dispatch or accounting integrations.
 
 ### 2026-06-18 - Platform direction
 
@@ -86,13 +136,13 @@ Notes: CRM/village design standard is supplied by `The village ERM Complete Requ
 
 ### 2026-06-18 - Booking cut-off
 
-Status: Confirmed.
+Status: Superseded for public/BOAS wording by the 2026-07-03 supplier warehouse cut-off decision.
 
-Decision: Booking cut-off is 12:30pm Brisbane time and is enforced by `APP-ADM-001`.
+Decision: Fixed booking cut-off was previously recorded as 12:30pm Brisbane time and enforced by `APP-ADM-001`.
 
 Source: User instruction on 2026-06-18.
 
-Notes: App logic must use Brisbane time for cut-off calculations.
+Notes: Do not carry this fixed public cut-off into website, legal, or BOAS copy. Existing runtime references need separate review before portal booking logic is changed.
 
 ### 2026-06-18 - POD delivered gate
 
@@ -283,3 +333,99 @@ Decision: SLA monitoring is not in scope for the logistics software build. HCM r
 Source: User direction on 2026-06-21; `docs/hard-scope-requirements.md`; `docs/hcm-boundary.md`.
 
 Notes: The logistics portal may record timestamps, evidence, and operational courier records. It must not own Admin SLA countdowns, breach alerts, escalation timers, or due-date trigger logic. It also must not own driver legal classification, driver agreements, driver legal verification evidence, disciplinary/removal consequences, or employee/contractor payment model decisions.
+
+### 2026-07-02 - Production runtime reconciliation
+
+Status: Confirmed direction, pending full platform assurance.
+
+Decision: Treat `https://motoandcocouriers.vercel.app` as the active V1 production portal and Supabase project ref `fhrqfrhqopicekaiibyj` as the active runtime target for V1 testing.
+
+Source: Production testing and user direction through June 2026; current app deployment checks on 2026-07-02.
+
+Notes: This does not close region/data-residency, RLS, Storage, migration, monitoring, or deployment-ownership gaps. The local workspace still needs safe Git/GitHub handoff before source-control evidence is complete.
+
+### 2026-07-02 - Offline driver device sync
+
+Status: Confirmed for V1 testing.
+
+Decision: Add `SOP-OPS-01 Offline Device Sync And Recovery`. Offline mode saves driver actions locally on the same device and retries live sync later; it does not update the live production record until that device reconnects and sync succeeds.
+
+Source: User field-test issue and confirmation on 2026-07-02.
+
+Notes: Driver users must keep the device signed in and online to clear pending sync. Clearing saved device data can abandon unsynced local updates. PWA background sync, minimum supported device/browser, local cache retention, and Admin recovery for unrecoverable outbox data remain open.
+
+### 2026-07-02 - Manual invoice PDF for V1
+
+Status: Confirmed.
+
+Decision: Xero connection is deferred/removed from V1. The portal generates downloadable invoice PDFs for Admin to manually email to clients.
+
+Source: User decision after Xero invalid-scope connection failure and invoice UX direction in late June 2026.
+
+Notes: Superseded by the later 2026-07-02 TBD-register decision for V1 scope: Admin email, bounce handling, payment follow-up, bank reconciliation, BAS/accountant handoff, and any corrected-invoice handling are out-of-system human/accounting processes. No Xero/OpenClaw/accounting API integration is part of the V1 baseline.
+
+### 2026-07-02 - Active supplier network adjustment
+
+Status: Confirmed for V1 runtime.
+
+Decision: Ficeda is removed from the active supplier network. The V1 active supplier list is Link International, A1 Accessories, McLeods, Gas Imports, and Whites Powersports.
+
+Source: User direction during supplier testing in late June 2026.
+
+Notes: CAP-MCL-001 source material still records the earlier six-supplier network. Documentation must distinguish the original source list from the current active runtime list.
+
+### 2026-07-02 - Driver pickup count timing
+
+Status: Confirmed.
+
+Decision: Drivers count freight items at pickup, not at delivery. Delivery sign-off verifies the pickup-counted items, price, receiver name, and receiver signature. Receiver phone is not required for POD.
+
+Source: User direction during driver journey testing in late June 2026.
+
+Notes: This changes the user journey and needs BOAS/SOP reconciliation against SOP-PUP-02, SOP-DEL-04, and SOP-DEL-05.
+
+### 2026-07-02 - Baseline documentation freeze before further build work
+
+Status: Confirmed.
+
+Decision: All baseline documentation must be reconciled before moving forward with more software changes. This includes BOAS, SOP, policy, journey, and runtime documentation.
+
+Source: User direction on 2026-07-02.
+
+Notes: `docs/baseline-documentation-register.md` now controls the baseline-documentation gate. `docs/policy-baseline-reconciliation.md` records policy impacts from offline mode, manual invoice PDF billing, active supplier changes, pickup-count timing, HCM boundary, SLA boundary, and production runtime. The formal BOAS workbook and policy `.docx` archives have not been silently overwritten; they still need approved versioned source updates.
+
+### 2026-07-02 - Recreated baseline pack with version control numbers
+
+Status: Draft for approval.
+
+Decision: Recreate the baseline documentation set as a version-controlled draft pack under `baseline/v2.0/`, preserving the old BOAS and policy archives as source evidence.
+
+Source: User direction on 2026-07-02 to edit or recreate the documents with new version control numbers.
+
+Notes: New draft documents are `DOC-BASE-CTRL-002` v2.0, `BOAS-ADD-002` v2.0, `SOP-ADD-001` v1.3, and `POL-ADD-002` v2.0. Full recreated source outputs now exist under `baseline/v2.0/full-source/`: BOAS v2.0 workbook, versioned SOP workbooks, versioned policy DOCX files, and versioned journey records. They are not final legal approval. Owner, Policy Owner/legal owner, Privacy Owner, and approval references remain `TBD`.
+
+### 2026-07-02 - Baseline approval register responses
+
+Status: Partially approved; UAT/evidence still required.
+
+Decision: Baseline v2.0 is approved as the source of truth for all V1 testing. BOAS v2.0, the v2 SOP workbook set, and the v2 journey set are approved for V1 testing alignment.
+
+Source: User response on 2026-07-02 to `docs/baseline-tbd-approval-register.md`.
+
+Notes: Policy/legal owner and Privacy Owner are to be Moto & Co Logistics roles; named assignees remain open. Legal pages are supplied but require updating against policy changes before publication. Australia/Sydney database position is accepted in principle, with evidence/UAT still required. Auth/RLS, Storage/POD, and production access-log testing are not complete. Storage/POD process is approved, but system testing failed and requires retest. DPA/security schedule remains open pending explanation/evidence.
+
+### 2026-07-02 - Remaining TBD register decisions
+
+Status: Confirmed with retained UAT/build gaps.
+
+Decision: Close or update TBD-012 through TBD-030 in the v2.0 baseline register. Security schedule/DPA is not required for V1. Offline device/browser, local cache retention, clear-device-data warning, unrecoverable outbox recovery, and POD photo non-mandatory position are approved for UAT evidence and must be re-executed after ERD approval and schema/runtime reconciliation. V1 billing runtime creates downloadable EOM invoice PDFs only; Admin email, bounce handling, payment follow-up, bank reconciliation, BAS/accountant handoff, and any corrected-invoice handling are outside the V1 runtime. Accounting API/OpenClaw/Xero integration is not part of the V1 baseline. Privacy Owner is role-based GM Moto & Co Logistics. Light-touch supplier governance, current red/coral state-colour direction, and current simple UI/icon approach are approved for V1.
+
+Source: Owner response on 2026-07-02 to `docs/baseline-tbd-approval-register.md`.
+
+Notes: Policy #22 source was not located by Owner, so scheduling cadence approval remains open. Previous evening-before run lockdown is rejected. New approved build requirement is a driver `Create Daily Run` workflow that consolidates ready con notes and supports three depot collection types: planned milk-run package, brought-forward ready next-day package, and ready package with no con note/customer missed portal entry. ERD draft now exists at `docs/entity-relationship-diagram-v2.0.md`; the daily-run workflow is blocked until ERD approval, schema/runtime build, and UAT.
+
+## 2026-07-02 - Software Scope v2.0 and ERD v2.0 Created
+
+Decision: Create `docs/software-scope-v2.0.md` and `docs/entity-relationship-diagram-v2.0.md` as the required gate before further software updates. Scope separates runtime responsibilities from out-of-system business processes. ERD documents the visible local Supabase migration state plus approved logical data requirements and flags migration/role-model reconciliation gaps.
+
+Notes: Further runtime/schema changes should wait until the software scope is accepted, the ERD is reviewed, and the local migration folder is reconciled against production evidence.

@@ -8,8 +8,7 @@ The build follows the project documentation in `docs/` and does not treat unknow
 
 - Next.js for the Vercel-ready website and app.
 - Supabase for auth, database, storage, and RLS.
-- Supabase live runtime bridge for production Auth, role records, RLS-protected workflow persistence, and private POD Storage.
-- Local mock state remains available only for non-live workflow verification.
+- Local mock state for workflow verification before real Supabase credentials exist.
 
 ## Environment Guardrail
 
@@ -17,10 +16,8 @@ The browser Supabase client is intentionally blocked when `NEXT_PUBLIC_APP_ENV` 
 `local` or `preview` and `NEXT_PUBLIC_SUPABASE_ENV` is `production`.
 
 This implements the confirmed release-control rule that preview deployments must
-not connect to production Supabase. GitHub, Vercel, Supabase region, production
-keys, migrations, private POD bucket, the initial pricing seed, the live
-runtime bridge, and the first Super Admin bootstrap are connected. Approved
-launch master data and actor-by-actor journey evidence remain open.
+not connect to production Supabase. Production project URL, region, secrets, and
+Vercel ownership are still open decisions.
 
 ## Local Commands
 
@@ -30,7 +27,6 @@ npm.cmd run dev
 npm.cmd run verify:local
 npm.cmd run verify:launch
 npm.cmd run verify:production
-npm.cmd run verify:live
 npm.cmd run typecheck
 npm.cmd run verify:requirements
 npm.cmd run verify:platform
@@ -49,32 +45,8 @@ handoff blockers named without creating repositories, running migrations,
 deploying, or printing secret values.
 
 Use `npm.cmd run verify:production` as the strict production readiness gate. It
-passes when production values are supplied and the local Git/Supabase/Vercel
-tooling is available. It does not prove actor workflow data has been wired into
-Supabase.
-
-Use `npm.cmd run verify:live` after Supabase is linked to confirm the production
-live bridge, private POD bucket, price rules, Supabase API table privileges,
-seed import evidence, and active Super Admin/Admin/Driver/Client Ops/Client
-Billing role records. The first Admin and first Super Admin have been
-bootstrapped in production. The verifier is expected to fail until approved
-launch customer, supplier, driver, vehicle, and client/driver role records are
-present.
-
-Use `npm.cmd run bootstrap:super-admin -- <email> "<display-name>" "<approval-reference>"`
-only for the one-time SOP-IAM-03 Super Admin bootstrap after those three values
-are approved. It requires a service-role key in the local environment and records
-the change in `profiles`, `access_role_assignments`, `master_data_changes`, and
-`runtime_records`.
-
-Use `node scripts/bootstrap-first-admin.mjs <email> [display-name] [evidence]`
-only for a recovery Admin bootstrap. Routine Admin creation now belongs to
-Super Admin through the app.
-
-Use `node scripts/import-production-master-data.mjs --file=<private-json> --apply`
-only after the launch master-data file has approval evidence. Start from
-`docs/production-master-data.template.json`, keep the completed file uncommitted,
-and do not use placeholder records.
+is expected to fail until GitHub, Supabase, Vercel, local Git, and live tooling
+blockers are resolved.
 
 The draft GitHub Actions workflow at `.github/workflows/runtime-ci.yml` runs the
 same requirement, platform-contract, Supabase migration, typecheck, and build

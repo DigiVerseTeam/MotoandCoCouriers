@@ -76,7 +76,6 @@ function forbidText(relativePath, checks, label) {
 }
 
 const productRoutes = [
-  "src/app/page.tsx",
   "src/app/booking/page.tsx",
   "src/app/tracking/page.tsx",
   "src/app/portal/page.tsx",
@@ -90,6 +89,14 @@ const productRoutes = [
 for (const route of productRoutes) {
   requireText(route, ["MotoCoLogisticsApp"], `software shell route ${route}`);
 }
+
+requireText(
+  "src/app/page.tsx",
+  [
+    "WebsitePage",
+  ],
+  "public homepage route mounts website front door"
+);
 
 requireText(
   "src/lib/brand.ts",
@@ -108,11 +115,12 @@ requireText(
   "src/app/website/page.tsx",
   [
     "moto-and-co-couriers-logo.png",
-    "Black-and-white website photo placeholder",
-    "brand.geography",
-    "brand.tagline",
-    "href=\"/booking\"",
-    "href=\"/tracking\"",
+    "moto-and-co-hero-van.png",
+    "SEQ motorcycle logistics",
+    "Customer portal",
+    "Courier business login",
+    "portalEntryPoints",
+    "publicNav",
     "href=\"/legal\"",
     "href=\"/\"",
     "Receiver name and signature",
@@ -124,16 +132,28 @@ requireText(
 requireText(
   "src/app/legal/page.tsx",
   [
+    "motoandco-legal-pages.v2.html",
+    "approvedLegalContent",
+    "PublicSiteHeader",
+    "PublicFooter",
+    "legalContent",
+    "site-footer",
+  ],
+  "legal page uses approved content inside public website shell"
+);
+
+requireText(
+  "src/content/legal/motoandco-legal-pages.v2.html",
+  [
     "Booking Terms",
     "Credit Terms",
     "Dangerous Goods Policy",
     "Delivery Disclaimer",
     "Privacy Policy",
-    "Data Retention & Destruction",
-    "Not Published",
-    "Awaiting approved release copy",
+    "Collection Notice",
+    "Data Retention &amp; Destruction",
   ],
-  "legal status page avoids publishing unapproved legal copy"
+  "approved legal HTML source contains customer-facing legal pages"
 );
 
 [
@@ -255,7 +275,7 @@ requireText(
   [
     "Driver Workflow Rule",
     "Admin Workflow Rule",
-    "System Workflow Rule",
+    "system workflow rule",
     "Complete the pre-trip check before starting the run.",
     "Complete the pre-trip check before confirming pickup.",
     "Receiver name and signature required",
@@ -338,7 +358,8 @@ requireText(
     "Vehicle register blocks dispatch",
     "CAP-MCL-002 Run Planning Monitor",
     "POL-MCL-002-001",
-    "Night-before compile due",
+    "Driver-created daily run",
+    "old night-before lockdown is removed",
     "Queue APP-ADM-002 Exception",
     "createRunPlanningException",
     "runPlanningMonitorRows",
@@ -893,11 +914,11 @@ for (const migration of migrations) exists(migration, `source-backed migration $
 requireText(
   "docs/production-blocker-register.md",
   [
-    "GitHub repository is not connected",
-    "Production Supabase project is not fully connected",
-    "Vercel project is not connected",
+    "GitHub repository is not connected from local workspace",
+    "Production Supabase project is not fully assured",
+    "Production Vercel ownership and environment governance are not fully evidenced",
     "Notification provider and channel are unconfirmed",
-    "Production invoice dispatch is unconfirmed",
+    "Invoice PDF operating evidence still needs UAT",
     "Public tracking model is unconfirmed",
     "POD photo and device assumptions are unconfirmed",
     "Production reason-code taxonomy is incomplete",
@@ -909,10 +930,10 @@ requireText(
   "docs/build-gaps.md",
   [
     "provider_not_configured",
-    "Zoho Books integration is not confirmed",
-    "Privacy Owner is unnamed",
+    "Xero, OpenClaw, and accounting API integration are not part of the V1 baseline",
+    "Privacy Owner: GM Moto & Co Logistics",
     "Public secure tracking-token model is not confirmed",
-    "Production invoice PDF/email rendering",
+    "Billing V1 uses portal-generated invoice PDFs",
   ],
   "local gaps remain explicit"
 );

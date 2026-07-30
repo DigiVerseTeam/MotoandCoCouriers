@@ -425,7 +425,7 @@ export function canSyncDomainForRole(domainKey, role) {
   if (role === "admin" || role === "super_admin") return true;
   if (role === "client") return ["orders", "exceptions", "operationalNotices"].includes(domainKey);
   if (role === "billing") return ["exceptions", "billingNotices"].includes(domainKey);
-  if (role === "driver") return ["orders", "proofs", "exceptions", "runClosures"].includes(domainKey);
+  if (role === "driver") return ["orders", "proofs", "exceptions", "runClosures", "operationalNotices"].includes(domainKey);
   return false;
 }
 
@@ -487,7 +487,7 @@ export async function syncLiveRuntimeDomain(domainKey, rows = [], appSession) {
 
   const payload = (rows || []).map((row) => ({
     ...(row || {}),
-    actorId: row?.actorId || row?.accountActorId || row?.account_actor_id || row?.clientActorId || appSession?.user?.actorId || "",
+    actorId: row?.accountActorId || row?.account_actor_id || row?.clientActorId || row?.client_actor_id || (appSession?.role === "driver" && domainKey === "orders" ? "" : row?.actorId || appSession?.user?.actorId || ""),
     profileId: row?.profileId || row?.driverProfileId || row?.driver_profile_id || (appSession?.role === "driver" ? appSession?.user?.profileId : row?.profileId) || "",
   }));
   if (!payload.length) return { skipped: true };
@@ -510,43 +510,59 @@ function dataUrlToBlob(dataUrl) {
   const [meta, encoded] = String(dataUrl || "").split(",");
   if (!meta?.startsWith("data:") || !encoded) return null;
   const mime = meta.match(/^data:([^;]+)/)?.[1] || "application/octet-stream";
-  const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return new Blob([bytes], { type: mime });
+  try {
+    const binary = atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new Blob([bytes], { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+function errorMessage(error, fallback = "upload blocked") {
+  return error?.message || error?.error_description || error?.name || String(error || fallback);
 }
 
 export async function uploadLiveDeliveryProof(proof, appSession) {
   const supabase = client();
-  if (!supabase || !proof?.signatureUrl || !appSession?.role) return { skipped: true };
-  const blob = dataUrlToBlob(proof.signatureUrl);
-  if (!blob) return { skipped: true };
-
+  if (!proof || !appSession?.role) return { skipped: true };
   const path = proof.signaturePath || `deliveries/${proof.deliveryId || proof.id}/signature.png`;
-  const { error: uploadError } = await supabase.storage
-    .from("delivery-proof")
-    .upload(path, blob, {
-      upsert: false,
-      contentType: blob.type || "image/png",
-    });
+  let uploadStatus = proof.signatureUploadStatus || "";
+  let uploaded = false;
+  const blob = proof.signatureUrl ? dataUrlToBlob(proof.signatureUrl) : null;
 
-  if (uploadError && !String(uploadError.message || "").toLowerCase().includes("already exists")) {
-    throw uploadError;
+  if (supabase && blob) {
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("delivery-proof")
+        .upload(path, blob, {
+          upsert: false,
+          contentType: blob.type || "image/png",
+        });
+
+      if (!uploadError || String(uploadError.message || "").toLowerCase().includes("already exists")) {
+        uploaded = true;
+        uploadStatus = "stored";
+      } else {
+        uploadStatus = `storage_pending: ${errorMessage(uploadError)}`;
+      }
+    } catch (uploadError) {
+      uploadStatus = `storage_pending: ${errorMessage(uploadError)}`;
+    }
+  } else if (proof.signatureUrl) {
+    uploadStatus = "storage_pending: signature data could not be decoded on this device";
+  } else {
+    uploadStatus = "storage_pending: signature image not present on this device";
   }
 
-  await syncLiveRuntimeDomain("proofs", [{ ...proof, signaturePath: path, storage: `delivery-proof/${path}` }], appSession);
+  await syncLiveRuntimeDomain("proofs", [{
+    ...proof,
+    signaturePath: path,
+    storage: `delivery-proof/${path}`,
+    signatureUploadStatus: uploadStatus,
+    bucketPrivate: true,
+  }], appSession);
 
-  if (proof.deliveryId && /^[0-9a-f-]{36}$/i.test(proof.deliveryId)) {
-    await supabase
-      .from("delivery_proof")
-      .insert({
-        delivery_id: proof.deliveryId,
-        receiver_name: proof.receiverName,
-        signature_path: path,
-        captured_by: appSession?.user?.profileId || null,
-        captured_at: proof.capturedAt || proof.deliveredAt || new Date().toISOString(),
-      });
-  }
-
-  return { uploaded: true, path };
+  return { uploaded, path, uploadStatus };
 }

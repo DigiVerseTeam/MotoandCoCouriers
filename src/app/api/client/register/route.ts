@@ -65,7 +65,8 @@ function normaliseSupplierList(values: unknown[]) {
     .filter((name) => !seen.has(name) && seen.add(name));
 }
 
-async function findExistingClientRuntime(supabase: AdminSupabaseClient, email: string) {
+async function findExistingClientRuntime(supabase: AdminSupabaseClient, emailsToCheck: string[]) {
+  const emails = new Set(emailsToCheck.map(normaliseEmail).filter(Boolean));
   const { data, error } = await supabase
     .from("runtime_records")
     .select("local_id, payload")
@@ -77,7 +78,7 @@ async function findExistingClientRuntime(supabase: AdminSupabaseClient, email: s
       payload.email,
       payload.operationalContact?.email,
       payload.billingContact?.email,
-    ].some((candidate) => normaliseEmail(candidate) === email);
+    ].some((candidate) => emails.has(normaliseEmail(candidate)));
   }) || null;
 }
 
@@ -108,7 +109,8 @@ export async function POST(request: NextRequest) {
     const billingName = cleanText(body.billingContact?.name || body.billingName || operationalName);
     const billingEmail = normaliseEmail(body.billingContact?.email || body.billingEmail || email);
     const vendors = Array.isArray(body.vendors) ? normaliseSupplierList(body.vendors) : [];
-    const consentAcceptedAt = cleanText(body.consent?.acceptedAt) || new Date().toISOString();
+    const submittedAt = new Date().toISOString();
+    const consentAcceptedAt = submittedAt;
 
     if (!name) return json(400, { error: "Business name is required." });
     if (!validEmail(email)) return json(400, { error: "A valid operational email is required." });
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
     if (!address) return json(400, { error: "Delivery address is required." });
     if (!vendors.length) return json(400, { error: "At least one supplier is required." });
 
-    const existing = await findExistingClientRuntime(supabase, email);
+    const existing = await findExistingClientRuntime(supabase, [email, billingEmail]);
     if (existing) return json(409, { error: "This email is already registered or pending Admin review." });
 
     const today = new Date().toISOString().slice(0, 10);
@@ -195,7 +197,7 @@ export async function POST(request: NextRequest) {
     if (consentError) throw consentError;
 
     const client = {
-      id: cleanText(body.id) || localClientId(),
+      id: localClientId(),
       actorId,
       name,
       businessName: name,
@@ -210,7 +212,7 @@ export async function POST(request: NextRequest) {
       billingContact: { id: billingContactId, name: billingName, email: billingEmail, phone },
       consent: { notice: "Policy #4 Collection Notice", acceptedAt: consentAcceptedAt },
       registrationSource: "public_customer_registration",
-      registeredAt: new Date().toISOString(),
+      registeredAt: submittedAt,
       activationEligibility: {
         reviewedAt: "",
         source: "Pending Admin activation",

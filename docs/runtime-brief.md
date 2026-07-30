@@ -1,6 +1,6 @@
 # Runtime Brief
 
-Last updated: 2026-06-18
+Last updated: 2026-07-02
 
 ## Confirmed from source material
 
@@ -31,7 +31,7 @@ The brand guide lists these next moves:
 - Capture a short conversation with Retromecanica about the first three months as the foundation for the first case asset.
 - Onboard second and third workshops.
 - Stand up the booking form and tracking link on the website.
-- Run the first weekly invoicing batch through Zoho Books with full job-level itemisation.
+- Run the first weekly invoicing batch with job-level itemisation. V1 now uses portal-generated invoice PDFs for Admin to manually email outside the portal; Xero, OpenClaw, and accounting API integration are not part of the V1 baseline.
 - Write the Argyle-transition origin story as a short website piece.
 
 ## Intended runtime direction
@@ -41,6 +41,8 @@ Confirmed platform direction from user:
 - GitHub for source control and project history.
 - Supabase for app runtime backend.
 - Vercel for website and app launch.
+- Active V1 portal for production testing: `https://motoandcocouriers.vercel.app`.
+- Active V1 Supabase project ref for runtime testing: `fhrqfrhqopicekaiibyj`.
 
 Working runtime shape, subject to confirmation:
 
@@ -51,6 +53,13 @@ Working runtime shape, subject to confirmation:
 - Admin view for jobs, customers, suppliers, drivers, billing status, and exceptions.
 
 Confirmed release-one rules are tracked in `release-one-rules.md`. Remaining unknowns must stay visible until they are answered or extracted from source material.
+
+Baseline documentation gate:
+
+- No further product behaviour should be built until the affected BOAS, SOP, policy, journey, and runtime documentation impacts are checked.
+- `docs/baseline-documentation-register.md` controls the baseline update checklist.
+- `docs/policy-baseline-reconciliation.md` controls policy impacts until formal policy source files are versioned and approved.
+- Formal BOAS and policy source files have not been silently overwritten.
 
 ## Product boundaries
 
@@ -67,6 +76,8 @@ Confirmed:
 - GPS is not required for POD.
 - Pricing rules are stored in a Supabase `price_rules` table and are not hard-coded.
 - Rates are fixed tiers based on tyre count and weight band.
+- Driver offline mode is governed by `SOP-OPS-01`: local device updates are not live until the same device reconnects and sync succeeds.
+- Billing V1 is invoice PDF download plus Admin manual email.
 - Release one uses a lean Village CRM/ERM subset: actors, contacts, events, obligations, and courier-specific operational tables.
 - Relationship records, opportunities, partner management, and relationship health scoring are deferred unless a later decision brings them into release one.
 
@@ -76,7 +87,7 @@ TBD:
 - Whether the first tracking link is public-token based, authenticated, or both.
 - Whether customers can create accounts at launch.
 - Whether booking starts as a simple request form or a structured order workflow.
-- Whether Zoho Books is integrated in release one or handled manually.
+- Invoice PDF UAT evidence and manual payment evidence format.
 - Whether relationship records are needed for a specific release-one workflow.
 
 ## Brand constraints to respect

@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal — Moto and Co Couriers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  /* ── Brand tokens ── */
+  :root {
+    --red:    #e11d48;
+    --grey:   #b9b9c3;
+    --black:  #000000;
+    --cream:  #f3f3e8;
+    --white:  #ffffff;
+    --ink:    #1a1a1a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Site header ── */
+  .site-header {
+    background: var(--black);
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .wordmark {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    font-size: 18px;
+  }
+  .wordmark .parent { color: var(--grey); }
+  .wordmark .sub    { color: var(--red); }
+  .site-header nav a {
+    color: var(--grey);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-left: 32px;
+  }
+  .site-header nav a:hover { color: var(--white); }
+
+  /* ── Legal hero ── */
+  .legal-hero {
+    background: var(--cream);
+    border-bottom: 1px solid #d8d8cc;
+    padding: 64px 48px 48px;
+  }
+  .legal-hero .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+  .legal-hero h1 {
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: var(--black);
+    max-width: 560px;
+    margin-bottom: 24px;
+  }
+  .legal-hero p {
+    font-size: 15px;
+    color: #555;
+    max-width: 540px;
+    line-height: 1.65;
+  }
+
+  /* ── Nav pills ── */
+  .doc-nav {
+    background: var(--cream);
+    padding: 0 48px;
+    border-bottom: 1px solid #d8d8cc;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .doc-nav a {
+    display: block;
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #888;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .doc-nav a:hover { color: var(--black); }
+  .doc-nav a.active { color: var(--red); border-color: var(--red); }
+
+  /* ── Layout ── */
+  .legal-body {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 48px 80px;
+    gap: 64px;
+    align-items: start;
+  }
+
+  /* ── Sidebar TOC ── */
+  .sidebar {
+    position: sticky;
+    top: 32px;
+    padding-top: 48px;
+  }
+  .sidebar h3 {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-bottom: 16px;
+  }
+  .sidebar ul { list-style: none; }
+  .sidebar ul li { margin-bottom: 8px; }
+  .sidebar ul li a {
+    font-size: 13px;
+    color: #777;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .sidebar ul li a:hover { color: var(--red); }
+
+  /* ── Document panels ── */
+  .doc-panel {
+    padding-top: 48px;
+  }
+  .doc-section {
+    margin-bottom: 80px;
+    padding-bottom: 80px;
+    border-bottom: 1px solid #d8d8cc;
+  }
+  .doc-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .doc-section .doc-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+  .doc-section h2 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    color: var(--black);
+    margin-bottom: 8px;
+  }
+  .doc-section .effective {
+    font-size: 12px;
+    color: var(--grey);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    margin-bottom: 32px;
+  }
+
+  /* Body text */
+  .doc-content p {
+    margin-bottom: 16px;
+    color: #333;
+    line-height: 1.7;
+  }
+  .doc-content h3 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--black);
+    margin: 32px 0 12px;
+  }
+  .doc-content h3:first-child { margin-top: 0; }
+  .doc-content ul, .doc-content ol {
+    padding-left: 20px;
+    margin-bottom: 16px;
+  }
+  .doc-content li {
+    margin-bottom: 8px;
+    color: #333;
+    line-height: 1.65;
+  }
+  .doc-content strong { font-weight: 700; color: var(--black); }
+
+  /* Callout box */
+  .callout {
+    background: var(--black);
+    color: var(--cream);
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .callout strong { color: var(--red); }
+
+  /* Ruling line */
+  .rule {
+    height: 1px;
+    background: var(--red);
+    width: 40px;
+    margin: 24px 0;
+  }
+
+  /* Contact block */
+  .contact-block {
+    background: var(--white);
+    border: 1px solid #d8d8cc;
+    padding: 20px 24px;
+    margin-top: 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #444;
+  }
+  .contact-block strong { display: block; color: var(--black); margin-bottom: 4px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Footer */
+  .site-footer {
+    background: var(--black);
+    color: var(--grey);
+    padding: 32px 48px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    letter-spacing: 0.04em;
+  }
+  .site-footer .wordmark { font-size: 14px; }
+  .site-footer p { color: #666; }
+
+  @media (max-width: 768px) {
+    .site-header, .legal-hero, .doc-nav, .site-footer { padding-left: 24px; padding-right: 24px; }
+    .legal-body { grid-template-columns: 1fr; padding: 0 24px 60px; gap: 0; }
+    .sidebar { position: static; display: none; }
+    .legal-hero h1 { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Site Header ── -->
+<header class="site-header">
+  <div class="wordmark">
+    <span class="parent">moto&amp;co</span>
+    <span class="sub">couriers</span>
+  </div>
+  <nav>
+    <a href="#">Home</a>
+    <a href="#">Book a Run</a>
+    <a href="#">Pricing</a>
+    <a href="#" style="color:var(--white);">Legal</a>
+  </nav>
+</header>
+
+<!-- ── Legal Hero ── -->
+<div class="legal-hero">
+  <div class="eyebrow">Legal &amp; Policies</div>
+  <h1>How we operate.<br>In plain terms.</h1>
+  <p>Everything that governs how Moto and Co Couriers works with you, your suppliers, and your freight. Kept clear so there are no surprises on a Tuesday morning.</p>
+</div>
+
+<!-- ── Document Navigation ── -->
+<nav class="doc-nav">
+  <a href="#booking" class="active">Booking Terms</a>
+  <a href="#credit">Credit Terms</a>
+  <a href="#dangerous">Dangerous Goods</a>
+  <a href="#delivery">Delivery Disclaimer</a>
+  <a href="#privacy">Privacy Policy</a>
+  <a href="#collection">Collection Notice</a>
+  <a href="#retention">Data Retention</a>
+  <a href="#security">Information Security</a>
+</nav>
+
+<!-- ── Main Content ── -->
+<div class="legal-body">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h3>On this page</h3>
+    <ul>
+      <li><a href="#booking">Booking Terms</a></li>
+      <li><a href="#credit">Credit Terms</a></li>
+      <li><a href="#dangerous">Dangerous Goods Policy</a></li>
+      <li><a href="#delivery">Delivery Disclaimer</a></li>
+      <li><a href="#privacy">Privacy Policy</a></li>
+      <li><a href="#collection">Collection Notice</a></li>
+      <li><a href="#retention">Data Retention &amp; Destruction</a></li>
+      <li><a href="#security">Information Security</a></li>
+    </ul>
+    <div style="margin-top:40px; padding-top:32px; border-top:1px solid #d8d8cc;">
+      <div style="font-size:11px; color:var(--grey); letter-spacing:0.08em; text-transform:uppercase; font-weight:700; margin-bottom:12px;">Questions?</div>
+      <div style="font-size:13px; color:#555; line-height:1.7;">Contact us before booking if anything here is unclear.</div>
+      <div style="margin-top:12px; font-size:13px; color:var(--red); font-weight:600;">hello@motoandcocouriers.com.au</div>
+    </div>
+  </aside>
+
+  <!-- Document Panels -->
+  <main class="doc-panel">
+
+    <!-- ── 1. BOOKING TERMS ── -->
+    <section class="doc-section" id="booking">
+      <div class="doc-label">Document 01</div>
+      <h2>Booking Terms</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Who these terms apply to</h3>
+        <p>These Booking Terms govern every job booked with Moto and Co Couriers, a trading name of Moto &amp; Co Pty Ltd (ABN 55 679 964 357). By placing a booking, you accept these terms in full.</p>
+
+        <h3>How the run works</h3>
+        <p>Moto and Co Couriers operates two structured freight days per week. Workshop orders must be placed with each supplier before that supplier warehouse's own cut-off time, so the goods can be picked, packed, and ready for the scheduled collection.</p>
+        <ul>
+          <li><strong>Run A:</strong> Supplier order placed before the relevant warehouse cut-off &rarr; Goods ready for Tuesday collection &rarr; Delivered Tuesday</li>
+          <li><strong>Run B:</strong> Supplier order placed before the relevant warehouse cut-off &rarr; Goods ready for Thursday collection &rarr; Delivered Thursday</li>
+        </ul>
+        <p>These are the only standard run days. Ad-hoc, same-day, or next-day deliveries outside this schedule are not available unless separately agreed in writing.</p>
+
+        <h3>What you need to do when booking</h3>
+        <ul>
+          <li>Place your order with your supplier(s) before each supplier warehouse's own cut-off for the relevant run day. Moto and Co Couriers does not set or control supplier warehouse cut-off times.</li>
+          <li>Ensure your supplier has your delivery address, contact name, and any access instructions before the pickup window.</li>
+          <li>Provide accurate pickup details. If a pickup fails because details were incorrect or goods were not ready, the job is forfeited for that run day.</li>
+          <li>Notify us immediately if a booking needs to be cancelled. Cancellations after 9am on run day may incur a cancellation charge.</li>
+        </ul>
+
+        <h3>Pickup network</h3>
+        <p>Our standard pickup network covers the following Brisbane-region distributors: Link International, Gas Imports, McLeods, Whites Powersports, and A1 Accessories. Ficeda is not part of the active pickup network. Pickups from locations outside this network are subject to prior written agreement and may incur an additional charge.</p>
+
+        <h3>What we do not carry</h3>
+        <p>The following goods are excluded from our service. Bookings that include excluded goods will be cancelled and any applicable refund issued:</p>
+        <ul>
+          <li>Dangerous or hazardous goods (see Dangerous Goods Policy)</li>
+          <li>Interstate freight</li>
+          <li>Bulk pallet loads or items exceeding our standard handling dimensions</li>
+          <li>Cash, negotiable instruments, or high-value items without prior written agreement</li>
+          <li>Irreplaceable or one-of-a-kind items without prior written agreement</li>
+          <li>Any unlawful goods</li>
+        </ul>
+
+        <h3>Your responsibility for goods</h3>
+        <p>Goods must be reasonably packaged by the supplier before collection. We are not liable for damage arising from inadequate packaging by the supplier. If we collect goods that are visibly damaged or poorly packaged, we will note this at pickup and advise you before delivery.</p>
+
+        <h3>Changes to the service</h3>
+        <p>We reserve the right to modify run days, pickup network, or service conditions with seven days' notice. Where changes materially affect your established booking pattern, we will contact you directly.</p>
+
+        <div class="callout">
+          <strong>The short version:</strong> Order before your supplier warehouse's own cut-off. Make sure the goods are picked, packed, and ready for the scheduled Tuesday or Thursday collection. We move parts, not parcels — if your goods do not fit our model, we will tell you before we collect.
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 2. CREDIT TERMS ── -->
+    <section class="doc-section" id="credit">
+      <div class="doc-label">Document 02</div>
+      <h2>Credit Terms</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Payment terms</h3>
+        <p>All invoices issued by Moto and Co Couriers are due and payable <strong>strictly within 7 days of the invoice date</strong>. This applies to all accounts, including new customers and established workshop accounts.</p>
+
+        <h3>Invoicing</h3>
+        <p>Invoices are generated from the Moto and Co Couriers portal as PDF invoices and manually emailed by Admin to the billing email address registered to your account. Each invoice itemises jobs by date, supplier pickup location, item count, and applicable charge. If you believe an invoice contains an error, you must notify us within 3 business days of receipt.</p>
+
+        <h3>Payment methods</h3>
+        <p>Accepted payment methods will be confirmed at account setup. Bank transfer to the account details on your invoice is the preferred method. We do not accept cash payment for ongoing accounts.</p>
+
+        <h3>Late payment</h3>
+        <p>Accounts unpaid after 7 days from invoice date are considered overdue. We reserve the right to:</p>
+        <ul>
+          <li>Suspend freight services until the overdue balance is cleared in full</li>
+          <li>Apply a late payment fee of $15 per overdue invoice after 14 days</li>
+          <li>Refer overdue accounts to a debt recovery service after 30 days</li>
+        </ul>
+        <p>We will contact you before suspending service. We prefer to resolve payment issues directly — call us before your invoice is overdue if you have a concern.</p>
+
+        <h3>No minimum volume</h3>
+        <p>There is no minimum order or volume commitment required to maintain an account. You order when you need freight. You are invoiced for what we collect and deliver.</p>
+
+        <h3>Account setup</h3>
+        <p>A credit account is established on first booking. No formal credit application is required for workshop accounts operating on standard 7-day terms. Accounts seeking extended terms or high-volume arrangements should contact us to discuss before booking.</p>
+
+        <h3>GST</h3>
+        <p>All prices are quoted exclusive of GST unless stated otherwise. GST at 10% is applied to all invoices. Moto &amp; Co Pty Ltd is registered for GST (ABN 55 679 964 357).</p>
+
+        <div class="callout">
+          <strong>The short version:</strong> 7 days, strictly. Invoice arrives after the run. Pay it before it's due and your freight keeps moving. Query an invoice within 3 business days of receiving it.
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 3. DANGEROUS GOODS POLICY ── -->
+    <section class="doc-section" id="dangerous">
+      <div class="doc-label">Document 03</div>
+      <h2>Dangerous Goods Policy</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Our position</h3>
+        <p>Moto and Co Couriers does not carry dangerous goods. This is not a procedural gap — it is a deliberate limit of our service model. Our vehicles are not fitted or licensed for regulated hazardous freight, and our drivers are not certified for dangerous goods transport under the <em>Australian Dangerous Goods Code</em>.</p>
+
+        <h3>What we define as dangerous goods</h3>
+        <p>For the purposes of this policy, dangerous goods include — but are not limited to — any substance, material, or article classified under the ADG Code, including:</p>
+        <ul>
+          <li>Flammable liquids (including fuels, solvents, and aerosols exceeding exempt quantities)</li>
+          <li>Compressed gases (including tyre inflation gases, aerosol propellants)</li>
+          <li>Corrosives (including battery acid and chemical cleaners in bulk)</li>
+          <li>Toxic substances</li>
+          <li>Oxidising agents</li>
+          <li>Explosives or pyrotechnics</li>
+          <li>Radioactive material</li>
+          <li>Lithium batteries exceeding exempt quantities or not installed in a device</li>
+        </ul>
+
+        <h3>Motorcycle trade context</h3>
+        <p>We understand that motorcycle parts suppliers regularly stock items that may be adjacent to dangerous goods classifications — lubricants, brake fluid, fuel system components. In most workshop-to-workshop volumes, these fall within retail exempt quantities under the ADG Code and can be carried without regulated classification. If you are unsure whether a specific item qualifies, contact us before booking. We will not carry an item we are uncertain about.</p>
+
+        <h3>What happens if a booking includes dangerous goods</h3>
+        <p>If we discover at pickup that a booking includes regulated dangerous goods:</p>
+        <ul>
+          <li>The item will not be collected</li>
+          <li>The remainder of your booking will proceed where possible</li>
+          <li>You will be notified immediately</li>
+          <li>No partial refund is issued for items not collected due to this policy</li>
+        </ul>
+        <p>If dangerous goods are concealed within packaging and discovered after collection, the consignment will be quarantined and you will be required to arrange collection at your cost.</p>
+
+        <h3>Your obligation</h3>
+        <p>By placing a booking, you confirm that no item in that booking is a regulated dangerous good requiring ADG compliance. Misrepresentation of goods constitutes a breach of these terms and may result in account termination and cost recovery.</p>
+
+        <div class="callout">
+          <strong>The short version:</strong> We carry parts. We don't carry hazmat. If you're not certain about an item, ask us before you book it — not after we've collected it.
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 4. DELIVERY DISCLAIMER ── -->
+    <section class="doc-section" id="delivery">
+      <div class="doc-label">Document 04</div>
+      <h2>Delivery Disclaimer</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>What we promise and what we do not</h3>
+        <p>Moto and Co Couriers operates structured, scheduled freight runs between Brisbane suppliers and Gold Coast workshops. We commit to collecting and delivering goods in accordance with the run schedule set out in our Booking Terms. We do not guarantee a specific delivery time within a run day, only the run day itself.</p>
+
+        <h3>Delivery completion</h3>
+        <p>Delivery is considered complete when:</p>
+        <ul>
+          <li>Goods are physically handed to a person at the delivery address, with proof of delivery (POD) captured; or</li>
+          <li>Goods are left in an agreed safe location at the delivery address, with a photo captured as POD</li>
+        </ul>
+        <p>If a delivery cannot be completed (no one present, no safe location agreed, access restrictions), we will contact you and arrange redelivery on the next available run day. A redelivery attempt may incur an additional charge.</p>
+
+        <h3>Proof of delivery</h3>
+        <p>We capture proof of delivery on every job. POD may include a photo of goods at the delivery location, a recipient signature, a timestamp, and GPS coordinates. POD records are retained and available on request within 90 days of delivery.</p>
+
+        <h3>Damaged goods</h3>
+        <p>If goods arrive visibly damaged, the recipient should note this at the time of delivery before signing. Claims for transit damage must be lodged within 48 hours of delivery, with photographic evidence. Our liability for transit damage is limited to the lower of:</p>
+        <ul>
+          <li>The documented wholesale cost of the damaged item; or</li>
+          <li>$300 per item, unless higher cover is agreed in writing before collection</li>
+        </ul>
+        <p>We are not liable for damage resulting from inadequate packaging by the supplier, pre-existing damage, or the nature of the goods themselves.</p>
+
+        <h3>Delays and disruptions</h3>
+        <p>Our run schedule is maintained as consistently as possible. Where a run is delayed or disrupted by circumstances beyond our reasonable control — including road incidents, supplier delays, vehicle breakdown, or extreme weather — we will notify affected customers as soon as practicable. We are not liable for consequential losses arising from a delayed or missed run.</p>
+
+        <h3>Missing items</h3>
+        <p>If a package listed on your booking is not delivered, notify us within 24 hours of the run day. We will investigate against our pickup records and POD. If the item was collected and cannot be accounted for, we will work with you to resolve the claim.</p>
+
+        <h3>Our general liability limit</h3>
+        <p>To the extent permitted by law, our total liability to you in connection with any job or series of jobs is limited to the freight charges paid for those jobs. We exclude all liability for consequential, indirect, or special loss including but not limited to lost revenue, workshop downtime, or customer losses downstream.</p>
+
+        <div class="callout">
+          <strong>The short version:</strong> We commit to the run day, not the hour. We take a photo on every delivery. Damaged goods claims go in within 48 hours. We are not a logistics insurer — if you're moving something irreplaceable, talk to us first.
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 5. PRIVACY POLICY ── -->
+    <section class="doc-section" id="privacy">
+      <div class="doc-label">Document 05</div>
+      <h2>Privacy Policy</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Our commitment</h3>
+        <p>Moto and Co Couriers collects and uses personal information to run structured freight services for motorcycle workshops. We collect what we need to do the job and no more. We do not sell, rent, or trade personal information to third parties.</p>
+        <p>This policy applies to all personal information collected by Moto &amp; Co Pty Ltd trading as Moto and Co Couriers. It is written to comply with the <em>Privacy Act 1988</em> (Cth) and the Australian Privacy Principles.</p>
+
+        <h3>What we collect</h3>
+        <p>We collect personal information in the course of providing freight services, including:</p>
+        <ul>
+          <li><strong>Contact information:</strong> Name, business name, email address, phone number, delivery address</li>
+          <li><strong>Booking information:</strong> Pickup locations, delivery details, package descriptions, special instructions</li>
+          <li><strong>Financial information:</strong> Invoice records, payment records (not card or banking credentials — these are handled by our payment processor)</li>
+          <li><strong>Delivery records:</strong> Proof of delivery images, timestamps, GPS coordinates, recipient name</li>
+          <li><strong>Communications:</strong> Emails, messages, or records of telephone conversations where relevant to a job or account</li>
+        </ul>
+
+        <h3>Why we collect it</h3>
+        <p>We use personal information to:</p>
+        <ul>
+          <li>Schedule, execute, and document freight runs</li>
+          <li>Issue and manage invoices</li>
+          <li>Communicate with you about bookings, accounts, and service changes</li>
+          <li>Investigate claims, disputes, or service failures</li>
+          <li>Comply with legal obligations</li>
+        </ul>
+
+        <h3>Who we share it with</h3>
+        <p>We share personal information only where necessary:</p>
+        <ul>
+          <li><strong>Our drivers:</strong> Delivery addresses, contact names, and access instructions for the purpose of completing the run</li>
+          <li><strong>Our suppliers and pickup partners:</strong> Where we need to coordinate pickup, we may share your account name</li>
+          <li><strong>Our software providers:</strong> Zoho (CRM, Books, Creator) processes operational and financial data on our behalf under their own privacy frameworks</li>
+          <li><strong>Legal or regulatory authorities:</strong> Where required by law or court order</li>
+        </ul>
+        <p>We do not share personal information with marketing companies, data brokers, or any party outside the operation of our service.</p>
+
+        <h3>How we store it</h3>
+        <p>Personal information is stored in the Moto and Co Couriers portal and supporting cloud infrastructure. For V1, the production database/storage location is recorded as Australia/Sydney, subject to final retained platform evidence. We take reasonable steps to protect personal information from misuse, interference, loss, and unauthorised access, including access controls, role-based permissions, and audit records within our systems.</p>
+
+        <h3>How long we keep it</h3>
+        <p>We retain personal information in line with our Data Retention and Destruction Policy. In general, account, booking, delivery, billing, and POD records are retained for seven years where required for billing, dispute, audit, tax, or operational evidence. See our Data Retention Policy for full detail.</p>
+
+        <h3>Your rights</h3>
+        <p>You have the right to:</p>
+        <ul>
+          <li>Request access to the personal information we hold about you</li>
+          <li>Ask us to correct personal information that is inaccurate or out of date</li>
+          <li>Make a complaint about how we have handled your information</li>
+        </ul>
+        <p>To exercise these rights, contact us at the details below. We will respond within 30 days.</p>
+
+        <h3>Complaints</h3>
+        <p>If you believe we have breached the Australian Privacy Principles, you may first raise the matter with us directly. If the matter is not resolved to your satisfaction, you may lodge a complaint with the Office of the Australian Information Commissioner (OAIC) at <strong>www.oaic.gov.au</strong>.</p>
+
+        <div class="contact-block">
+          <strong>Privacy contact</strong>
+          Moto &amp; Co Pty Ltd · Trading as Moto and Co Couriers<br>
+          ABN 55 679 964 357<br>
+          Email: privacy@motoandcocouriers.com.au
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 6. COLLECTION NOTICE ── -->
+    <section class="doc-section" id="collection">
+      <div class="doc-label">Document 06</div>
+      <h2>Collection Notice</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <p>This notice is provided at or before the point of collection in accordance with Australian Privacy Principle 5. It summarises how Moto and Co Couriers collects and uses your personal information when you book a freight job or open an account.</p>
+
+        <h3>Who is collecting your information</h3>
+        <p>Moto &amp; Co Pty Ltd, trading as Moto and Co Couriers (ABN 55 679 964 357).</p>
+
+        <h3>What information is collected</h3>
+        <p>When you book a freight run or open an account, we collect:</p>
+        <ul>
+          <li>Your name, business name, phone number, and email address</li>
+          <li>Your delivery address and any access instructions</li>
+          <li>Details of the goods being collected and delivered</li>
+          <li>Payment and invoice records</li>
+        </ul>
+        <p>At the point of delivery, we also collect proof-of-delivery information, including the recipient's name, a photograph, and where applicable, a signature and GPS location.</p>
+
+        <h3>Why we collect it</h3>
+        <p>Your personal information is collected for the purpose of:</p>
+        <ul>
+          <li>Executing your freight booking</li>
+          <li>Issuing invoices and processing payment</li>
+          <li>Communicating with you about your booking or account</li>
+          <li>Resolving any dispute or claim arising from a delivery</li>
+        </ul>
+
+        <h3>Is collection required?</h3>
+        <p>Yes. Without your contact and delivery information, we cannot perform the service. We cannot complete a booking without a valid delivery address and a contact name at that address.</p>
+
+        <h3>Who we share it with</h3>
+        <p>Your information may be shared with our drivers (for the purpose of completing your delivery) and our software providers (Zoho). It is not shared with any other third party except as required by law.</p>
+
+        <h3>Where to find our full Privacy Policy</h3>
+        <p>Our full Privacy Policy, including your rights of access and correction, is available at <strong>motoandcocouriers.com.au/legal</strong> or on request by emailing <strong>privacy@motoandcocouriers.com.au</strong>.</p>
+
+        <div class="callout">
+          <strong>In brief:</strong> We collect your name, address, and booking details to run your freight. We use Zoho to manage it. We don't sell it. You can ask to see or correct what we hold.
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 7. DATA RETENTION & DESTRUCTION ── -->
+    <section class="doc-section" id="retention">
+      <div class="doc-label">Document 07</div>
+      <h2>Data Retention &amp; Destruction</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Purpose of this policy</h3>
+        <p>This policy sets out how long Moto and Co Couriers retains different categories of data, and how that data is disposed of when the retention period expires. It applies to all records — digital and physical — held by Moto &amp; Co Pty Ltd in connection with the Moto and Co Couriers trading name.</p>
+
+        <h3>Retention schedule</h3>
+
+        <h3>Financial records</h3>
+        <p>Invoices, payment records, payment evidence, manual invoice email evidence, and related financial documents are retained for <strong>seven years</strong> from the date of the transaction, in compliance with the <em>Income Tax Assessment Act 1997</em> and Australian Taxation Office requirements.</p>
+
+        <h3>Job and booking records</h3>
+        <p>Records of individual freight jobs — including booking details, supplier pickup records, item counts, delivery records, and audit history — are retained for <strong>seven years</strong> from the run/delivery date. This period supports dispute resolution, billing, retention, and operational audit.</p>
+
+        <h3>Proof of delivery records</h3>
+        <p>POD records, including receiver name, receiver signature, timestamp/status evidence, and any optional exception photo if captured, are retained for <strong>seven years</strong> from delivery date.</p>
+
+        <h3>Customer account records</h3>
+        <p>Contact and account records for active accounts are retained for the life of the account plus <strong>seven years</strong> after the last transaction or account closure, unless a shorter period is approved by the Privacy Owner and no legal hold applies.</p>
+
+        <h3>Communications</h3>
+        <p>Emails and written communications related to a specific job or dispute are retained for the duration of the relevant job or dispute period, plus one year. General correspondence not related to a specific job is retained for one year.</p>
+
+        <h3>Driver and operational records</h3>
+        <p>Run sheets, driver logs, and internal operational records are retained for <strong>two years</strong> from the date of the run.</p>
+
+        <h3>How data is destroyed</h3>
+        <p>When a retention period expires:</p>
+        <ul>
+          <li><strong>Digital records in Zoho:</strong> Deleted from the relevant module. Records in Zoho's backup infrastructure are subject to Zoho's own data deletion timelines, which we have verified are consistent with our retention requirements.</li>
+          <li><strong>Locally stored files:</strong> Permanently deleted using standard deletion tools. Where files contain sensitive personal information, secure deletion is applied.</li>
+          <li><strong>Physical documents:</strong> Cross-cut shredded. We do not use external shredding services for documents containing personal information without a confidentiality agreement in place.</li>
+        </ul>
+
+        <h3>Retention override</h3>
+        <p>Where data is the subject of a legal hold, regulatory investigation, insurance claim, or unresolved dispute, the standard retention period is suspended until the matter is resolved. The data will be retained in full until the hold is lifted.</p>
+
+        <h3>Review of this policy</h3>
+        <p>This policy is reviewed when a new version of the Brand Guide is triggered, or at minimum every two years. Changes to Australian law affecting data retention obligations will prompt an immediate review.</p>
+
+      </div>
+    </section>
+
+    <!-- ── 8. INFORMATION SECURITY ── -->
+    <section class="doc-section" id="security">
+      <div class="doc-label">Document 08</div>
+      <h2>Information Security</h2>
+      <div class="effective">Effective June 2026 · Moto &amp; Co Pty Ltd ABN 55 679 964 357</div>
+      <div class="rule"></div>
+      <div class="doc-content">
+
+        <h3>Our approach</h3>
+        <p>Moto and Co Couriers takes reasonable steps to protect the personal and commercial information we hold from misuse, interference, loss, and unauthorised access. This document describes how we do that, in honest terms proportionate to the size and nature of our operation.</p>
+
+        <h3>System architecture</h3>
+        <p>Our operational and customer data is managed within the Moto and Co Couriers portal using role-based application access, database records, private proof storage, and audit history. For V1, the production database/storage location is recorded as Australia/Sydney, subject to final retained platform evidence.</p>
+        <p>Our customer-facing portal is hosted on Vercel and uses Supabase for authentication, database, and private proof storage. API credentials and secrets are stored in server-side environment controls and must not be exposed in client-side code.</p>
+
+        <h3>Access controls</h3>
+        <p>Access to operational systems is restricted by role:</p>
+        <ul>
+          <li><strong>Super Admin:</strong> Provisioning and high-level access management</li>
+          <li><strong>Admin:</strong> Dispatch, clients, billing, exceptions, pricing/master data, and operational controls</li>
+          <li><strong>Client Operational / Client Billing users:</strong> Access to their own booking, delivery, POD, billing, and account records according to role</li>
+          <li><strong>Drivers:</strong> Access to assigned run, delivery addresses, pickup count, and POD capture for their assigned work only</li>
+          <li><strong>Receivers:</strong> No-login role; receiver name and signature are captured only inside the driver POD workflow</li>
+        </ul>
+        <p>Shared passwords are not used. Each user has an individual login. Passwords are required to meet minimum complexity standards. We review access permissions when a role changes or a person leaves.</p>
+
+        <h3>Data in transit</h3>
+        <p>All data transmitted between our systems and users is encrypted via HTTPS/TLS. We do not transmit personal information over unencrypted channels.</p>
+
+        <h3>Physical security</h3>
+        <p>Physical documents containing personal information (run sheets, delivery dockets) are stored securely while in use and destroyed after the applicable retention period in accordance with our Data Retention and Destruction Policy. Vehicles are locked when unattended. Physical access to operational materials is limited to staff.</p>
+
+        <h3>Incident response</h3>
+        <p>In the event of a suspected data breach involving personal information, we will:</p>
+        <ul>
+          <li>Assess the breach within 24 hours of becoming aware of it</li>
+          <li>Contain the breach and prevent further exposure where possible</li>
+          <li>Notify affected individuals where the breach is likely to result in serious harm, in line with the Notifiable Data Breaches scheme under the <em>Privacy Act 1988</em></li>
+          <li>Report to the OAIC as required</li>
+          <li>Document the incident and the response, and use it to improve controls</li>
+        </ul>
+
+        <h3>Third-party services</h3>
+        <p>We use a small number of third-party services in the operation of our business, including our portal hosting, database/storage/authentication provider, email provider, source-control/deployment tooling, and payment/accounting support where approved. Each is selected in part for its security posture. We do not connect our systems to third-party marketing platforms, data aggregators, or analytics services that would have access to customer personal information.</p>
+
+        <h3>Honest limits</h3>
+        <p>We are a small business. We do not have a dedicated information security function. We apply security controls appropriate to the sensitivity of the data we hold and the size of our operation. If you have a specific security question — particularly if you are an enterprise supplier or a workshop with compliance requirements — contact us directly so we can give you an accurate answer.</p>
+
+        <h3>Review of this policy</h3>
+        <p>This policy is reviewed annually or when a significant change is made to our systems or architecture. The current version is V1, published June 2026.</p>
+
+        <div class="contact-block">
+          <strong>Security and privacy contact</strong>
+          Moto &amp; Co Pty Ltd · Trading as Moto and Co Couriers<br>
+          ABN 55 679 964 357<br>
+          Email: privacy@motoandcocouriers.com.au
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="wordmark">
+    <span class="parent">moto&amp;co</span>
+    <span class="sub">couriers</span>
+  </div>
+  <p>Moto &amp; Co Pty Ltd · ABN 55 679 964 357 · Brisbane to Gold Coast · Payment terms strictly 7 days</p>
+  <p style="color:#444;">Legal V1 · June 2026</p>
+</footer>
+
+</body>
+</html>

@@ -58,7 +58,7 @@ export const softwareActors: SoftwareActor[] = [
     id: "APP-ADM-001",
     name: "Identity, account and order intake gate",
     surface: "Customer",
-    accountableFor: "Supabase Auth/RLS, registration, role gate, pickup request validation, 12:30pm cut-off, work item creation, and suspended-account insert blocks.",
+    accountableFor: "Supabase Auth/RLS, registration, role gate, pickup request validation, work item creation, and suspended-account insert blocks.",
     mustNotDo: "Must not silently accept incomplete requests, bypass courier eligibility, or expose one customer's records to another customer.",
     source: "BOAS v1.7 Sheets 02, 03, 06; UJ-CRM-001A; SOP-IAM-01/02; SOP-REQ-01/02",
     status: "part_built"
@@ -221,7 +221,7 @@ export const processAccountabilities: ProcessAccountability[] = [
     input: "Account, supplier, requested date, notes, submission time",
     output: "Pickup request/work item with actual run date",
     dataObject: "Pickup Request / Work Item",
-    control: "12:30pm Brisbane cut-off; linked supplier; active account only",
+    control: "Driver-created daily run; linked supplier; active account only",
     status: "part_built",
     source: "BOAS Sheet 03 REQ-01/02/03; SOP-REQ-01/02"
   },

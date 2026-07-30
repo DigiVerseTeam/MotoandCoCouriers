@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
+    "verify:driver-visibility": "node scripts/verify-driver-order-visibility.mjs",
+    "verify:runtime-access": "node scripts/verify-runtime-access-control.mjs",
+    "verify:public-registration": "node scripts/verify-public-registration-hardening.mjs",
     "verify:launch": "node scripts/check-launch-readiness.mjs",
     "verify:local": "node scripts/local-preflight.mjs",
     "verify:live": "node scripts/verify-live-rls.mjs",
@@ -18,6 +21,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "latest",
+    "jspdf": "^4.2.1",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",

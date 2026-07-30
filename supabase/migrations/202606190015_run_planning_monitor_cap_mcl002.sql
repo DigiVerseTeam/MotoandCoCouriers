@@ -37,7 +37,7 @@ alter table public.exceptions
 alter table public.exceptions
   add constraint exceptions_run_planning_source_check
   check (
-    summary <> 'Run Planning Exception'
+    type <> 'Run Planning Exception'
     or source = 'CAP-MCL-002 / APP-ADM-002 / POL-MCL-002-001'
   );
 
@@ -45,9 +45,8 @@ create index if not exists runs_expected_compile_date_idx
   on public.runs (expected_compile_date, status);
 
 create index if not exists exceptions_run_planning_open_idx
-  on public.exceptions (status, created_at)
-  where summary = 'Run Planning Exception'
-    or source = 'CAP-MCL-002 / APP-ADM-002 / POL-MCL-002-001';
+  on public.exceptions (order_id, status)
+  where type = 'Run Planning Exception';
 
 comment on column public.runs.expected_compile_date is
   'CAP-MCL-002: night-before APP-ADM-002 compilation due date, one calendar day before run_date.';
