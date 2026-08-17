@@ -3517,6 +3517,28 @@ function passwordResetErrorMessage(error) {
   return "We could not send the password email. Check the address or contact Admin.";
 }
 
+function readablePortalError(error, fallback = "Live portal data could not be loaded. Contact Admin.") {
+  if (!error) return fallback;
+  if (typeof error === "string") return error;
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "object") {
+    const parts = ["message", "error", "details", "hint", "code"]
+      .map(key => error?.[key])
+      .filter(value => typeof value === "string" || typeof value === "number")
+      .map(value => String(value).trim())
+      .filter(Boolean);
+    if (parts.length) return parts.join(" ");
+    try {
+      const json = JSON.stringify(error);
+      if (json && json !== "{}") return json;
+    } catch {
+      return fallback;
+    }
+  }
+  const message = String(error || "").trim();
+  return message && message !== "[object Object]" ? message : fallback;
+}
+
 const PASSWORD_RESET_SUCCESS_COOLDOWN_SECONDS = 10 * 60;
 const PASSWORD_RESET_RATE_LIMIT_SECONDS = 60 * 60;
 
@@ -3753,7 +3775,7 @@ function Login({ onRegister, defaultRole = "client", entryNotice = "", liveRunti
           </button>
         </div>
         {entryNotice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{entryNotice}</div>}
-        {liveAuthError && <div className="err">{liveAuthError}</div>}
+        {liveAuthError && <div className="err">{readablePortalError(liveAuthError)}</div>}
         {err && <div className="err">{err}</div>}
         {notice && <div className="card" style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".9rem" }}>{notice}</div>}
         <p style={{ fontSize: ".82rem", color: T.mu, marginBottom: ".8rem" }}>
@@ -15077,7 +15099,7 @@ function AppShell() {
       } catch (error) {
         if (!cancelled && refreshSeq === liveRefreshSeq.current) {
           setSession(null);
-          setLiveAuthError(error?.message || "Login could not be completed. Contact Admin.");
+          setLiveAuthError(readablePortalError(error, "Login could not be completed. Contact Admin."));
         }
       } finally {
         if (!cancelled && refreshSeq === liveRefreshSeq.current) setLiveAuthLoading(false);
@@ -15173,12 +15195,13 @@ function AppShell() {
         return snapshot;
       })
       .catch(error => {
+        const message = readablePortalError(error, "Live portal data could not be loaded. Contact Admin.");
         if (background) {
-          console.warn(error);
-          return { error };
+          console.warn(message, error);
+          return { error: message };
         }
-        setLiveAuthError(error?.message || "Live portal data could not be loaded. Contact Admin.");
-        return { error };
+        setLiveAuthError(message);
+        return { error: message };
       })
       .finally(() => {
         liveSnapshotRefreshRef.current = null;
@@ -17088,7 +17111,16 @@ function AppShell() {
               <p>Opening portal</p>
             </div>
             {liveAuthError ? (
-              <div className="err">{liveAuthError}</div>
+              <>
+                <div className="err">{readablePortalError(liveAuthError)}</div>
+                <div style={{ display: "flex", gap: ".55rem", marginTop: ".75rem" }}>
+                  <button className="btn b-acc" onClick={() => {
+                    setLiveAuthError("");
+                    refreshLiveRuntimeSnapshot({ background: false });
+                  }}>Retry</button>
+                  <button className="btn b-ghost" onClick={logout}>Log out</button>
+                </div>
+              </>
             ) : (
               <div className="card" style={{ fontSize: ".82rem", color: T.mu }}>Loading live account data before opening the workspace...</div>
             )}

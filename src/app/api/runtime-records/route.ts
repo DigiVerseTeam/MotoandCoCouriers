@@ -35,11 +35,33 @@ function json(status: number, payload: Record<string, unknown>) {
 }
 
 function runtimeErrorMessage(error: unknown, fallback = "Runtime sync failed.") {
-  const message = error instanceof Error ? error.message : String(error || "");
+  const message = readableRuntimeError(error);
   if (message.toLowerCase().includes("row-level security")) {
     return "Live server write was blocked by database policy. Check the production runtime service key and runtime_records access policy.";
   }
   return message || fallback;
+}
+
+function readableRuntimeError(error: unknown) {
+  if (!error) return "";
+  if (error instanceof Error) return String(error.message || "").trim();
+  if (typeof error === "string") return error.trim();
+  if (typeof error === "number" || typeof error === "boolean") return String(error);
+  if (typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const parts = ["message", "error", "details", "hint", "code"]
+      .map((key) => record[key])
+      .filter((value) => typeof value === "string" || typeof value === "number")
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+    if (parts.length) return parts.join(" ");
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return Object.prototype.toString.call(error);
+    }
+  }
+  return String(error || "").trim();
 }
 
 function serviceClient(): AdminSupabaseClient | null {
@@ -93,6 +115,10 @@ function uniqueText(values: unknown[] = []) {
       seen.add(key);
       return true;
     });
+}
+
+function uniqueUuids(values: unknown[] = []) {
+  return uniqueText(values).filter(isUuid);
 }
 
 function mergeSupplierNames(existing: unknown, linked: unknown[] = []) {
@@ -271,7 +297,7 @@ function callerAccountActorIds(caller: any) {
   const assignmentActorIds = (caller?.assignments || [])
     .filter((assignment: any) => ["client_ops", "client_operational", "client_billing"].includes(String(assignment?.application_role || "")))
     .map((assignment: any) => assignment?.actor_id);
-  return uniqueText([
+  return uniqueUuids([
     caller?.profile?.account_id,
     caller?.profile?.actor_id,
     ...assignmentActorIds,
