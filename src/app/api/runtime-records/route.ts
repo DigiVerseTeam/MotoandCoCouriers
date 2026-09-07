@@ -836,7 +836,13 @@ export async function POST(request: NextRequest) {
     const callerRole = [...caller.roles].find((role) => canSyncDomainForRole(domainKey, role)) || "";
     if (!callerRole) return json(403, { error: "This role cannot update that runtime domain." });
 
-    const localIds = rows.map((row: Record<string, unknown>) => runtimeRecordId(row || {}));
+    const preparedRowsById = new Map<string, Record<string, unknown>>();
+    for (const row of rows) {
+      const safeRow = row || {};
+      preparedRowsById.set(runtimeRecordId(safeRow), safeRow);
+    }
+    const preparedRows = [...preparedRowsById.entries()].map(([localId, row]) => ({ localId, row }));
+    const localIds = preparedRows.map(({ localId }) => localId);
     const { data: existingRows, error: existingError } = await supabase
       .from("runtime_records")
       .select("local_id, owner_actor_id, driver_profile_id, payload")
@@ -848,8 +854,8 @@ export async function POST(request: NextRequest) {
     const existingClientByOwnerActor = new Map<string, any>();
     if (domainKey === "clients") {
       const ownerActorIds = uniqueText(
-        rows
-          .map((row: Record<string, unknown>) => ownerActorForRow(row || {}, "", caller.profile.actor_id || ""))
+        preparedRows
+          .map(({ row }) => ownerActorForRow(row || {}, "", caller.profile.actor_id || ""))
           .filter(isUuid)
       );
       if (ownerActorIds.length) {
@@ -867,25 +873,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existingForWrite = (row: Record<string, unknown>) => {
-      const localId = runtimeRecordId(row || {});
+    const existingForWrite = (row: Record<string, unknown>, localId: string) => {
       const existing = existingById.get(localId);
       if (domainKey !== "clients") return existing;
       const ownerActorId = ownerActorForRow(row || {}, existing?.owner_actor_id || "", caller.profile.actor_id || "");
       return preferredExistingClientRecord(existing, ownerActorId ? existingClientByOwnerActor.get(ownerActorId) : undefined);
     };
 
-    const deniedRow = rows.find((row: Record<string, unknown>) => {
-      const existing = existingForWrite(row || {});
+    const deniedRow = preparedRows.find(({ row, localId }) => {
+      const existing = existingForWrite(row || {}, localId);
       return !canWriteRuntimeRecord(domainKey, row || {}, existing, caller);
     });
     if (deniedRow) {
-      return json(403, { error: `Caller is not permitted to update ${domainKey} record ${runtimeRecordId(deniedRow || {})}.` });
+      return json(403, { error: `Caller is not permitted to update ${domainKey} record ${deniedRow.localId}.` });
     }
 
-    const payload = rows.map((row: Record<string, unknown>) => {
-      const localId = runtimeRecordId(row || {});
-      const existing = existingForWrite(row || {});
+    const payload = preparedRows.map(({ row, localId }) => {
+      const existing = existingForWrite(row || {}, localId);
       const storedRow = domainKey === "clients" ? protectClientPayloadForWrite(row || {}, existing, callerRole) : row || {};
       return {
         record_type: recordType,
