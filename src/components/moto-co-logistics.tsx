@@ -15181,10 +15181,17 @@ function AppShell() {
 
   async function refreshLiveRuntimeSnapshot({ background = false } = {}) {
     if (!liveRuntimeEnabled || !session?.role) return { skipped: true };
-    if (pendingLiveSyncRef.current.size) return { skipped: true, reason: "pending_sync" };
+    if (pendingLiveSyncRef.current.size && background) return { skipped: true, reason: "pending_sync" };
     if (liveOutboxRef.current.length) {
-      await flushLiveOutbox({ background: true });
-      if (liveOutboxRef.current.length) return { skipped: true, reason: "offline_outbox" };
+      const savedUpdateCount = liveOutboxRef.current.length;
+      const flushPromise = flushLiveOutbox({ background: true });
+      if (background) {
+        await flushPromise;
+        if (liveOutboxRef.current.length) return { skipped: true, reason: "offline_outbox" };
+      } else {
+        flushPromise.catch(error => console.warn("Saved live updates will retry after workspace opens.", error));
+        setSystemNotice(`${savedUpdateCount} saved field update${savedUpdateCount === 1 ? "" : "s"} still waiting to sync. Opening the workspace with latest live data while retry continues.`);
+      }
     }
     if (liveSnapshotRefreshRef.current) return liveSnapshotRefreshRef.current;
 

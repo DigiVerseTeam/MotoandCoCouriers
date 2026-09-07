@@ -42,6 +42,12 @@ function runtimeErrorMessage(error: unknown, fallback = "Runtime sync failed.") 
   return message || fallback;
 }
 
+function logRuntimeRouteError(method: string, error: unknown) {
+  const message = runtimeErrorMessage(error);
+  const stack = error instanceof Error ? error.stack : undefined;
+  console.error(`[api/runtime-records:${method}] failed`, { message, stack });
+}
+
 function readableRuntimeError(error: unknown) {
   if (!error) return "";
   if (error instanceof Error) return String(error.message || "").trim();
@@ -807,6 +813,7 @@ export async function GET(request: NextRequest) {
 
     return json(200, { snapshot });
   } catch (error) {
+    logRuntimeRouteError("GET", error);
     return json(500, { error: runtimeErrorMessage(error, "Runtime snapshot failed.") });
   }
 }
@@ -902,6 +909,7 @@ export async function POST(request: NextRequest) {
 
     return json(200, { synced: payload.length });
   } catch (error) {
+    logRuntimeRouteError("POST", error);
     return json(500, { error: runtimeErrorMessage(error, "Runtime sync failed.") });
   }
 }
